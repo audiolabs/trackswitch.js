@@ -1,0 +1,439 @@
+.jquery-trackswitch *,
+.jquery-trackswitch *:before,
+.jquery-trackswitch *:after {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+
+.jquery-trackswitch {
+    background: #EEEEEE;
+    position: relative;
+    margin: 10px;
+    overflow: hidden;
+    color: #000000;
+    line-height: 1; /* Reset line-height to stop it inheriting from page */
+}
+
+.jquery-trackswitch ts-track {
+    display: none;
+}
+
+/* Reset list elements from bootstrap styling */
+.jquery-trackswitch ul { margin: 0; padding: 0; }
+.jquery-trackswitch li { margin: 0; padding: 0; list-style: none; }
+
+/* Should be able to find a better way to bind the font-awesome icons ------------------------------------------- TODO */
+.jquery-trackswitch .overlay span:after,
+.jquery-trackswitch li.track.error:before,
+.jquery-trackswitch .control li.button:after {
+    content: "";
+    display: block;
+    font-family: FontAwesome;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 16px;
+    line-height: 1;
+    text-indent: 0;
+}
+
+/* OVERLAY STYLES ----------------------------------------------------------- */
+
+.jquery-trackswitch .overlay {
+    background-color: rgba(0,0,0,0.3);
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: 10;
+}
+
+.jquery-trackswitch .overlay > span,
+.jquery-trackswitch .overlay > p,
+.jquery-trackswitch .overlay #overlayinfo span.info {
+    display: block;
+    position: absolute;
+    text-align: center;
+}
+
+.jquery-trackswitch .overlay > span {
+    background-color: #F1C40F;
+    width: 50px;
+    height: 50px;
+    top: calc(50% - 25px);
+    left: calc(50% - 25px);
+    text-indent: -9999px;
+    line-height: 0;
+    border-radius: 100%;
+    cursor: pointer;
+}
+
+.jquery-trackswitch .overlay > span.loading {
+    cursor: inherit;
+}
+
+.jquery-trackswitch .overlay > span:after {
+    content: "\f011"; /* fa-power-off */
+    padding-top: 7px;
+    font-size: 28pt;
+}
+
+.jquery-trackswitch .overlay > span.loading:after {
+    content: "\f110"; /* fa-spinner */
+}
+
+.jquery-trackswitch.error .overlay {
+    background: rgba(0,0,0,0.6);
+}
+
+.jquery-trackswitch.error .overlay > span {
+    background: #C03328;
+    cursor: inherit;
+}
+
+.jquery-trackswitch.error .overlay > span:after {
+    content: "\f12a"; /* fa-exclamation */
+}
+
+.jquery-trackswitch.error .overlay p {
+    width: 100%;
+    top: calc(50% + 35px);
+    color: #FFFFFF;
+}
+
+.jquery-trackswitch .overlay #overlayinfo {
+    height: 40px;
+    width: 100%;
+    bottom: 5px;
+    right: 10px;
+    color: #ED8C01;
+    color: #000000;
+    text-align: right;
+    font-size: 14pt;
+}
+
+.jquery-trackswitch .overlay #overlayinfo span.info {
+    bottom: 0px;
+    right: 0px;
+    width: 380px;
+    cursor: pointer;
+    text-indent: -9999px;
+    opacity: 0.4;
+}
+
+.jquery-trackswitch .overlay #overlayinfo span.info:after {
+    content: "\f05a"; /* fa-info-circle */
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    font-size: 16pt;
+}
+
+.jquery-trackswitch .overlay #overlayinfo span.text {
+    display: none;
+    position: absolute;
+    right: 0px;
+}
+
+.jquery-trackswitch .overlay #overlayinfo span.text strong {
+    font-weight: bold;
+}
+
+.jquery-trackswitch .overlay #overlayinfo a {
+    color: #EEEEEE;
+    text-decoration: underline;
+}
+
+/* MAIN CONTROL STYLES ------------------------------------------------------ */
+
+.jquery-trackswitch .main-control ul {
+    background-color: #333;
+    height: auto;
+    min-height: 36px;
+    padding: 4px 12px;  /* Top/Bottom Left/Right */
+    overflow: hidden;
+    color: #DDDDDD;
+}
+
+.jquery-trackswitch .main-control .button {
+  /*background: red;*/
+  float: left;
+  width: 15px;
+  margin: 7px 10px 0 0; /* Bring buttons to vertical center with 7px */
+  cursor: pointer;
+}
+
+.jquery-trackswitch .main-control .timing {
+  /*background: green;*/
+  float: right;
+  font-family: monospace;
+  margin: 7px 0 0 10px; /* Bring time to vertical center with 7px */
+}
+
+.jquery-trackswitch .main-control .seekwrap {
+  /*background: blue;*/
+  overflow: hidden;
+  height: 28px;
+  cursor: pointer;
+}
+
+.jquery-trackswitch .main-control .seekwrap .seekbar {
+    background-color: #ED8C01;
+    height: 6px;
+    margin: 11px 4px 0 0px;
+    position: relative;
+
+    /* Hack to extend the seekhead to the seekwrap (4px shift)*/
+    -webkit-box-shadow: 4px 0px 0px 0px #ED8C01;
+       -moz-box-shadow: 4px 0px 0px 0px #ED8C01;
+            box-shadow: 4px 0px 0px 0px #ED8C01;
+}
+
+.jquery-trackswitch .main-control .seekwrap .seekbar .seekhead {
+    background-color: #ED8C01;
+    position: absolute;
+    width: 4px;
+    height: 22px;
+    top: -8px;
+    left: 0;
+}
+
+
+/* PLAYER TITLE STYLES ------------------------------------------------------ */
+
+.jquery-trackswitch > p { /* Player title <p> */
+    margin: 12px 10px;
+}
+
+
+/* SEEKABLE/POSTER IMAGE STYLES --------------------------------------------- */
+
+/* Is the display: block added to the wrap in the js necessary? ------------------------------------------------- TODO */
+.jquery-trackswitch img {
+    max-width: 100%; /* Limit images to 100% width (unless overridden by the user) */
+    display: block;
+    margin: 0; /* Prevent inheritence from kirby styles */
+    padding: 0;
+}
+
+.jquery-trackswitch .seekable-img-wrap {
+    display: inline-block;
+    position: relative;
+}
+
+.jquery-trackswitch .seekable-img-wrap .seekwrap {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    cursor: pointer;
+}
+
+.jquery-trackswitch .seekable-img-wrap .seekwrap .seekhead {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-left: 2px solid #000000;
+    border-right: 2px solid #FFFFFF;
+}
+
+
+/* TRACK STYLES ------------------------------------------------------------- */
+
+.jquery-trackswitch ul.track_list {
+    padding: 0;
+}
+
+.jquery-trackswitch li.track {
+    background-color: #DDDDDD;
+    position: relative;
+    min-height: 32px; /* Required if there is no title defined */
+    padding: 8px 10px 8px 60px; /* Top Right Bottom Left */
+}
+
+.jquery-trackswitch li.track.tabs {
+    display: inline-block;
+    padding-right: 12px;
+    border: 1px solid #999;
+}
+
+/* SPECIFICITY PROBLEMS!!!!!!!!! -------------------------------------------------------------------------------- TODO */
+.jquery-trackswitch li.track:not(.tabs):nth-child(even) {
+    background-color: #EEEEEE;
+}
+
+/* NEVER USE IMPORTANT, SORT OUT THE SPECIFICITY PROBLEMS ------------------------------------------------------- TODO */
+.jquery-trackswitch li.track.error {
+    background-color: #DD9B9B !important;
+}
+
+.jquery-trackswitch li.track.error:before {
+    content: "\f071  ERROR"; /* fa-exclamation-triangle */
+    display: inline;
+    padding-right: 10px;
+    color: #7C2525;
+    cursor: inherit;
+}
+
+.jquery-trackswitch li.track ul.control {
+    position: absolute;
+    top: calc(50% - 14px);
+    left: 5px;
+    padding-left: 2px;
+}
+
+.jquery-trackswitch li.track ul.control li {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    /*margin: 0; This realignes the controls with bootstrap (overridden) */
+    text-align: center;
+}
+
+.jquery-trackswitch .control li.button {
+    position: relative;
+    text-indent: -9999px;
+    line-height: 0;
+    cursor: pointer;
+}
+
+.jquery-trackswitch .control li.button:after {
+    position: absolute;
+    top: 0;
+}
+
+.jquery-trackswitch .control li.playpause:after {
+    content: "\f04b"; /* fa-play */
+}
+
+.jquery-trackswitch .control li.playpause.checked:after {
+    content: "\f04c"; /* fa-pause */
+}
+
+.jquery-trackswitch .control li.stop:after {
+    content: "\f04d"; /* fa-stop */
+}
+
+.jquery-trackswitch .control li.repeat:after {
+    content: "\f01e"; /* fa-repeat */
+    opacity: 0.5;
+}
+
+.jquery-trackswitch .control li.repeat.checked:after {
+    opacity: 1;
+}
+
+.jquery-trackswitch .control li.mute:after {
+    content: "\f028"; /* fa-volume-up */
+    position: absolute;
+    bottom: 50%; left: 4px; /* Necessary to do it this way? ----------------------------------------------------- TODO */
+}
+
+.jquery-trackswitch .control li.mute.checked:after {
+    content: "\f026"; /* fa-volume-off */
+}
+
+.jquery-trackswitch .control li.solo:after {
+    content: "\f10c"; /* fa-circle-o */
+    position: absolute;
+    bottom: 50%; left: 4px; /* Necessary to do it this way? and can we combine it ------------------------------- TODO */
+}
+
+.jquery-trackswitch .control li.solo.checked:after {
+    content: "\f05d"; /* fa-check-circle-o */
+}
+
+.jquery-trackswitch .control li.solo.radio { /* .radio bootstrap fix */
+    margin: 0;
+}
+
+.jquery-trackswitch .control li.solo.radio.checked:after {
+    content: "\f192"; /* fa-dot-circle-o */
+}
+
+
+@media (max-width: 767px) {
+    /* Style Adjustments for Responsive Design - matched to Boostrap breakpoint */
+
+
+    /* OVERLAY STYLES ------------------------------------------------------------- */
+
+    .jquery-trackswitch .overlay span {
+        width: 70px;
+        height: 70px;
+        top: calc(50% - 35px);
+        left: calc(50% - 35px);
+        line-height: 10px;
+    }
+
+    .jquery-trackswitch .overlay span:after {
+        padding-top: 3px;
+        font-size: 36pt;
+    }
+
+    .jquery-trackswitch.error .overlay p {
+        top: calc(50% + 45px);
+
+    }
+
+
+    /* MAIN CONTROL STYLES -------------------------------------------------- */
+
+    .jquery-trackswitch .control li.button:after { /* is this main-control? */
+        font-size: 23px;
+    }
+
+    .jquery-trackswitch .main-control .button {
+        margin: 4px 22px 0 0;
+    }
+
+    .jquery-trackswitch .main-control .seekwrap {
+        width: 100%;
+        margin-top: 30px;
+    }
+
+
+    /* TRACK STYLES --------------------------------------------------------- */
+
+    .jquery-trackswitch li.track {
+        padding-left: 80px;
+    }
+
+    .jquery-trackswitch li.track ul.control {
+        top: calc(50% - 19px);
+    }
+
+    .jquery-trackswitch .track .control li.button {
+        margin: 0 10px 0 0;
+    }
+
+    .jquery-trackswitch .control li.mute:after,
+    .jquery-trackswitch .control li.solo:after {
+        padding-top: 0;
+        bottom: 35%;
+    }
+
+}
+
+@media (max-width: 400px) {
+    /* Style Adjustments for Responsive Design - extra breakpoint for smallest devices */
+
+
+    /* MAIN CONTROL STYLES -------------------------------------------------- */
+
+    .jquery-trackswitch .main-control {
+        text-align: center; /* Center the `inline-block` buttons */
+    }
+
+    .jquery-trackswitch .main-control .button {
+        float: none;
+        display: inline-block;
+        margin: 0 14px; /* Share the spacing margin each side to center align */
+    }
+
+    .jquery-trackswitch .main-control .timing {
+        width: 100%;
+        float: none;
+        margin: 32px 0 8px 0;
+    }
+
+    .jquery-trackswitch .main-control .seekwrap {
+        margin-top: 8px;
+    }
+
+}

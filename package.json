@@ -1,0 +1,42 @@
+{
+  "name": "trackswitch",
+  "version": "0.1.0",
+  "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
+  "description": "Multitrack Audio Player",
+  "homepage": "https://github.com/audiolabs/trackswitch.js",
+  "license": "MIT",
+  "scripts": {
+    "sass": "node-sass --output-style expanded --precision 6 css/reset.sass dist/tmp/reset.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/audiolabs/trackswitch.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/audiolabs/trackswitch.js/issues"
+  },
+  "style": "dist/css/trackswitch.css",
+  "main": "dist/js/trackswitch",
+  "dependencies": {
+    "font-awesome": "^4.2.0",
+    "jquery": ">=1.9.1"
+  },
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-babel": "^6.0.0",
+    "grunt-contrib-clean": "^1.0.0",
+    "grunt-contrib-compress": "^1.4.1",
+    "grunt-contrib-concat": "^1.0.1",
+    "grunt-contrib-connect": "^1.0.2",
+    "grunt-contrib-cssmin": "^2.0.0",
+    "grunt-contrib-uglify": "^2.2.0",
+    "grunt-contrib-watch": "^1.0.0",
+    "grunt-exec": "^2.0.0",
+    "grunt-gh-pages": "^2.0.0",
+    "grunt-stamp": "^0.3.0",
+    "load-grunt-tasks": "^3.5.2",
+    "node-sass": "^4.5.0",
+    "time-grunt": "^1.4.0",
+    "uglify-js": "^2.8.14"
+  }
+}
