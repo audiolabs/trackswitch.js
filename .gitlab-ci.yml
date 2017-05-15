@@ -1,0 +1,23 @@
+image: ruby:2.3
+
+cache:
+  paths: 
+    - vendor/
+
+variables:
+  PAGES_REPO_NWO: "audiolabs/trackswitch.js"
+
+before_script:
+  - apt-get update -yy
+  - apt-get install -yy nodejs
+  - bundle install --path vendor
+
+pages:
+  stage: deploy
+  script:
+    - bundle exec jekyll build -d public/ --baseurl trackswitchjs
+  artifacts:
+    paths:
+      - public
+  only:
+    - gh-pages
