@@ -1,6 +1,8 @@
 trackswitch.js
 ==============
 
+![Screenshot](/examples/screenshot.png)
+
 Installation
 ------------
 
