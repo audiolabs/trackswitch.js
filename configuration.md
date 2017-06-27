@@ -248,7 +248,7 @@ You can include images related to the audio content, which can optionally act as
 ```html
 <div class="player">
     <img class="seekable" src="mix.png">
-    <img src="cover.png">
+    <img src="cover.jpg">
     <ts-track title="Violins">
         <ts-source src="violins.mp3"></ts-source>
     </ts-track>
@@ -372,7 +372,7 @@ The images can be positioned using normal CSS (eg, `width` and `margin` properti
 
 ```html
 <div class="player">
-    <img style="margin: 20px auto;" src="cover.png">
+    <img style="margin: 20px auto;" src="cover.jpg">
     <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="mix.png">
     <ts-track title="Violins" data-img="violins.png">
         <ts-source src="violins.mp3"></ts-source>
@@ -390,7 +390,7 @@ The images can be positioned using normal CSS (eg, `width` and `margin` properti
 ```
 
 <div class="player">
-    <img style="margin: 20px auto;" src="data/multitracks/cover.png">
+    <img style="margin: 20px auto;" src="data/multitracks/cover.jpg">
     <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
     <ts-track title="Violins" data-img="data/multitracks/violins.png">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>

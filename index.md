@@ -16,12 +16,6 @@ alternatively you can manually download and include [`trackswitch.min.css`](http
 ## Example
 
 <div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <p style="text-align: center;">
-      <a href="https://www.native-instruments.com/en/products/maschine/maschine-expansions/halcyon-sky/">
-        Halcyon Sky - Koronium 5, free STEM file by Native Instruments
-      </a>
-    </p>
-    <img style="margin: 20px auto;" src="data/multitracks/cover.png">
     <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
     <ts-track title="Violins" data-img="data/multitracks/violins.png">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
@@ -40,12 +34,10 @@ alternatively you can manually download and include [`trackswitch.min.css`](http
 
 ```html
 <div class="player">
-    <p style="text-align: center;">
-      <a href="https://www.native-instruments.com/en/products/maschine/maschine-expansions/halcyon-sky/">
-        Halcyon Sky - Koronium 5, free STEM file by Native Instruments
-      </a>
-    </p>
-    <img style="margin: 20px auto;" src="data/multitracks/cover.png">
+    <!--
+      STEM file Halcyon Sky - Koronium 5 by Native Instruments
+      https://www.native-instruments.com/en/products/maschine/maschine-expansions/halcyon-sky
+    -->
     <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="mix.png">
     <ts-track title="Violins" data-img="violins.png">
         <ts-source src="violins.mp3"></ts-source>
