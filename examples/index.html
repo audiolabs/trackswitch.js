@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Multi Track Audio Player</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+    <link rel="stylesheet" href="../dist/css/trackswitch.min.css" />
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+<div class="player">
+    <img style="margin: 20px auto;" src="data/cover.png">
+    <img data-style="margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/mix.png">
+    <ts-track title="Violins" data-img="data/violins.png">
+        <ts-source src="data/violins.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Synths" data-img="data/synth.png">
+        <ts-source src="data/synth.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" data-img="data/bass.png">
+        <ts-source src="data/bass.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums" data-img="data/drums.png">
+        <ts-source src="data/drums.mp3"></ts-source>
+    </ts-track>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="crossorigin="anonymous"></script>
+<script src="../dist/js/trackswitch.min.js"></script>
+
+<script type="text/javascript">
+    jQuery(document).ready(function() {
+        jQuery(".player").trackSwitch(); // All other players are default
+    });
+</script>
+</body>
+</html>
