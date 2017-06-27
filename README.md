@@ -1,7 +1,7 @@
 trackswitch.js
 ==============
 
-![Screenshot](/examples/screenshot.png)
+[![Screenshot](/examples/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
 
 Installation
 ------------
