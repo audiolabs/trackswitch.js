@@ -26,7 +26,7 @@ alternatively you can manually download and include [`trackswitch.min.css`](http
     <ts-track title="Violins" data-img="data/multitracks/violins.png">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Snyths" data-img="data/multitracks/synth.png">
+    <ts-track title="Synths" data-img="data/multitracks/synth.png">
         <ts-source src="data/multitracks/synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" data-img="data/multitracks/bass.png">
@@ -50,7 +50,7 @@ alternatively you can manually download and include [`trackswitch.min.css`](http
     <ts-track title="Violins" data-img="violins.png">
         <ts-source src="violins.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Snyths" data-img="synth.png">
+    <ts-track title="Synths" data-img="synth.png">
         <ts-source src="synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" data-img="bass.png">
