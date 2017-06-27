@@ -6,3 +6,4 @@ dist/tmp/*
 *.zip
 .grunt
 _site/
+examples
