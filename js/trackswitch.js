@@ -1,4 +1,4 @@
-// Put the audioContext in the global scope and pass it to each player instance.
+// Put the this.audioContext in the global scope and pass it to each player instance.
 // WebAudioAPI fallback for IE: http://stackoverflow.com/a/27711181
 function audioContextCheck() {
     if (typeof AudioContext !== "undefined") {
@@ -11,12 +11,11 @@ function audioContextCheck() {
         return null;
     }
 }
-var audioContext = audioContextCheck();
 
 if (typeof document.registerElement !== "undefined") {
     var TsTrack = document.registerElement('ts-track');
     var TsSource = document.registerElement('ts-source');
-} 
+}
 
 var pluginName = 'trackSwitch',
     defaults = {
@@ -51,6 +50,7 @@ function Plugin(element, options) {
     this._name = pluginName;
 
     // Properties for the overall player
+    this.audioContext = '';
     this.numberOfTracks = 0;
     this.longestDuration = 0;
     this.playing = false;
@@ -67,14 +67,6 @@ function Plugin(element, options) {
     this.trackGainNode = Array();
     this.trackBuffer = Array();
     this.activeAudioSources = Array();
-
-    // Skip gain node creation if WebAudioAPI could not load.
-    if (audioContext) {
-        // Master output gain node setup
-        this.gainNodeMaster = audioContext.createGain();
-        this.gainNodeMaster.gain.value = 0.0 // Start at 0.0 to allow fade in
-        this.gainNodeMaster.connect(audioContext.destination);
-    }
 
     this.init();
 }
@@ -195,13 +187,6 @@ Plugin.prototype.init = function() {
 
         this.updateMainControls();
 
-        // Throw a player error if the WebAudioAPI could not load.
-        if (!audioContext) {
-            this.element.trigger("errored");
-            this.element.find("#overlaytext").html("Web Audio API is not supported in your browser. Please consider upgrading.");
-            return false;
-        }
-
     } else {
 
         this.element.trigger("errored");
@@ -244,11 +229,13 @@ Plugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
 
     // Looks like promise-based syntax (commented below) isn't supported on mobile yet...
     // audioContext.decodeAudioData(audioData).then(function(decodedData) {
-    audioContext.decodeAudioData(audioData, function(decodedData) {
+    that.audioContext.decodeAudioData(audioData, function(decodedData) {
 
-        that.trackGainNode[currentTrack] = audioContext.createGain();
+        that.trackGainNode[currentTrack] = that.audioContext.createGain();
+        console.log(that.gainNodeMaster);
+
         that.trackGainNode[currentTrack].connect(that.gainNodeMaster);
-        that.trackBuffer[currentTrack] = audioContext.createBufferSource();
+        that.trackBuffer[currentTrack] = that.audioContext.createBufferSource();
         that.trackBuffer[currentTrack].buffer = decodedData;
 
         // Fire a success if the decoding works and allow the player to proceed
@@ -310,6 +297,24 @@ Plugin.prototype.load = function(event) {
     event.preventDefault();
 
     var that = this;
+
+    // create audio context
+    that.audioContext = audioContextCheck();
+
+    // Skip gain node creation if WebAudioAPI could not load.
+    if (that.audioContext) {
+        // Master output gain node setup
+        that.gainNodeMaster = that.audioContext.createGain();
+        that.gainNodeMaster.gain.value = 0.0 // Start at 0.0 to allow fade in
+        that.gainNodeMaster.connect(that.audioContext.destination);
+    }
+
+    // Throw a player error if the WebAudioAPI could not load.
+    if (!that.audioContext) {
+        this.element.trigger("errored");
+        this.element.find("#overlaytext").html("Web Audio API is not supported in your browser. Please consider upgrading.");
+        return false;
+    }
 
     this.element.find(".overlay span.activate").addClass("fa-spin loading");
 
@@ -565,7 +570,7 @@ Plugin.prototype.monitorPosition = function(context) {
 
     // context = this from outside the closure
 
-    context.position = context.playing && !context.currentlySeeking ? audioContext.currentTime - context.startTime : context.position;
+    context.position = context.playing && !context.currentlySeeking ? this.audioContext.currentTime - context.startTime : context.position;
 
     // Can't use onEnded as context calls each time stopAudio is called...
     if (context.position >= context.longestDuration && !context.currentlySeeking) {
@@ -590,7 +595,7 @@ Plugin.prototype.monitorPosition = function(context) {
 Plugin.prototype.stopAudio = function() {
 
     // Create downward master gain ramp to fade signal out
-    var now = audioContext.currentTime;
+    var now = this.audioContext.currentTime;
     var downwardRamp = 0.03;
 
     // NOTE: The downward ramp is in 'free' time, after the playhead has stopped.
@@ -614,7 +619,7 @@ Plugin.prototype.startAudio = function(newPos, duration) {
     var that = this;
 
     // Ramping constants
-    var now = audioContext.currentTime;
+    var now = this.audioContext.currentTime;
     var upwardRamp = downwardRamp = 0.03;
 
     this.position = typeof newPos !== 'undefined' ? newPos : this.position || 0;
@@ -623,7 +628,7 @@ Plugin.prototype.startAudio = function(newPos, duration) {
 
         this.activeAudioSources[i] = null; // Destroy old sources before creating new ones...
 
-        this.activeAudioSources[i] = audioContext.createBufferSource();
+        this.activeAudioSources[i] = this.audioContext.createBufferSource();
         this.activeAudioSources[i].buffer = this.trackBuffer[i].buffer;
         this.activeAudioSources[i].connect(this.trackGainNode[i]);
 
@@ -667,7 +672,7 @@ Plugin.prototype.pause = function() {
 
     if (this.playing === true) {
         this.stopAudio();
-        this.position = audioContext.currentTime - this.startTime;
+        this.position = this.audioContext.currentTime - this.startTime;
         this.playing = false;
         this.updateMainControls();
     }
