@@ -756,6 +756,20 @@ Plugin.prototype.event_repeat = function(event) {
 };
 
 
+Plugin.prototype.seek_by_time = function(time_sec) {
+
+  if (this.playing) {
+      this.stopAudio();
+      this.startAudio(time_sec);
+  } else {
+      this.position = time_sec;
+  }
+
+  this.updateMainControls();
+
+};
+
+
 // When seeking, calculate the desired position in the audio from the position on the slider
 Plugin.prototype.seek = function(event) {
 
