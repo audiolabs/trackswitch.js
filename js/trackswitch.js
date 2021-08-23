@@ -16,7 +16,7 @@ var audioContext = audioContextCheck();
 if (typeof document.registerElement !== "undefined") {
     var TsTrack = document.registerElement('ts-track');
     var TsSource = document.registerElement('ts-source');
-} 
+}
 
 var pluginName = 'trackSwitch',
     defaults = {
@@ -322,6 +322,7 @@ Plugin.prototype.load = function(event) {
             ".aif"  : "audio/aiff;",
             ".aiff" : "audio/aiff;",
             ".au"   : "audio/basic;",
+            ".flac" : "audio/flac;",
             ".mp1"  : "audio/mpeg;",
             ".mp2"  : "audio/mpeg;",
             ".mp3"  : "audio/mpeg;",
