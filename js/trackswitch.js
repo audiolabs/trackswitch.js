@@ -72,7 +72,7 @@ function Plugin(element, options) {
     if (audioContext) {
         // Master output gain node setup
         this.gainNodeMaster = audioContext.createGain();
-        this.gainNodeMaster.gain.value = 0.0 // Start at 0.0 to allow fade in
+        this.gainNodeMaster.gain.value = 0.0; // Start at 0.0 to allow fade in
         this.gainNodeMaster.connect(audioContext.destination);
     }
 
@@ -232,7 +232,7 @@ Plugin.prototype.sourceFailed = function(currentTrack, currentSource, errorType)
         this.trackStatusChanged();
     }
 
-}
+};
 
 
 // On sucessful audio file request, decode it into an audiobuffer
@@ -259,7 +259,7 @@ Plugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
         that.sourceFailed(currentTrack, currentSource, "Error Decoding File Type");
     });
 
-}
+};
 
 
 // Make and listen to XMLHttpRequest for each source of a track as needed
@@ -282,23 +282,23 @@ Plugin.prototype.makeRequest = function(currentTrack, currentSource) {
             }
         }
 
-    }
+    };
 
     request.send();
 
-}
+};
 
 
 // Check if there is a source to request for the given track
 Plugin.prototype.prepareRequest = function(currentTrack, currentSource) {
 
     if (this.trackSources[currentTrack][currentSource] !== undefined) {
-        this.makeRequest(currentTrack, currentSource)
+        this.makeRequest(currentTrack, currentSource);
     } else {
         this.sourceFailed(currentTrack, currentSource, "No Source Found");
     }
 
-}
+};
 
 
 // On player load/activate, find the audio tracks and sources and filter out ones we can't play
@@ -334,7 +334,7 @@ Plugin.prototype.load = function(event) {
             ".ogg"  : "audio/ogg;",
             ".wav"  : "audio/wav;",
             ".webm" : "audio/webm;"
-        }
+        };
 
         this.element.find('ts-track').each(function(i) {
 
@@ -356,7 +356,7 @@ Plugin.prototype.load = function(event) {
                 // Beware of triple not!!! - If file type cannot be played...
                 if ( !(!!(a.canPlayType && a.canPlayType(mime).replace(/no/, ''))) ) {
                     // ...eject it from the source list
-                    that.trackSources[i].splice(j, 1)
+                    that.trackSources[i].splice(j, 1);
                 }
             }
 
@@ -384,14 +384,14 @@ Plugin.prototype.findLongest = function() {
         var currentDuration = this.trackBuffer[i].buffer.duration;
 
         if (currentDuration > this.longestDuration) {
-            this.longestDuration = currentDuration
+            this.longestDuration = currentDuration;
         }
 
     }
 
     this.element.trigger("loaded");
 
-}
+};
 
 
 // When all tracks have been requested, proceed if possible, or in the event of errors, fire and show error
@@ -415,7 +415,7 @@ Plugin.prototype.trackStatusChanged = function() {
 
     }
 
-}
+};
 
 
 // When the audio files are completely (and sucessfully) loaded, unlock the player and set times
@@ -499,7 +499,7 @@ Plugin.prototype.bindEvents = function() {
             if (event.which === 32) { // Spacebar
                 that.event_playpause(event); // Toggle playpause event
             }
-        })
+        });
     }
 
 };
@@ -517,7 +517,7 @@ Plugin.prototype.valid_click = function(event) {
         return false;
     }
 
-}
+};
 
 
 // Format time for the UI, from seconds to HH:MM:SS:mmm
@@ -538,7 +538,7 @@ Plugin.prototype.secondsToHHMMSSmmm = function(seconds) {
 
     return (h + ':' + m + ':' + s + ':' + mil);
 
-}
+};
 
 
 // Update the UI elements for the position
@@ -557,7 +557,7 @@ Plugin.prototype.updateMainControls = function() {
         $(this.element).find('.timing .time').html(this.secondsToHHMMSSmmm(this.position));
     }
 
-}
+};
 
 
 // Timer fuction to update the UI periodically (with new time and seek position)
@@ -584,7 +584,7 @@ Plugin.prototype.monitorPosition = function(context) {
 
     context.updateMainControls();
 
-}
+};
 
 
 // Stop each track and destroy it's audio buffer and clear the timer
@@ -606,7 +606,7 @@ Plugin.prototype.stopAudio = function() {
 
     clearInterval(this.timerMonitorPosition);
 
-}
+};
 
 
 // Create, connect and start a new audio buffer for each track and begin update timer
@@ -660,7 +660,7 @@ Plugin.prototype.startAudio = function(newPos, duration) {
         that.monitorPosition(that);
     }, 16); // 62.5Hz for smooth motion
 
-}
+};
 
 
 // Pause player (used by other players to enforce globalsolo)
@@ -691,7 +691,7 @@ Plugin.prototype.pause_others = function() {
         });
     }
 
-}
+};
 
 
 // Toggle start stop of audio, saving the position to mock pausing
@@ -757,6 +757,20 @@ Plugin.prototype.event_repeat = function(event) {
 };
 
 
+Plugin.prototype.seek_by_time = function(time_sec) {
+
+  if (this.playing) {
+      this.stopAudio();
+      this.startAudio(time_sec);
+  } else {
+      this.position = time_sec;
+  }
+
+  this.updateMainControls();
+
+};
+
+
 // When seeking, calculate the desired position in the audio from the position on the slider
 Plugin.prototype.seek = function(event) {
 
@@ -769,7 +783,7 @@ Plugin.prototype.seek = function(event) {
 
     // Limit the seeking to within the seekbar min/max
     var seekWidth = $(this.seekingElement).width();
-    seekWidth = seekWidth < 1 ? 1 : seekWidth // Lower limit of width to 1 to avoid dividing by 0
+    seekWidth = seekWidth < 1 ? 1 : seekWidth; // Lower limit of width to 1 to avoid dividing by 0
 
     // Constrain posXRel to within the seekable object
     var posXRelLimted = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
@@ -795,7 +809,7 @@ Plugin.prototype.seek = function(event) {
 
     this.updateMainControls();
 
-}
+};
 
 
 // When touchsstart or mousedown on a seeking area, turn 'seeking' on and seek to cursor
@@ -875,7 +889,7 @@ Plugin.prototype.event_solo = function(event) {
     // If radiosolo option is on and the target is already soloed...
     if ((this.options.radiosolo || event.shiftKey) && currentState) {
         // ...keep the target soloed (must be one track always soloed)
-        this.trackProperties[targetIndex].solo = true
+        this.trackProperties[targetIndex].solo = true;
     }
     // Else, flip the solo state of the target
     else {
@@ -927,9 +941,9 @@ Plugin.prototype.switch_image = function() {
     }
 
     // Apply the final image src to the display element
-    this.element.find(".seekable").attr('src', imageSrc)
+    this.element.find(".seekable").attr('src', imageSrc);
 
-}
+};
 
 
 // When mute or solo properties changed, apply them to the gain of each track and update UI
