@@ -1,6 +1,6 @@
 /*!
  * trackswitchjs v0.1.0 (https://github.com/audiolabs/trackswitch.js)
- * Copyright 2017 International Audio Laboratories Erlangen
+ * Copyright 2024 International Audio Laboratories Erlangen
  * Licensed under MIT (https://github.com/audiolabs/trackswitchjs/blob/master/LICENSE)
  */
 
@@ -36,7 +36,7 @@ var audioContext = audioContextCheck();
 if (typeof document.registerElement !== "undefined") {
     var TsTrack = document.registerElement('ts-track');
     var TsSource = document.registerElement('ts-source');
-} 
+}
 
 var pluginName = 'trackSwitch',
     defaults = {
@@ -185,7 +185,12 @@ Plugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
-            that.trackProperties[i] = { mute: false, solo: false, success: false, error: false, };
+            that.trackProperties[i] = {
+                mute: this.hasAttribute('mute'),  // <ts-track title="Track" mute>
+                solo: this.hasAttribute('solo'),  // <ts-track title="Track" solo>
+                success: false,
+                error: false
+            };
 
             // Append classes to '.track' depending on options (for styling and click binding)
             var tabview = that.options.tabview ? " tabs" : ""; // For styling into tab view
@@ -342,6 +347,7 @@ Plugin.prototype.load = function(event) {
             ".aif"  : "audio/aiff;",
             ".aiff" : "audio/aiff;",
             ".au"   : "audio/basic;",
+            ".flac" : "audio/flac;",
             ".mp1"  : "audio/mpeg;",
             ".mp2"  : "audio/mpeg;",
             ".mp3"  : "audio/mpeg;",
