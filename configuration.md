@@ -7,6 +7,8 @@ title: trackswitch.js
    - [Tracks](#tracks)
      - [Fallback Audio Files](#fallback-audio-files)
      - [Track Styling](#track-styling)
+     - [Solo Tracks](#solo-tracks)
+     - [Mute Tracks](#mute-tracks)
    - [Player Behaviour](#player-behaviour)
    - [Additional Player Elements](#additional-player-elements)
      - [Additional and Seekable Player Image](#additional-and-seekable-player-image)
@@ -161,6 +163,78 @@ You can use CSS to style each individual `ts-track` element:
     </ts-track>
     <ts-track title="Drums" style="background-color: #159858;">
         <ts-source src="data/multitracks/drums.mp3"></ts-source>
+    </ts-track>
+</div>
+
+### Solo Tracks
+
+You can preselect **solo** for individual tracks by using the `solo` attribute within the `ts-track` element, like this: `<ts-track title="Violins" solo>`.
+
+```html
+<div class="player">
+    <ts-track title="Violins" solo>
+        <ts-source src="violins.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Synth" solo>
+        <ts-source src="synth.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Bass">
+        <ts-source src="bass.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Drums">
+        <ts-source src="drums.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+</div>
+```
+
+<div class="player">
+    <ts-track title="Violins" solo>
+        <ts-source src="data/multitracks/violins.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Synth" solo>
+        <ts-source src="data/multitracks/synth.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Bass">
+        <ts-source src="data/multitracks/bass.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Drums">
+        <ts-source src="data/multitracks/drums.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+</div>
+
+### Mute Tracks
+
+You can preselect **mute** for individual tracks by using the `mute` attribute within the `ts-track` element, like this: `<ts-track title="Bass" mute>`.
+
+```html
+<div class="player">
+    <ts-track title="Violins">
+        <ts-source src="violins.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Synth">
+        <ts-source src="synth.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" mute>
+        <ts-source src="bass.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Drums" mute>
+        <ts-source src="drums.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+</div>
+```
+
+<div class="player">
+    <ts-track title="Violins">
+        <ts-source src="data/multitracks/violins.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Synth">
+        <ts-source src="data/multitracks/synth.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" mute>
+        <ts-source src="data/multitracks/bass.mp3" type="audio/mpeg"></ts-source>
+    </ts-track>
+    <ts-track title="Drums" mute>
+        <ts-source src="data/multitracks/drums.mp3" type="audio/mpeg"></ts-source>
     </ts-track>
 </div>
 
