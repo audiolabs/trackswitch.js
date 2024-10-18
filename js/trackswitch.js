@@ -165,7 +165,12 @@ Plugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
-            that.trackProperties[i] = { mute: false, solo: false, success: false, error: false, };
+            that.trackProperties[i] = {
+                mute: this.hasAttribute('mute'),  // <ts-track title="Track" mute>
+                solo: this.hasAttribute('solo'),  // <ts-track title="Track" solo>
+                success: false,
+                error: false
+            };
 
             // Append classes to '.track' depending on options (for styling and click binding)
             var tabview = that.options.tabview ? " tabs" : ""; // For styling into tab view
