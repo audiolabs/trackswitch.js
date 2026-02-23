@@ -28,6 +28,7 @@ var pluginName = 'trackSwitch',
         onlyradiosolo: false,
         spacebar: false,
         tabview: false,
+        volume: true,
     };
 
 
@@ -67,6 +68,7 @@ function Plugin(element, options) {
     this.trackGainNode = Array();
     this.trackBuffer = Array();
     this.activeAudioSources = Array();
+    this.trackVolume = Array();
 
     // Skip gain node creation if WebAudioAPI could not load.
     if (audioContext) {
@@ -172,10 +174,30 @@ Plugin.prototype.init = function() {
                 error: false
             };
 
+            // Initialize per-track volume from data attribute or default to 1.0
+            that.trackVolume[i] = parseFloat($(this).attr('data-volume')) || 1.0;
+            // Clamp to [0, 1]
+            that.trackVolume[i] = Math.min(1.0, Math.max(0.0, that.trackVolume[i]));
+
             // Append classes to '.track' depending on options (for styling and click binding)
             var tabview = that.options.tabview ? " tabs" : ""; // For styling into tab view
             var radiosolo = that.options.radiosolo ? " radio" : ""; // For styling the (radio)solo button
             var wholesolo = that.options.onlyradiosolo ? " solo" : ""; // For making whole track clickable
+
+            // Volume slider markup
+            var volumeControl = '';
+            if (that.options.volume) {
+                var volPercent = Math.round(that.trackVolume[i] * 100);
+                volumeControl =
+                    '<li class="volume-wrap" title="Volume">' +
+
+                        '<input type="range" class="volume-slider" ' +
+                            'min="0" max="100" step="1" ' +
+                            'value="' + volPercent + '" ' +
+                            'aria-label="Track volume" />' +
+                        '<span class="volume-value">' + volPercent + '%</span>' +
+                    '</li>';
+            }
 
             tracklist.append(
                 // User defined style and title fallback if not defined
@@ -184,6 +206,7 @@ Plugin.prototype.init = function() {
                     '<ul class="control">' +
                         (that.options.mute ? '<li class="mute button" title="Mute">Mute</li>' : '') +
                         (that.options.solo ? '<li class="solo button' + radiosolo + '" title="Solo">Solo</li>' : '') +
+                        volumeControl +
                     '</ul>' +
                 '</li>'
             );
@@ -474,6 +497,9 @@ Plugin.prototype.unbindEvents = function() {
     this.element.off('touchstart mousedown', '.mute');
     this.element.off('touchstart mousedown', '.solo');
 
+
+    this.element.off('input change', '.volume-slider');
+
     if (this.options.spacebar) {
         $(window).unbind("keypress");
     }
@@ -494,6 +520,9 @@ Plugin.prototype.bindEvents = function() {
 
     this.element.on('touchstart mousedown', '.mute', $.proxy(this.event_mute, this));
     this.element.on('touchstart mousedown', '.solo', $.proxy(this.event_solo, this));
+
+
+    this.element.on('input change', '.volume-slider', $.proxy(this.event_volume, this));
 
     if (this.options.spacebar) {
         var that = this;
@@ -824,6 +853,9 @@ Plugin.prototype.event_seekStart = function(event) {
 // When touchmove or mousemove over a seeking area, seek if seeking has been started
 Plugin.prototype.event_seekMove = function(event) {
 
+
+    if ($(event.target).closest('.volume-wrap').length) { return; }
+
     if (this.currentlySeeking) {
         event.preventDefault();
         this.seek(event);
@@ -837,6 +869,9 @@ Plugin.prototype.event_seekMove = function(event) {
 
 // When touchend or mouseup on a seeking area, turn seeking off
 Plugin.prototype.event_seekEnd = function(event) {
+
+
+    if ($(event.target).closest('.volume-wrap').length) { return; }
 
     event.preventDefault();
 
@@ -912,6 +947,30 @@ Plugin.prototype.event_mute = function(event) {
 };
 
 
+// NEW: Handle volume slider change for a specific track
+Plugin.prototype.event_volume = function(event) {
+
+    var targetIndex = this._index_from_target(event.target);
+    var newVolume = parseInt($(event.target).val()) / 100;
+
+    // Store the volume level
+    this.trackVolume[targetIndex] = newVolume;
+
+    // Update the percentage label
+    $(event.target).siblings('.volume-value').text(Math.round(newVolume * 100) + '%');
+
+    // Update the gain node if it exists (player has been activated)
+    if (this.trackGainNode[targetIndex] !== undefined) {
+        // Re-apply track properties so mute/solo logic is respected alongside the new volume
+        this.apply_track_properties();
+    }
+
+    // Stop event from bubbling up and triggering seek etc
+    event.stopPropagation();
+
+};
+
+
 // Cycle through the available images, setting it based on the solo states
 Plugin.prototype.switch_image = function() {
 
@@ -973,20 +1032,23 @@ Plugin.prototype.apply_track_properties = function() {
         // Filter to stop the gains being edited before activation (gain undefined)
         if (that.trackGainNode.length > 0) {
 
-            that.trackGainNode[i].gain.value = 1;
+            // Get the per-track volume (default 1.0 if not set)
+            var vol = (that.trackVolume[i] !== undefined) ? that.trackVolume[i] : 1.0;
+
+            that.trackGainNode[i].gain.value = vol;
 
             // First, only play tracks that are not muted
             if(that.trackProperties[i].mute) {
                 that.trackGainNode[i].gain.value = 0;
             }
             else {
-                that.trackGainNode[i].gain.value = 1;
+                that.trackGainNode[i].gain.value = vol;
             }
 
             // Then, if there are 1 or more soloed tracks, overwrite with their solo state
             if(anySolos) {
                 if(that.trackProperties[i].solo) {
-                    that.trackGainNode[i].gain.value = 1;
+                    that.trackGainNode[i].gain.value = vol;
                 }
                 else {
                     that.trackGainNode[i].gain.value = 0;

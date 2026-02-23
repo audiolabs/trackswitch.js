@@ -243,7 +243,7 @@
     background-color: #DDDDDD;
     position: relative;
     min-height: 32px; /* Required if there is no title defined */
-    padding: 8px 10px 8px 60px; /* Top Right Bottom Left */
+    padding: 8px 10px 8px 230px; /* Top Right Bottom Left */
 }
 
 .jquery-trackswitch li.track.tabs {
@@ -346,6 +346,13 @@
     content: "\f192"; /* fa-dot-circle-o */
 }
 
+.jquery-trackswitch li.track ul.control li.volume-wrap {
+    width: auto ;
+    vertical-align: -11px;
+}
+
+
+
 
 @media (max-width: 767px) {
     /* Style Adjustments for Responsive Design - matched to Boostrap breakpoint */
@@ -391,11 +398,11 @@
     /* TRACK STYLES --------------------------------------------------------- */
 
     .jquery-trackswitch li.track {
-        padding-left: 80px;
+        padding-left: 180px;
     }
 
     .jquery-trackswitch li.track ul.control {
-        top: calc(50% - 19px);
+        top: 0;
     }
 
     .jquery-trackswitch .track .control li.button {
