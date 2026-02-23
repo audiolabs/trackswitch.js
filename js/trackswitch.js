@@ -190,12 +190,11 @@ Plugin.prototype.init = function() {
                 var volPercent = Math.round(that.trackVolume[i] * 100);
                 volumeControl =
                     '<li class="volume-wrap" title="Volume">' +
-
                         '<input type="range" class="volume-slider" ' +
                             'min="0" max="100" step="1" ' +
                             'value="' + volPercent + '" ' +
                             'aria-label="Track volume" />' +
-                        '<span class="volume-value">' + volPercent + '%</span>' +
+                        // '<span class="volume-value">' + volPercent + '%</span>' +
                     '</li>';
             }
 
