@@ -29,10 +29,10 @@ Citation
 
 If you use this software in a scientific publication, please make sure to cite the following publication
 
-Werner, Nils, et al. **"trackswitch.js: A Versatile Web-Based Audio Player for Presenting Scientifc Results."** 3rd web audio conference, London, UK. 2017.
+Werner, Nils, et al. **"trackswitch.js: A Versatile Web-Based Audio Player for Presenting Scientific Results."** 3rd web audio conference, London, UK. 2017.
 
     @inproceedings{werner2017trackswitchjs,
-      title={trackswitch.js: A Versatile Web-Based Audio Player for Presenting Scientifc Results},
+      title={trackswitch.js: A Versatile Web-Based Audio Player for Presenting Scientific Results},
       author={Nils Werner and Stefan Balke and Fabian-Rober Stöter and Meinard Müller and Bernd Edler},
       booktitle={3rd web audio conference, London, UK},
       year={2017},
@@ -54,6 +54,14 @@ See [examples](https://audiolabs.github.io/trackswitch.js/examples.html).
 Development
 -----------
 
-    npm install -g grunt-cli
     npm install
-    grunt serve
+    npm run build
+
+This will compile Sass, concatenate files, and minify CSS/JS into the `dist/` folder.
+
+### Build Scripts
+
+- `npm run build` - Full build (clean, compile, minify)
+- `npm run build:css` - Compile and minify CSS only
+- `npm run build:js` - Concatenate and minify JS only
+- `npm run clean` - Remove `dist/` folder

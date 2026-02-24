@@ -6,7 +6,15 @@
   "homepage": "https://github.com/audiolabs/trackswitch.js",
   "license": "MIT",
   "scripts": {
-    "sass": "node-sass --output-style expanded --precision 6 css/reset.sass dist/tmp/reset.css"
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "sass css/reset.sass dist/tmp/reset.css && npm run concat:css && npm run minify:css",
+    "build:js": "npm run concat:js && npm run minify:js",
+    "concat:css": "node build/concat-css.js",
+    "concat:js": "node build/concat-js.js",
+    "minify:css": "esbuild dist/tmp/concat.css --minify --outfile=dist/css/trackswitch.min.css",
+    "minify:js": "esbuild dist/js/trackswitch.js --minify --outfile=dist/js/trackswitch.min.js",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean"
   },
   "repository": {
     "type": "git",
@@ -22,21 +30,8 @@
     "jquery": ">=1.9.1"
   },
   "devDependencies": {
-    "grunt": "^1.0.1",
-    "grunt-babel": "^6.0.0",
-    "grunt-contrib-clean": "^1.0.0",
-    "grunt-contrib-compress": "^1.4.1",
-    "grunt-contrib-concat": "^1.0.1",
-    "grunt-contrib-connect": "^1.0.2",
-    "grunt-contrib-cssmin": "^2.0.0",
-    "grunt-contrib-uglify": "^2.2.0",
-    "grunt-contrib-watch": "^1.0.0",
-    "grunt-exec": "^2.0.0",
-    "grunt-gh-pages": "^2.0.0",
-    "grunt-stamp": "^0.3.0",
-    "load-grunt-tasks": "^3.5.2",
-    "node-sass": "^4.5.0",
-    "time-grunt": "^1.4.0",
-    "uglify-js": "^2.8.14"
+    "esbuild": "^0.27.3",
+    "rimraf": "^6.0.0",
+    "sass": "^1.83.0"
   }
 }

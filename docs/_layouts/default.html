@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "en-US" }}">
+  <head>
+    <meta charset="UTF-8">
+    <title>{{ page.title | default: site.title }}</title>
+    <meta name="description" content="{{ page.description | default: site.description | default: site.github.project_tagline }}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#157878">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css' />
+    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}" />
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" />
+    <link rel="stylesheet" href="{{ '/css/trackswitch.min.css' | relative_url }}" />
+    <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">
+        <a href="{{ '/' | relative_url }}">
+          {{ site.title | default: site.github.repository_name }}
+        </a>
+      </h1>
+      <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+      <a href="https://www.npmjs.com/package/trackswitch" class="btn">View on npm</a>
+      {% if site.github.is_project_page %}
+        <a href="{{ site.github.zip_url }}" class="btn">Download as ZIP</a>
+        <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
+      {% endif %}
+    </section>
+
+    <section class="main-content">
+      {{ content }}
+
+      <footer class="site-footer">
+        <a href="https://www.audiolabs-erlangen.de/">
+          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" />
+        </a>
+        <a href="https://www.iis.fraunhofer.de/">
+          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" />
+        </a>
+        <a href="https://www.fau.de/">
+          <img src="{{ '/assets/fau.gif' | relative_url }}" alt="" />
+        </a>
+      </footer>
+    </section>
+
+    <script src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="js/trackswitch.min.js"></script>
+    <script type="text/javascript">
+        jQuery(document).ready(function() {
+            jQuery(".customplayer").trackSwitch({ onlyradiosolo: true, repeat: true });
+            jQuery(".player").trackSwitch();
+        });
+    </script>
+  </body>
+</html>
