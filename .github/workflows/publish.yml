@@ -23,16 +23,26 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-          cache: "npm"
+          package-manager-cache: false
 
       - name: Use latest npm CLI
-        run: npm install -g npm@latest
+        run: npm install --global npm@latest
 
       - name: Verify release tag matches package version
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          node -e "const pkg = require('./package.json'); const tag = process.env.TAG_NAME.replace(/^v/, ''); if (pkg.version !== tag) { console.error(`package.json version ${pkg.version} does not match release tag ${process.env.TAG_NAME}`); process.exit(1); }"
+          node -e "
+            const pkg = require('./package.json');
+            const tag = process.env.TAG_NAME.replace(/^v/, '');
+
+            if (pkg.version !== tag) {
+              console.error(
+                \`package.json version \${pkg.version} does not match release tag \${process.env.TAG_NAME}\`
+              );
+              process.exit(1);
+            }
+          "
 
       - name: Install dependencies
         run: npm ci
@@ -45,8 +55,8 @@ jobs:
 
       - name: Publish stable release
         if: ${{ !github.event.release.prerelease }}
-        run: npm publish --provenance
+        run: npm publish
 
       - name: Publish prerelease to next
         if: ${{ github.event.release.prerelease }}
-        run: npm publish --tag next --provenance
+        run: npm publish --tag next
