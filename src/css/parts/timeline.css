@@ -1,0 +1,135 @@
+/* Shared timeline geometry for main seekbar, waveform/MIDI overlays, and seekable images. */
+
+.trackswitch
+:is(
+	.main-control .seekbar,
+	.waveform-wrap .seekwrap,
+	.midi-wrap .seekwrap,
+	.seekable-img-wrap .seekwrap
+) {
+	--ts-playhead-position: 0%;
+	--ts-loop-marker-a: 0%;
+	--ts-loop-marker-b: 0%;
+	--ts-loop-region-start: 0%;
+	--ts-loop-region-width: 0%;
+	position: relative;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap {
+	--ts-zoom-viewport-left: 0px;
+	--ts-zoom-viewport-width: 0px;
+}
+
+.trackswitch .midi-wrap .midi-zoom .midi-zoom-minimap {
+	--ts-zoom-viewport-left: 0px;
+	--ts-zoom-viewport-width: 0px;
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .seekhead,
+		.waveform-wrap .seekwrap .seekhead,
+		.midi-wrap .seekwrap .seekhead,
+		.seekable-img-wrap .seekwrap .seekhead
+	) {
+	position: absolute;
+	left: var(--ts-playhead-position);
+	z-index: 4;
+	transform: translateX(-50%);
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .loop-marker,
+		.waveform-wrap .seekwrap .loop-marker,
+		.midi-wrap .seekwrap .loop-marker,
+		.seekable-img-wrap .seekwrap .loop-marker
+	) {
+	position: absolute;
+	inset-block: 0;
+	display: none;
+	z-index: 2;
+	width: var(--ts-seek-marker-hit-width);
+	cursor: ew-resize;
+	background: transparent;
+	transform: translateX(-50%);
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .loop-marker.marker-a,
+		.waveform-wrap .seekwrap .loop-marker.marker-a,
+		.midi-wrap .seekwrap .loop-marker.marker-a,
+		.seekable-img-wrap .seekwrap .loop-marker.marker-a
+	) {
+	left: var(--ts-loop-marker-a);
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .loop-marker.marker-b,
+		.waveform-wrap .seekwrap .loop-marker.marker-b,
+		.midi-wrap .seekwrap .loop-marker.marker-b,
+		.seekable-img-wrap .seekwrap .loop-marker.marker-b
+	) {
+	left: var(--ts-loop-marker-b);
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .loop-marker,
+		.waveform-wrap .seekwrap .loop-marker,
+		.midi-wrap .seekwrap .loop-marker,
+		.seekable-img-wrap .seekwrap .loop-marker
+	)::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	inset-block: 0;
+	width: var(--ts-seek-marker-line-width);
+	transform: translateX(-50%);
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .loop-region,
+		.waveform-wrap .seekwrap .loop-region,
+		.midi-wrap .seekwrap .loop-region,
+		.seekable-img-wrap .seekwrap .loop-region
+	) {
+	position: absolute;
+	inset-block: 0;
+	left: var(--ts-loop-region-start);
+	width: var(--ts-loop-region-width);
+	display: none;
+	background-color: var(--ts-color-accent-soft-15);
+	z-index: 1;
+}
+
+.trackswitch
+	:is(
+		.main-control .seekbar .loop-region,
+		.waveform-wrap .seekwrap .loop-region,
+		.midi-wrap .seekwrap .loop-region,
+		.seekable-img-wrap .seekwrap .loop-region
+	).active {
+	background-color: var(--ts-color-accent-soft-30);
+}
+
+.trackswitch
+	:is(
+		.waveform-wrap .seekwrap .loop-marker,
+		.midi-wrap .seekwrap .loop-marker,
+		.seekable-img-wrap .seekwrap .loop-marker
+	)::after {
+	background: repeating-linear-gradient(
+		to bottom,
+		var(--ts-color-surface-panel-dark) 0 var(--ts-seek-marker-dash),
+		transparent var(--ts-seek-marker-dash)
+			calc(var(--ts-seek-marker-dash) + var(--ts-seek-marker-gap))
+	);
+}
+
+.trackswitch .main-control .seekbar .loop-marker::after {
+	background-color: var(--ts-color-surface-panel-dark);
+}

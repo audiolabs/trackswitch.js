@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trackswitch.js - Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin: 16px 0 24px 16px;
+            color: #ed8c01;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <a class="back-link" href="/examples/">Back to examples</a>
+    <trackswitch-player id="player" style="display: block; width: 50%; margin: 0 auto;">
+        <script type="application/json">
+            {
+                "presetNames": ["All Tracks", "Violins & Synths", "Drums & Bass", "Drums Only"],
+                "ui": [
+                    {
+                        "type": "image",
+                        "src": "data/cover.png",
+                        "seekable": true
+                    },
+                    {
+                        "type": "waveform",
+                        "height": 150,
+                        "waveformBarWidth": 1
+                    },
+                    {
+                        "type": "text",
+                        "text": "TrackSwitch.js - Default Mode Example",
+                        "bold": false,
+                        "italic": false,
+                        "fontSize": 32
+                    },
+                    {
+                        "type": "trackGroup",
+                        "trackGroup": [
+                            {
+                                "title": "Violins",
+                                "image": "data/violins.png",
+                                "presets": [0, 1],
+                                "sources": [{ "src": "data/violins.mp3" }]
+                            },
+                            {
+                                "title": "Synths",
+                                "image": "data/synth.png",
+                                "presets": [0, 1],
+                                "sources": [{ "src": "data/synth.mp3" }]
+                            },
+                            {
+                                "title": "Bass",
+                                "image": "data/bass.png",
+                                "presets": [0, 2],
+                                "sources": [{ "src": "data/bass.mp3" }]
+                            },
+                            {
+                                "title": "Drums",
+                                "image": "data/drums.png",
+                                "presets": [0, 2, 3],
+                                "sources": [{ "src": "data/drums.mp3" }]
+                            }
+                        ]
+                    }
+                ],
+                "features": {
+                    "exclusiveSolo": false,
+                    "globalVolume": true,
+                    "trackVolumeControls": true,
+                    "trackPanControls": true,
+                    "repeat": false,
+                    "tabView": false,
+                    "iosAudioUnlock": true,
+                    "keyboard": true,
+                    "looping": true,
+                    "seekBar": true,
+                    "timer": true,
+                    "presets": true,
+                    "customizablePanelOrder": false,
+                    "muteOtherPlayerInstances": true
+                }
+            }
+        </script>
+    </trackswitch-player>
+    
+    <script type="module" src="../../src/browser.ts"></script>
+</body>
+
+</html>

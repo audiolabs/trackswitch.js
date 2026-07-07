@@ -1,56 +1,61 @@
 <!DOCTYPE html>
-<html lang="{{ site.lang | default: "en-US" }}">
-  <head>
-    <meta charset="UTF-8">
-    <title>{{ page.title | default: site.title }}</title>
-    <meta name="description" content="{{ page.description | default: site.description | default: site.github.project_tagline }}"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#157878">
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css' />
-    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}" />
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" />
-    <link rel="stylesheet" href="{{ '/css/trackswitch.min.css' | relative_url }}" />
-    <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
-  </head>
-  <body>
-    <section class="page-header">
-      <h1 class="project-name">
-        <a href="{{ '/' | relative_url }}">
-          {{ site.title | default: site.github.repository_name }}
-        </a>
-      </h1>
-      <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
-      <a href="https://www.npmjs.com/package/trackswitch" class="btn">View on npm</a>
-      {% if site.github.is_project_page %}
-        <a href="{{ site.github.zip_url }}" class="btn">Download as ZIP</a>
-        <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
-      {% endif %}
-    </section>
+<html lang="{{ site.lang | default: 'en-US' }}">
 
-    <section class="main-content">
-      {{ content }}
+<head>
+  <meta charset="UTF-8">
+  {% if page.url == '/' %}
+  <title>{{ site.title }}</title>
+  {% else %}
+  <title>{{ page.title | default: site.title }} | {{ site.title }}</title>
+  {% endif %}
+  <meta name="description" content="{{ page.description | default: site.description }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#383838">
+  <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
+</head>
 
-      <footer class="site-footer">
-        <a href="https://www.audiolabs-erlangen.de/">
-          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" />
-        </a>
-        <a href="https://www.iis.fraunhofer.de/">
-          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" />
-        </a>
-        <a href="https://www.fau.de/">
-          <img src="{{ '/assets/fau.gif' | relative_url }}" alt="" />
-        </a>
-      </footer>
-    </section>
+<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/documentation.html' %} class="docs-page docs-page--config"{% elsif page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
+  {% unless page.url == '/' %}
+  <header class="site-masthead">
+    <div class="site-masthead__inner">
+      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch.js</a>
+      <nav class="site-nav" aria-label="Documentation">
+        <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
+        <a href="{{ '/documentation.html' | relative_url }}"{% if page.url == '/documentation.html' %} aria-current="page"{% endif %}>Documentation</a>
+        <a href="{{ '/examples.html' | relative_url }}"{% if page.url == '/examples.html' %} aria-current="page"{% endif %}>Examples</a>
+        <a href="{{ '/citation.html' | relative_url }}"{% if page.url == '/citation.html' %} aria-current="page"{% endif %}>Cite</a>
+      </nav>
+    </div>
+  </header>
+  {% endunless %}
 
-    <script src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-    <script src="js/trackswitch.min.js"></script>
-    <script type="text/javascript">
-        jQuery(document).ready(function() {
-            jQuery(".customplayer").trackSwitch({ onlyradiosolo: true, repeat: true });
-            jQuery(".player").trackSwitch();
-        });
-    </script>
-  </body>
+  <main class="site-main">
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__logos">
+      <a href="https://www.audiolabs-erlangen.de/">
+        <img src="{{ '/assets/alabs.png' | relative_url }}" alt="AudioLabs Erlangen" />
+      </a>
+      <a href="https://www.iis.fraunhofer.de/">
+        <img src="{{ '/assets/iis.svg' | relative_url }}" alt="Fraunhofer IIS" />
+      </a>
+      <a href="https://www.fau.de/">
+        <img src="{{ '/assets/fau.png' | relative_url }}" alt="FAU Erlangen-Nurnberg" />
+      </a>
+    </div>
+  </footer>
+
+  <script src="{{ '/js/trackswitch.js' | relative_url }}"></script>
+  {% if page.url == '/' %}
+  <script src="{{ '/js/homepage-demo.js' | relative_url }}"></script>
+  {% else %}
+  <script src="{{ '/js/docs-code-snippets.js' | relative_url }}"></script>
+  {% endif %}
+  {% if page.url == '/documentation.html' %}
+  <script src="{{ '/js/configuration-toc.js' | relative_url }}"></script>
+  {% endif %}
+</body>
+
 </html>

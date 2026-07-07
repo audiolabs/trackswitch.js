@@ -1,0 +1,184 @@
+/* MIDI VISUALIZATION STYLES ----------------------------------------------- */
+
+.trackswitch .midi-wrap {
+	display: block;
+	position: relative;
+	width: 100%;
+	margin: 0;
+	container-type: inline-size;
+	container-name: ts-midi;
+}
+
+.trackswitch .midi-wrap .midi-scroll {
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	position: relative;
+}
+
+.trackswitch .midi-wrap .midi-scroll::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+	display: none;
+}
+
+.trackswitch .midi-wrap .midi-surface {
+	position: relative;
+	min-width: 100%;
+	overflow: hidden;
+	background: var(--ts-color-surface-base);
+}
+
+.trackswitch .midi-wrap .midi-note-layer {
+	position: absolute;
+	inset: 0;
+}
+
+.trackswitch .midi-wrap .midi-note {
+	position: absolute;
+	overflow: hidden;
+	box-sizing: border-box;
+	border: 1px solid var(--ts-color-accent-soft-55);
+	border-radius: 2px;
+	background: var(--ts-color-accent-soft-30);
+	color: var(--ts-color-text-primary);
+	font-family: var(--ts-font-ui);
+	font-size: 10px;
+	line-height: 1;
+	white-space: nowrap;
+	box-shadow: inset 0 1px 0 var(--ts-color-surface-raised-42);
+}
+
+.trackswitch .midi-wrap .midi-note-label {
+	position: relative;
+	z-index: 1;
+	display: block;
+	overflow: hidden;
+	padding: 2px 4px 0;
+	text-overflow: clip;
+	pointer-events: none;
+}
+
+.trackswitch .midi-wrap .midi-note-velocity {
+	position: absolute;
+	left: 3px;
+	right: auto;
+	bottom: 2px;
+	width: max(1px, calc((100% - 6px) * var(--ts-midi-note-velocity)));
+	height: 3px;
+	border-radius: 1px;
+	background: var(--ts-color-accent);
+	pointer-events: none;
+}
+
+.trackswitch .midi-wrap .midi-overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 5;
+}
+
+.trackswitch .midi-wrap .seekwrap {
+	position: absolute;
+	inset: 0;
+	cursor: pointer;
+	pointer-events: auto;
+	touch-action: pan-y;
+	--seekhead-vertical-extent: 0.35;
+	--seekhead-color: var(--ts-color-surface-panel-dark);
+}
+
+.trackswitch .midi-wrap .seekwrap .seekhead {
+	inset-block: 0;
+	width: var(--ts-waveform-seekhead-width);
+	background-color: var(--seekhead-color);
+}
+
+.trackswitch .midi-wrap .midi-timing,
+.trackswitch .midi-wrap .midi-zoom {
+	position: absolute;
+	top: 4px;
+	width: max-content;
+	z-index: 1;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-panel-dark);
+	user-select: none;
+}
+
+.trackswitch .midi-wrap .midi-timing {
+	right: 8px;
+	padding: 4px 6px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: none;
+}
+
+.trackswitch .midi-wrap .midi-zoom {
+	left: 6px;
+	display: none;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 3px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: auto;
+}
+
+.trackswitch .midi-wrap .midi-zoom .midi-zoom-label {
+	pointer-events: none;
+}
+
+.trackswitch .midi-wrap .midi-zoom .midi-zoom-minimap {
+	position: relative;
+	width: clamp(50px, 16cqw, 220px);
+	height: 18px;
+	overflow: hidden;
+	border-radius: 5px;
+	background: var(--ts-color-surface-raised-94);
+	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
+	pointer-events: auto;
+	cursor: grab;
+	--midi-note-color: var(--ts-color-accent);
+}
+
+.trackswitch .midi-wrap .midi-zoom .midi-zoom-minimap:active {
+	cursor: grabbing;
+}
+
+.trackswitch .midi-wrap .midi-zoom .midi-zoom-canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	opacity: 0.95;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.trackswitch .midi-wrap .midi-zoom .midi-zoom-viewport {
+	position: absolute;
+	left: var(--ts-zoom-viewport-left);
+	width: var(--ts-zoom-viewport-width);
+	top: 1px;
+	bottom: 1px;
+	min-width: 0;
+	border-radius: 4px;
+	border: 1px solid var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-raised-16);
+	box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
+	pointer-events: none;
+}
+
+.trackswitch .midi-wrap.midi-loading .midi-surface::before {
+	content: "Loading MIDI...";
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ts-color-text-secondary);
+	font-family: var(--ts-font-ui);
+	font-size: 13px;
+}

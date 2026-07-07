@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trackswitch.js - Interactive music synchronization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #ed8c01;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            font-size: 1.4em;
+            margin-bottom: 0.3em;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <a class="back-link" href="/examples/">Back to examples</a>
+    <h1>Interactive music synchronization</h1>
+    <p>
+        Drag and drop audio files (.wav, .mp3, .ogg, .flac), MusicXML scores (.xml, .musicxml),
+        and/or MIDI files (.mid, .midi)
+        into the player below. Select one file as the reference timeline, then click
+        <strong>Synchronize</strong> to synchronize all files using your selected warping-path features and algorithm.
+        Alignment is computed entirely in your browser using
+        <a href="https://github.com/meinardmueller/synctoolbox">synctoolbox</a> via
+        <a href="https://pyodide.org">Pyodide</a>.
+    </p>
+
+    <trackswitch-sync-interactive id="player" style="display: block; width: 100%;">
+        <script type="application/json">
+            {
+                "workerUrl": "../../dist/js/trackswitch-interactive-worker.js",
+                "featureSet": "chroma_dlnco_synctoolbox",
+                "algorithm": "mrmsdtw"
+            }
+        </script>
+    </trackswitch-sync-interactive>
+
+    <script type="module" src="../../src/browser.ts"></script>
+</body>
+
+</html>

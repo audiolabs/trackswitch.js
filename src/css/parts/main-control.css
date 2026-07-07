@@ -1,0 +1,355 @@
+/* MAIN CONTROL STYLES ------------------------------------------------------ */
+
+/* Desktop (default): auto-compacting flex layout
+   Row 1: playback | volume | loop | preset | seekbar | timing
+   Seekbar moves to row 2 (full width) if container is too narrow */
+
+.trackswitch .main-control {
+	container-type: inline-size;
+	container-name: ts-main-control;
+}
+
+.trackswitch .main-control ul.control {
+	background-color: var(--ts-color-surface-panel-dark);
+	min-height: var(--ts-main-control-height);
+	padding-block-start: var(--ts-main-control-padding-block-start);
+	padding-block-end: var(--ts-main-control-padding-block-end);
+	padding-inline: var(--ts-main-control-padding-inline);
+	color: var(--ts-color-text-muted);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ts-main-control-row-gap) var(--ts-main-control-column-gap);
+}
+
+.trackswitch .main-control ul.control > li {
+	box-sizing: border-box;
+	min-height: var(--ts-main-control-row-height);
+}
+
+.trackswitch .main-control ul.control > li:not(.seekwrap) {
+	display: flex;
+	align-items: center;
+}
+
+.trackswitch .main-control .playback-group {
+	order: 10;
+}
+
+.trackswitch .main-control .sync-global {
+	order: 15;
+}
+
+.trackswitch .main-control .sync-global.sync-after-loop {
+	order: 35;
+}
+
+.trackswitch .main-control .volume {
+	order: 20;
+}
+
+.trackswitch .main-control .loop-group {
+	order: 30;
+}
+
+.trackswitch .main-control .preset-selector-wrap {
+	order: 40;
+}
+
+.trackswitch .main-control .timing {
+	order: 90;
+	margin-left: 0;
+}
+
+@container ts-main-control (min-width: 1001px) {
+	.trackswitch .main-control ul.control:not(:has(> .seekwrap)) > .timing {
+		margin-left: auto;
+	}
+}
+
+.trackswitch .main-control .settings-button {
+	order: 80;
+	margin-left: auto;
+}
+
+.trackswitch .main-control .seekwrap {
+	order: 50;
+	flex: 1 1 240px;
+}
+
+/* Playback group (play/stop/repeat) */
+.trackswitch .main-control .playback-group > .playback-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--ts-main-control-playback-gap);
+}
+
+.trackswitch .main-control .playback-group > .playback-controls > li.button {
+	width: var(--ts-main-control-icon-size);
+	height: var(--ts-main-control-icon-size);
+	margin: 0;
+}
+
+.trackswitch
+	.main-control
+	.playback-group
+	> .playback-controls
+	> li.button
+	.ts-icon-slot,
+.trackswitch .main-control .settings-button .ts-icon-slot {
+	font-size: var(--ts-main-control-icon-size);
+}
+
+/* Generic button styles within main-control */
+.trackswitch .main-control .button {
+	cursor: pointer;
+}
+
+.trackswitch .main-control .settings-button {
+	width: var(--ts-main-control-icon-size);
+	height: var(--ts-main-control-icon-size);
+}
+
+.trackswitch .main-control .sync-global {
+	width: auto;
+	min-width: 38px;
+	height: var(--ts-preset-selector-height);
+	text-indent: 0;
+	line-height: calc(var(--ts-preset-selector-height) - 4px);
+	font-family: var(--ts-font-ui);
+	font-size: 10px;
+	font-weight: 900;
+	letter-spacing: 0.4px;
+	opacity: 0.7;
+	border: 2px solid currentColor;
+	border-radius: 3px;
+	padding: 0 8px;
+	box-sizing: border-box;
+	text-align: center;
+}
+
+.trackswitch .main-control .sync-global.checked {
+	opacity: 1;
+}
+
+.trackswitch .main-control .sync-global.disabled {
+	opacity: 0.35;
+	cursor: default;
+	pointer-events: none;
+}
+
+/* Timing */
+.trackswitch .main-control .timing {
+	font-family: monospace;
+	white-space: nowrap;
+}
+
+/* Seekbar */
+.trackswitch .main-control .seekwrap {
+	overflow: visible;
+	height: var(--ts-main-seek-hit-height);
+	cursor: pointer;
+	min-width: 200px;
+	width: 100%;
+}
+
+.trackswitch .main-control .seekwrap .seekbar {
+	background-color: var(--ts-color-accent);
+	height: var(--ts-seekbar-height);
+	margin-block-start: calc(
+		(var(--ts-main-seek-hit-height) - var(--ts-seekbar-height)) /
+		2
+	);
+}
+
+.trackswitch .main-control .seekwrap .seekbar .seekhead {
+	background-color: var(--ts-color-accent);
+	transform: none;
+	width: var(--ts-main-seekhead-width);
+	height: var(--ts-main-seekhead-height);
+	top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-marker {
+	height: var(--ts-main-seekhead-height);
+	top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
+}
+
+/* Volume control */
+.trackswitch .main-control .volume-control {
+	display: flex;
+	align-items: center;
+}
+
+.trackswitch .main-control .volume-icon {
+	font-size: 16px;
+	color: var(--ts-color-text-muted);
+	margin-right: 8px;
+	width: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+}
+
+.trackswitch .main-control .volume-slider {
+	--ts-slider-track-color: var(--ts-color-surface-control);
+}
+
+/* Loop group */
+.trackswitch .main-control .control > li.loop-group > .loop-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--ts-main-control-loop-gap);
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.button {
+	margin: 0;
+	width: var(--ts-main-control-large-button-size);
+	height: var(--ts-main-control-large-button-size);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-a
+	.ts-icon-slot {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-a
+	.ts-icon-svg {
+	width: 18px;
+	height: 18px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-b
+	.ts-icon-slot {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-b
+	.ts-icon-svg {
+	width: 18px;
+	height: 18px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-toggle
+	.ts-icon-slot {
+	width: 14px;
+	height: 14px;
+	font-size: 14px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-clear
+	.ts-icon-slot {
+	width: 12px;
+	height: 12px;
+	font-size: 12px;
+	margin-left: -6px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-toggle
+	.ts-icon-svg {
+	width: 14px;
+	height: 14px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-clear
+	.ts-icon-svg {
+	width: 12px;
+	height: 12px;
+}
+
+/* Preset selector */
+.trackswitch .main-control .preset-selector-wrap {
+	position: relative;
+	z-index: 3;
+	display: inline-flex;
+	align-items: center;
+	height: var(--ts-main-control-row-height);
+	min-height: var(--ts-main-control-row-height);
+	max-height: var(--ts-main-control-row-height);
+	line-height: 1;
+	overflow: visible;
+}
+
+.trackswitch .main-control .preset-selector {
+	appearance: auto;
+	background-color: var(--ts-color-surface-control);
+	color: var(--ts-color-text-muted);
+	border: 1px solid var(--ts-color-surface-panel-dark);
+	box-sizing: border-box;
+	display: block;
+	height: var(--ts-preset-selector-height);
+	width: auto;
+	min-height: 0;
+	max-height: var(--ts-preset-selector-height);
+	padding: 0 4px;
+	font: 12px var(--ts-font-ui);
+	line-height: normal;
+	cursor: pointer;
+	border-radius: 4px;
+	pointer-events: auto;
+	touch-action: manipulation;
+	vertical-align: middle;
+}
+
+.trackswitch .main-control .preset-selector:focus,
+.trackswitch .main-control .preset-selector:focus-visible {
+	outline: none;
+	box-shadow: none;
+}
+
+.trackswitch .main-control .preset-selector option {
+	background-color: var(--ts-color-surface-panel-dark);
+	color: var(--ts-color-text-muted);
+}

@@ -1,0 +1,39 @@
+/* SEEKABLE/POSTER IMAGE STYLES --------------------------------------------- */
+
+/* Limit generic image resets to TrackSwitch-managed seekable image content. */
+.trackswitch .seekable-img-wrap > img {
+	max-width: 100%;
+	display: block;
+	margin: 0 auto;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.trackswitch .seekable-img-wrap {
+	display: block;
+	width: fit-content;
+	position: relative;
+	margin: 0 auto;
+}
+
+.trackswitch .seekable-section {
+	display: block;
+	width: 100%;
+	container-type: inline-size;
+	container-name: ts-seekable;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap {
+	position: absolute;
+	inset: 0;
+	cursor: pointer;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap .seekhead {
+	inset-block: 0;
+	width: var(--ts-waveform-seekhead-width);
+	background-color: var(--ts-color-text-primary);
+}

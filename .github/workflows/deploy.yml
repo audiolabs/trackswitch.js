@@ -19,38 +19,42 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: docs/Gemfile
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
-      
+          node-version: '24'
+
       - name: Install dependencies
         run: npm ci
-      
-      - name: Build project
-        run: npm run build
-      
-      - name: Prepare Jekyll site
-        run: |
-          mkdir -p docs/css docs/js
-          cp dist/css/trackswitch.min.css docs/css/
-          cp dist/js/trackswitch.min.js docs/js/
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build project and docs assets
+        run: npm run docs:build
       
       - name: Setup Pages
-        uses: actions/configure-pages@v5
-      
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
-          source: ./docs
-          destination: ./_site
+          ruby-version: '3.2'
+          bundler: '4.0.7'
+          bundler-cache: true
+
+      - name: Build with Jekyll
+        run: bundle exec jekyll build --source ./docs --destination ./_site --baseurl "${{ steps.pages.outputs.base_path }}"
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
 
   # Deployment job
   deploy:
@@ -62,4 +66,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

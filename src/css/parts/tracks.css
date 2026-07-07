@@ -1,0 +1,282 @@
+/* TRACK STYLES ------------------------------------------------------------- */
+
+.trackswitch ul.track_list {
+	padding: 0;
+	container-type: inline-size;
+	container-name: ts-tracks;
+}
+
+.trackswitch ul.track_list:has(> li.track.tabs) {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 23rem), 1fr));
+}
+
+.trackswitch li.track {
+	--ts-track-row-bg: var(--ts-color-text-muted);
+	background-color: var(--ts-track-row-bg);
+	position: relative;
+	min-height: var(--ts-track-min-height);
+	padding: var(--ts-track-padding-block) var(--ts-track-padding-inline);
+	padding-inline-start: calc(
+		var(--ts-track-control-column) +
+		var(--ts-track-padding-inline)
+	);
+	display: flex;
+	align-items: center;
+	cursor: default;
+	container-type: inline-size;
+	container-name: ts-track-row;
+}
+
+.trackswitch li.track.tabs {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	padding-inline: 8px 12px;
+	border: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch li.track:not(.tabs):nth-child(even) {
+	--ts-track-row-bg: var(--ts-color-surface-base);
+}
+
+.trackswitch li.track.error,
+.trackswitch li.track.error:not(.tabs):nth-child(even) {
+	--ts-track-row-bg: var(--ts-color-track-error-bg);
+}
+
+.trackswitch li.track .track-error-indicator {
+	display: none;
+	align-items: center;
+	gap: 8px;
+	color: var(--ts-color-text-error);
+	margin-right: 10px;
+	flex: 0 0 auto;
+}
+
+.trackswitch li.track .track-error-indicator .ts-icon-slot {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.trackswitch li.track.error .track-error-indicator {
+	display: inline-flex;
+}
+
+.trackswitch li.track .track-error-text {
+	font-size: 12px;
+	font-weight: bold;
+	letter-spacing: 0.02em;
+}
+
+.trackswitch li.track ul.control {
+	position: absolute;
+	inset-block-start: 50%;
+	transform: translateY(-50%);
+	inset-inline-start: var(--ts-track-padding-inline);
+	padding-left: 0;
+}
+
+.trackswitch li.track.tabs ul.control {
+	position: static;
+	transform: none;
+	inset-block-start: auto;
+	inset-inline-start: auto;
+	order: -1;
+	flex: 0 0 auto;
+}
+
+.trackswitch li.track ul.control li {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--ts-track-control-size);
+	height: var(--ts-track-control-size);
+}
+
+.trackswitch .control li.button:not(.sync-global) {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.trackswitch .control li.button .ts-icon-slot {
+	position: static;
+	width: 1em;
+	height: 1em;
+	font-size: 16px;
+}
+
+.trackswitch .control li.repeat .ts-icon-slot {
+	opacity: 0.5;
+}
+
+.trackswitch .control li.repeat.checked .ts-icon-slot {
+	opacity: 1;
+}
+
+.trackswitch .control li.loop-a .ts-icon-slot,
+.trackswitch .control li.loop-b .ts-icon-slot {
+	opacity: 0.5;
+}
+
+.trackswitch .control li.loop-a.checked .ts-icon-slot,
+.trackswitch .control li.loop-a.active .ts-icon-slot,
+.trackswitch .control li.loop-b.checked .ts-icon-slot,
+.trackswitch .control li.loop-b.active .ts-icon-slot {
+	opacity: 1;
+}
+
+.trackswitch .control li.loop-toggle .ts-icon-slot {
+	opacity: 0.5;
+}
+
+.trackswitch .control li.loop-toggle.checked .ts-icon-slot {
+	opacity: 1;
+}
+
+.trackswitch .control li.loop-clear .ts-icon-slot {
+	opacity: 0.5;
+}
+
+.trackswitch .control li.loop-clear:hover .ts-icon-slot {
+	opacity: 1;
+}
+
+.trackswitch .control li.solo .ts-icon-slot {
+	position: static;
+	width: 1em;
+	height: 1em;
+	font-size: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transform: none;
+}
+
+.trackswitch .control li.solo .ts-icon-slot .ts-icon-svg {
+	width: 1em;
+	height: 1em;
+	flex: 0 0 1em;
+	overflow: visible;
+	transform-origin: center;
+	shape-rendering: geometricPrecision;
+}
+
+.trackswitch .control li.solo .ts-icon-slot[data-icon="circle"] .ts-icon-svg,
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle-check"]
+	.ts-icon-svg,
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle-dot"]
+	.ts-icon-svg {
+	transform: none;
+}
+
+.trackswitch .control li.solo.radio {
+	margin: 0;
+}
+
+.trackswitch li.track .control li.button.disabled {
+	opacity: 0.35;
+	cursor: default;
+	pointer-events: none;
+}
+
+.trackswitch li.track .track-title {
+	line-height: 1.35;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: default;
+}
+
+.trackswitch li.track.tabs .track-title {
+	flex: 0 1 auto;
+	min-width: 7ch;
+	max-width: 18ch;
+}
+
+.trackswitch li.track .track-mix-controls {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	gap: var(--ts-track-mix-gap);
+	padding-left: var(--ts-track-mix-padding);
+}
+
+.trackswitch li.track.tabs .track-mix-controls {
+	margin-left: 6px;
+	padding-left: 0;
+}
+
+.trackswitch li.track .track-volume-control,
+.trackswitch li.track .track-pan-control {
+	display: flex;
+	align-items: center;
+}
+
+.trackswitch li.track.tabs .track-volume-control,
+.trackswitch li.track.tabs .track-pan-control {
+	flex: 0 0 auto;
+}
+
+.trackswitch li.track .track-volume-icon {
+	font-size: 16px;
+	color: var(--ts-color-text-secondary);
+	margin-right: 8px;
+	width: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+}
+
+.trackswitch li.track .track-pan-label {
+	color: var(--ts-color-text-secondary);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	margin-right: 8px;
+	min-width: 24px;
+}
+
+.trackswitch li.track.tabs .track-pan-label {
+	flex: 0 0 2.4em;
+	min-width: 2.4em;
+	text-align: center;
+}
+
+.trackswitch li.track .mix-slider {
+	--ts-slider-track-color: var(--ts-color-border-mid);
+}
+
+.trackswitch li.track.tabs .mix-slider {
+	flex: 0 0 72px;
+	width: 72px;
+}
+
+.trackswitch li.track .mix-slider:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
+
+.trackswitch li.track .track-pan-control.disabled .track-pan-label,
+.trackswitch li.track .track-mix-controls.disabled .track-volume-icon {
+	opacity: 0.45;
+}

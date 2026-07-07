@@ -1,0 +1,52 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tagged release
+        uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      - name: Use latest npm CLI
+        run: npm install -g npm@latest
+
+      - name: Verify release tag matches package version
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          node -e "const pkg = require('./package.json'); const tag = process.env.TAG_NAME.replace(/^v/, ''); if (pkg.version !== tag) { console.error(`package.json version ${pkg.version} does not match release tag ${process.env.TAG_NAME}`); process.exit(1); }"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Verify published package contents
+        run: npm pack --dry-run
+
+      - name: Publish stable release
+        if: ${{ !github.event.release.prerelease }}
+        run: npm publish --provenance
+
+      - name: Publish prerelease to next
+        if: ${{ github.event.release.prerelease }}
+        run: npm publish --tag next --provenance

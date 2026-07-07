@@ -1,0 +1,51 @@
+.trackswitch.trackswitch {
+	--ts-main-control-icon-size: 14px;
+	--ts-main-control-large-button-size: 20px;
+	--ts-preset-selector-height: 24px;
+
+	--ts-main-control-height: 24px;
+	--ts-main-control-row-height: max(
+		var(--ts-main-seek-hit-height),
+		var(--ts-main-control-large-button-size)
+	);
+	--ts-main-control-padding-block-start: 8px;
+	--ts-main-control-padding-block-end: 8px;
+	--ts-main-control-padding-inline: 12px;
+	--ts-main-control-row-gap: 8px;
+	--ts-main-control-column-gap: 16px;
+	--ts-main-control-playback-gap: 10px;
+	--ts-main-control-loop-gap: 2px;
+
+	--ts-track-min-height: 32px;
+	--ts-track-padding-block: 8px;
+	--ts-track-padding-inline: 10px;
+	--ts-track-control-column: 30px;
+	--ts-track-control-size: 24px;
+	--ts-track-mix-gap: 14px;
+	--ts-track-mix-padding: 14px;
+
+	--ts-seekbar-height: 6px;
+	--ts-main-seek-hit-height: 20px;
+	--ts-main-seekhead-width: 5px;
+	--ts-main-seekhead-half-width: 2.5px;
+	--ts-main-seekhead-height: 20px;
+	--ts-seek-marker-hit-width: 10px;
+	--ts-seek-marker-line-width: 2px;
+	--ts-seek-marker-dash: 6px;
+	--ts-seek-marker-gap: 2px;
+	--ts-waveform-seekhead-width: 2px;
+
+	--ts-panel-gutter-sm: 12px;
+	--ts-panel-gutter-md: 16px;
+	--ts-panel-gutter-lg: 22px;
+	--ts-interactive-panel-padding: 18px;
+	--ts-interactive-panel-gap: 18px;
+
+	--ts-slider-thumb-size: 12px;
+	--ts-slider-track-size: 5px;
+	--ts-slider-hit-size: 16px;
+	--ts-slider-width: 80px;
+	--ts-slider-track-color: var(--ts-color-surface-control);
+	--ts-slider-thumb-color: var(--ts-color-accent);
+	--ts-shortcut-delay: 40ms;
+}
