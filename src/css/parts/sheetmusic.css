@@ -1,0 +1,70 @@
+/* SHEET MUSIC VISUALIZATION STYLES ---------------------------------------- */
+
+.trackswitch .sheetmusic-wrap {
+	display: block;
+	position: relative;
+	width: 100%;
+	margin: 0;
+	background: var(--ts-color-text-inverse);
+}
+
+.trackswitch .sheetmusic-wrap[data-sheetmusic-max-width-applied="true"] {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.trackswitch .sheetmusic-wrap .sheetmusic-scroll {
+	overflow-x: hidden;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	position: relative;
+	padding: 8px;
+}
+
+.trackswitch .sheetmusic-wrap.sheetmusic-scrollable .sheetmusic-scroll {
+	overflow-y: auto;
+}
+
+.trackswitch .sheetmusic {
+	min-height: 120px;
+}
+
+.trackswitch .sheetmusic img[id^="cursorImg"] {
+	max-width: none !important;
+	margin: 0 !important;
+	display: inline !important;
+}
+
+.trackswitch .sheetmusic.sheetmusic-loading {
+	position: relative;
+}
+
+.trackswitch .sheetmusic.sheetmusic-loading:empty::before {
+	content: "Loading score...";
+	display: block;
+	padding: 12px;
+	font-size: 12px;
+	color: var(--ts-color-text-secondary);
+}
+
+.trackswitch .sheetmusic.sheetmusic-error:empty::before {
+	content: "Sheet music unavailable.";
+	display: block;
+	padding: 12px;
+	font-size: 12px;
+	color: var(--ts-color-text-error);
+}
+
+.trackswitch .sheetmusic.sheetmusic-ready.sheetmusic-map-error::after {
+	content: "Measure sync unavailable";
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 2;
+	padding: 3px 6px;
+	border-radius: 3px;
+	font-size: 11px;
+	background: var(--ts-color-overlay-button);
+	color: var(--ts-color-surface-panel-dark);
+	pointer-events: none;
+}

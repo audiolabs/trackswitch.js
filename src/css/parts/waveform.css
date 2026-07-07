@@ -1,0 +1,170 @@
+/* WAVEFORM VISUALIZATION STYLES -------------------------------------------- */
+
+.trackswitch .waveform-wrap {
+	display: block;
+	position: relative;
+	width: 100%;
+	margin: 0;
+	container-type: inline-size;
+	container-name: ts-waveform;
+}
+
+.trackswitch .waveform-wrap .waveform-scroll {
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	position: relative;
+}
+
+.trackswitch .waveform-wrap .waveform-scroll::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+	display: none;
+}
+
+.trackswitch .waveform-wrap .waveform-surface {
+	position: relative;
+	min-width: 100%;
+}
+
+.trackswitch .waveform-wrap .waveform-surface .waveform-tile-layer {
+	position: absolute;
+	inset: 0;
+}
+
+.trackswitch .waveform-wrap .waveform-surface .waveform-tile {
+	position: absolute;
+	top: 0;
+	display: block;
+}
+
+.trackswitch .waveform-wrap .waveform-surface canvas.waveform-tile {
+	overflow: hidden;
+}
+
+.trackswitch .waveform-wrap .waveform-overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 5;
+}
+
+.trackswitch .waveform {
+	display: block;
+	width: 100%;
+	background-color: var(--ts-color-surface-base);
+	--waveform-color: var(--ts-color-accent);
+}
+
+.trackswitch .waveform-wrap .seekwrap {
+	position: absolute;
+	inset: 0;
+	cursor: pointer;
+	pointer-events: auto;
+	touch-action: pan-y;
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead {
+	inset-block: 0;
+	width: var(--ts-waveform-seekhead-width);
+}
+
+.trackswitch .waveform-wrap .seekwrap {
+	--seekhead-vertical-extent: 0.35;
+	--seekhead-color: var(--ts-color-surface-panel-dark);
+	--seekhead-ref-color: var(--ts-color-surface-panel-dark);
+	--alignment-points-color: var(--ts-color-alignment-points);
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead {
+	background-color: var(--seekhead-color);
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+	pointer-events: none;
+	z-index: 4;
+}
+
+.trackswitch .waveform-wrap .seekwrap.aligned-playhead .seekhead {
+	display: none;
+}
+
+.trackswitch .waveform-wrap .waveform-timing,
+.trackswitch .waveform-wrap .waveform-zoom {
+	position: absolute;
+	top: 4px;
+	width: max-content;
+	z-index: 1;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-panel-dark);
+	user-select: none;
+}
+
+.trackswitch .waveform-wrap .waveform-timing {
+	right: 8px;
+	padding: 4px 6px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: none;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom {
+	left: 6px;
+	display: none;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 3px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: auto;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-label {
+	pointer-events: none;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap {
+	position: relative;
+	width: clamp(50px, 16cqw, 220px);
+	height: 18px;
+	overflow: hidden;
+	border-radius: 5px;
+	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
+	pointer-events: auto;
+	cursor: grab;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap:active {
+	cursor: grabbing;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	opacity: 0.95;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-viewport {
+	position: absolute;
+	left: var(--ts-zoom-viewport-left);
+	width: var(--ts-zoom-viewport-width);
+	top: 1px;
+	bottom: 1px;
+	min-width: 0;
+	border-radius: 4px;
+	border: 1px solid var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-raised-16);
+	box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
+	pointer-events: none;
+}

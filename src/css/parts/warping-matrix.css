@@ -1,0 +1,259 @@
+/* WARPING MATRIX ----------------------------------------------------------- */
+
+.trackswitch .warping-matrix-wrap {
+	display: block;
+	margin: 0;
+}
+
+.trackswitch .warping-matrix-host {
+	width: 100%;
+	min-height: 180px;
+	display: flex;
+	align-items: stretch;
+	gap: 8px;
+	position: relative;
+}
+
+.trackswitch .warping-matrix-host.warping-matrix-host-stacked {
+	flex-direction: column;
+	gap: 10px;
+}
+
+.trackswitch .warping-matrix-panel {
+	width: auto;
+	min-height: 180px;
+	position: relative;
+	background-color: var(--ts-color-surface-base);
+}
+
+.trackswitch .warping-matrix-panel-main {
+	flex: 0 0 auto;
+}
+
+.trackswitch .warping-matrix-panel-tempo {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.trackswitch .warping-plot-host {
+	width: 100%;
+	height: 100%;
+	position: relative;
+	font-family: var(--ts-font-ui);
+	background-color: var(--ts-color-surface-base);
+}
+
+.trackswitch .warping-plot-host-tempo {
+	flex: 1 1 auto;
+	height: auto;
+	min-height: 0;
+	order: 2;
+}
+
+.trackswitch .warping-tempo-controls {
+	order: 0;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	align-items: start;
+	gap: 8px 12px;
+	width: 100%;
+	min-width: 0;
+	padding: 6px 8px 4px 8px;
+	border-bottom: 1px solid var(--ts-color-text-muted);
+	background-color: var(--ts-color-surface-base);
+	position: relative;
+	z-index: 2;
+}
+
+.trackswitch .warping-tempo-message {
+	order: 1;
+	padding: 6px 10px;
+	border-bottom: 1px solid var(--ts-color-text-muted);
+	background-color: var(--ts-color-track-error-bg);
+	color: var(--ts-color-text-primary);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.trackswitch .warping-tempo-control {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 0;
+	min-width: 0;
+	width: 100%;
+}
+
+.trackswitch.trackswitch .warping-tempo-control-label {
+	flex: 0 0 auto;
+	min-width: fit-content;
+	margin-right: 8px;
+	white-space: nowrap;
+}
+
+.trackswitch.trackswitch .warping-tempo-slider {
+	--ts-slider-track-color: var(--ts-color-surface-control);
+	--ts-slider-width: 6rem;
+	flex: 0 0 6rem;
+	width: 6rem;
+	min-width: 6rem;
+	min-inline-size: 0;
+	max-inline-size: 6rem;
+	max-width: 6rem;
+	margin: 0;
+	display: block;
+}
+
+.trackswitch .warping-tempo-slider:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
+
+.trackswitch.trackswitch .warping-tempo-value {
+	flex: 0 0 3.75em;
+	width: 3.75em;
+	margin-left: 0;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.trackswitch.trackswitch .warping-tempo-text-node {
+	display: block;
+	color: var(--ts-color-text-secondary);
+	font-family: var(--ts-font-ui);
+	font-size: 15px;
+	font-weight: 400;
+	line-height: 18px;
+}
+
+.trackswitch .warping-plot-host .warping-plot-svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+.trackswitch .warping-plot-title {
+	fill: var(--ts-color-text-secondary);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.trackswitch .warping-plot-axis path,
+.trackswitch .warping-plot-axis line {
+	stroke: var(--ts-color-text-secondary);
+}
+
+.trackswitch .warping-plot-axis text {
+	fill: var(--ts-color-text-secondary);
+	font-size: 14px;
+}
+
+.trackswitch .warping-plot-axis-label {
+	fill: var(--ts-color-text-secondary);
+	font-size: 12px;
+}
+
+.trackswitch .warping-path-line {
+	fill: none;
+	stroke: var(--ts-color-accent);
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.trackswitch .warping-guide-line {
+	fill: none;
+	stroke: var(--ts-color-text-secondary);
+	stroke-width: 1.3px;
+	stroke-dasharray: 6 4;
+}
+
+.trackswitch .warping-playhead-dot {
+	fill: var(--ts-color-text-secondary);
+	stroke: var(--ts-color-surface-base);
+	stroke-width: 1px;
+}
+
+.trackswitch .warping-tempo-line {
+	fill: none;
+	stroke: var(--ts-color-accent);
+	stroke-width: 2px;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.trackswitch .warping-tempo-reference-line {
+	fill: none;
+	stroke: var(--ts-color-text-secondary);
+	stroke-width: 1.3px;
+	stroke-dasharray: 6 4;
+}
+
+.trackswitch .warping-tempo-center-line {
+	fill: none;
+	stroke: var(--ts-color-text-secondary);
+	stroke-width: 1.3px;
+	stroke-dasharray: 5 5;
+}
+
+.trackswitch.trackswitch .warping-matrix-sync-overlay {
+	position: absolute;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--ts-color-overlay-dim);
+	color: var(--ts-color-text-inverse);
+	font-size: 20px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	pointer-events: auto;
+	z-index: 4;
+}
+
+.trackswitch
+	.warping-matrix-host.warping-matrix-sync-disabled
+	.warping-plot-host {
+	pointer-events: none;
+}
+
+.trackswitch
+	.warping-matrix-host.warping-matrix-sync-disabled
+	.warping-tempo-controls {
+	pointer-events: none;
+}
+
+.trackswitch
+	.warping-matrix-host.warping-matrix-sync-disabled
+	.warping-matrix-sync-overlay {
+	display: flex;
+}
+
+@media (max-width: 500px) {
+	.trackswitch .warping-matrix-host {
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.trackswitch .warping-matrix-panel-main,
+	.trackswitch .warping-matrix-panel-tempo {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.trackswitch .warping-tempo-controls {
+		grid-template-columns: 1fr;
+		gap: 8px;
+	}
+
+	.trackswitch .warping-tempo-message {
+		font-size: 11px;
+	}
+
+	.trackswitch .warping-tempo-control {
+		width: 100%;
+	}
+}

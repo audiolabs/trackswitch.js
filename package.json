@@ -1,37 +1,114 @@
 {
-  "name": "trackswitch",
-  "version": "0.1.0",
-  "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
-  "description": "Multitrack Audio Player",
-  "homepage": "https://github.com/audiolabs/trackswitch.js",
-  "license": "MIT",
-  "scripts": {
-    "build": "npm run build:css && npm run build:js",
-    "build:css": "sass css/reset.sass dist/tmp/reset.css && npm run concat:css && npm run minify:css",
-    "build:js": "npm run concat:js && npm run minify:js",
-    "concat:css": "node build/concat-css.js",
-    "concat:js": "node build/concat-js.js",
-    "minify:css": "esbuild dist/tmp/concat.css --minify --outfile=dist/css/trackswitch.min.css",
-    "minify:js": "esbuild dist/js/trackswitch.js --minify --outfile=dist/js/trackswitch.min.js",
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/audiolabs/trackswitch.js.git"
-  },
-  "bugs": {
-    "url": "https://github.com/audiolabs/trackswitch.js/issues"
-  },
-  "style": "dist/css/trackswitch.css",
-  "main": "dist/js/trackswitch",
-  "dependencies": {
-    "font-awesome": "^4.2.0",
-    "jquery": ">=1.9.1"
-  },
-  "devDependencies": {
-    "esbuild": "^0.27.3",
-    "rimraf": "^6.0.0",
-    "sass": "^1.83.0"
-  }
+	"name": "trackswitch",
+	"version": "2.0.0",
+	"description": "Multitrack Audio Player",
+	"keywords": [
+		"audio",
+		"player",
+		"multitrack",
+		"web-audio",
+		"music",
+		"waveform",
+		"sheet-music",
+		"synchronization",
+		"react"
+	],
+	"license": "MIT",
+	"type": "module",
+	"engines": {
+		"node": ">=18"
+	},
+	"author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
+	"contributors": [
+		"Manuel Peters (manuel.peters@audiolabs-erlangen.de)"
+	],
+	"homepage": "https://github.com/audiolabs/trackswitch.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/audiolabs/trackswitch.js.git"
+	},
+	"bugs": {
+		"url": "https://github.com/audiolabs/trackswitch.js/issues"
+	},
+	"publishConfig": {
+		"provenance": true
+	},
+	"files": [
+		"dist/",
+		"LICENSE",
+		"README.md",
+		"THIRD_PARTY_NOTICES.md"
+	],
+	"module": "dist/esm/index.js",
+	"types": "dist/types/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/types/index.d.ts",
+			"import": "./dist/esm/index.js"
+		},
+		"./element": {
+			"types": "./dist/types/element.d.ts",
+			"import": "./dist/esm/element.js"
+		},
+		"./react": {
+			"types": "./dist/types/react.d.ts",
+			"import": "./dist/esm/react.js"
+		},
+		"./vue": {
+			"types": "./dist/types/vue.d.ts",
+			"import": "./dist/esm/vue.js"
+		},
+		"./svelte": {
+			"types": "./dist/types/svelte.d.ts",
+			"import": "./dist/esm/svelte.js"
+		},
+		"./interactive": {
+			"types": "./dist/types/interactive.d.ts",
+			"import": "./dist/esm/interactive.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"unpkg": "dist/js/trackswitch.js",
+	"jsdelivr": "dist/js/trackswitch.js",
+	"peerDependencies": {
+		"react": ">=18",
+		"vue": ">=3"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		},
+		"vue": {
+			"optional": true
+		}
+	},
+	"scripts": {
+		"clean": "rimraf dist",
+		"build": "npm run build:browser && npm run build:worker && npm run build:runtime-assets && npm run build:esm && npm run build:types",
+		"build:browser": "vite build --mode browser",
+		"build:worker": "vite build --mode worker",
+		"build:runtime-assets": "node scripts/sync-runtime-assets.mjs",
+		"build:esm": "vite build --mode esm",
+		"docs:assets": "node scripts/sync-docs-assets.mjs",
+		"docs:build": "npm run build && npm run docs:assets",
+		"build:types": "tsc --project tsconfig.build.json",
+		"dev": "vite",
+		"prebuild": "npm run clean",
+		"prepack": "npm run build",
+		"typecheck": "tsc --project tsconfig.json",
+		"typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
+	},
+	"dependencies": {
+		"@tonejs/midi": "^2.0.28",
+		"d3": "^7.9.0",
+		"opensheetmusicdisplay": "^2.0.0",
+		"papaparse": "^5.5.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.15",
+		"@types/d3": "^7.4.3",
+		"rimraf": "^6.0.0",
+		"typescript": "^5.9.3",
+		"vite": "^8.0.10"
+	}
 }

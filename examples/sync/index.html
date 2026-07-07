@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trackswitch.js - Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin: 16px 0 24px 16px;
+            color: #ed8c01;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <a class="back-link" href="/examples/">Back to examples</a>
+    <trackswitch-sync-player id="player" style="display: block; width: 50%; margin: 0 auto;">
+        <script type="application/json">
+            {
+                "ui": [
+                    {
+                        "type": "sheetMusic",
+                        "src": "data/Schubert_D911-03.xml",
+                        "measureColumn": "measure_Schubert_D911-03_2",
+                        "maxHeight": 370,
+                        "maxWidth": 1000,
+                        "renderScale": 0.7,
+                        "followPlayback": true,
+                        "cursorColor": "#999999",
+                        "cursorAlpha": 0.4
+                    },
+                    {
+                        "type": "midi",
+                        "src": "data/Schubert_D911-03.mid",
+                        "alignmentColumn": "time_Schubert_D911-03",
+                        "height": 180,
+                        "maxZoom": 5,
+                        "playbackFollowMode": "center",
+                        "timer": true
+                    },
+                    {
+                        "type": "waveform",
+                        "waveformSource": 0,
+                        "waveformBarWidth": 1,
+                        "height": 100,
+                        "timer": true,
+                        "alignedPlayhead": true,
+                        "showAlignmentPoints": false
+                    },
+                    {
+                        "type": "waveform",
+                        "waveformSource": 1,
+                        "waveformBarWidth": 1,
+                        "height": 100,
+                        "timer": true,
+                        "alignedPlayhead": true,
+                        "showAlignmentPoints": false
+                    },
+                    {
+                        "type": "warpingMatrix",
+                        "height": 200,
+                        "bpm": null
+                    },
+                    {
+                        "type": "trackGroup",
+                        "trackGroup": [
+                            {
+                                "title": "Schubert: Winterreise, D. 911: No. 3 - HU33",
+                                "sources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
+                                "alignment": {
+                                    "synchronizedSources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
+                                    "column": "time_Schubert_D911-03_HU33"
+                                }
+                            },
+                            {
+                                "title": "Schubert: Winterreise, D. 911: No. 3 - SC06",
+                                "sources": [{ "src": "data/Schubert_D911-03_SC06.wav" }],
+                                "alignment": {
+                                    "synchronizedSources": [{ "src": "data/Schubert_D911-03_SC06_syncronized.wav" }],
+                                    "column": "time_Schubert_D911-03_SC06"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "alignment": {
+                    "csv": "data/alignment.csv",
+                    "referenceTimeColumn": "time_sync_reference",
+                    "referenceTimeColumnSync": "time_sync_reference",
+                    "outOfRange": "clamp"
+                },
+                "features": {
+                    "repeat": false,
+                    "timer": true,
+                    "trackVolumeControls": true,
+                    "trackPanControls": true,
+                    "seekBar": true,
+                    "keyboard": true,
+                    "globalVolume": true,
+                    "looping": true,
+                    "presets": false,
+                    "customizablePanelOrder": false,
+                    "tabView": false,
+                    "iosAudioUnlock": true,
+                    "muteOtherPlayerInstances": true
+                }
+            }
+        </script>
+    </trackswitch-sync-player>
+
+    <script type="module" src="../../src/browser.ts"></script>
+</body>
+
+</html>

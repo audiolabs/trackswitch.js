@@ -1,0 +1,486 @@
+/* Main-control layout adapts to container width; touch sizing adapts to viewport width. */
+@container ts-main-control (max-width: 1000px) {
+	.trackswitch .main-control ul.control {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		row-gap: var(--ts-main-control-row-gap);
+		column-gap: var(--ts-main-control-column-gap);
+		min-height: var(--ts-main-control-height);
+		padding-block-start: var(--ts-main-control-padding-block-start);
+		padding-block-end: var(--ts-main-control-padding-block-end);
+		padding-inline: var(--ts-main-control-padding-inline);
+	}
+
+	.trackswitch .main-control .settings-button {
+		margin-left: auto;
+	}
+
+	.trackswitch .main-control .timing {
+		flex: 0 0 auto;
+		margin-left: 0;
+		text-align: right;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:not(:has(> .settings-button))
+		> .timing {
+		margin-left: auto;
+	}
+
+	.trackswitch .main-control .seekwrap {
+		order: 100;
+		flex: 0 0 100%;
+		min-width: 0;
+		width: 100%;
+		margin: 0;
+		padding: 0;
+	}
+}
+
+@container ts-main-control (max-width: 700px) {
+	.trackswitch .main-control .volume,
+	.trackswitch .main-control .preset-selector-wrap {
+		align-self: center;
+	}
+
+	.trackswitch .main-control .timing {
+		order: 200;
+		flex: 0 0 100%;
+		justify-content: center;
+		justify-self: center;
+		margin-left: 0;
+		text-align: center;
+	}
+
+	.trackswitch .main-control ul.control > .timing {
+		margin-left: 0;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:not(:has(> .settings-button))
+		> .timing {
+		margin-left: 0;
+	}
+
+	.trackswitch .main-control .seekwrap {
+		order: 300;
+		min-width: 0;
+	}
+}
+
+@container ts-main-control (max-width: 700px) {
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-a,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-b,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-toggle,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-clear {
+		z-index: 2;
+		touch-action: manipulation;
+		pointer-events: auto;
+	}
+
+	.trackswitch .main-control .sync-global.sync-after-loop {
+		order: 55;
+	}
+}
+
+@container ts-main-control (max-width: 500px) {
+	.trackswitch .main-control ul.control {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-auto-rows: var(--ts-main-control-row-height);
+		align-items: center;
+		column-gap: var(--ts-main-control-column-gap);
+		row-gap: var(--ts-main-control-row-gap);
+	}
+
+	.trackswitch .main-control .playback-group {
+		order: 10;
+		grid-column: auto;
+		min-width: 0;
+	}
+
+	.trackswitch .main-control .volume {
+		order: 20;
+		grid-column: auto;
+		justify-self: end;
+		margin: 0;
+	}
+
+	.trackswitch .main-control .loop-group {
+		order: 50;
+		grid-column: auto;
+		justify-self: end;
+		margin: 0;
+	}
+
+	.trackswitch .main-control .preset-selector-wrap {
+		order: 40;
+		grid-column: auto;
+		min-width: 0;
+		margin: 0;
+	}
+
+	.trackswitch .main-control .sync-global,
+	.trackswitch .main-control .settings-button {
+		grid-column: auto;
+	}
+
+	/* Keep preset left and looping right when both controls are enabled. */
+	.trackswitch .main-control
+		ul.control:has(> .preset-selector-wrap):has(> .loop-group)
+		> .preset-selector-wrap {
+		grid-column: 1;
+		justify-self: start;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:has(> .preset-selector-wrap):has(> .loop-group)
+		> .loop-group {
+		grid-column: 2;
+		justify-self: end;
+	}
+
+	/* In sync+loop layouts without presets, pin loop controls left and SYNC right. */
+	.trackswitch .main-control
+		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
+			:has(> .preset-selector-wrap)
+		)
+		> .loop-group {
+		grid-column: 1;
+		justify-self: start;
+		margin: 0;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
+			:has(> .preset-selector-wrap)
+		)
+		> .sync-after-loop {
+		grid-column: 2;
+		justify-self: end;
+		margin: 0;
+	}
+
+	.trackswitch .main-control .timing {
+		order: 200;
+		grid-column: 1 / -1;
+		justify-self: center;
+		margin: 0;
+		text-align: center;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:not(:has(> .settings-button))
+		> .timing {
+		margin-left: 0;
+	}
+
+	.trackswitch .main-control .seekwrap {
+		order: 300;
+		grid-column: 1 / -1;
+		width: 100%;
+		min-width: 0;
+		margin: 0;
+		padding: 0;
+	}
+}
+
+@media (max-width: 700px) {
+	.trackswitch.trackswitch {
+		--ts-main-control-icon-size: 18px;
+		--ts-main-control-playback-gap: 16px;
+	}
+
+	.trackswitch .main-control .sync-global {
+		min-width: 68px;
+		height: 26px;
+		line-height: 26px;
+		font-size: 14px;
+		padding: 0;
+	}
+
+	.trackswitch .main-control .volume-control .volume-icon {
+		font-size: 20px;
+		margin-right: 12px;
+	}
+
+	.trackswitch .main-control .volume-slider,
+	.trackswitch .warping-tempo-slider {
+		--ts-slider-thumb-size: 16px;
+	}
+
+	.trackswitch .main-control .control > li.loop-group > .loop-controls {
+		gap: 6px;
+		position: relative;
+		top: 2px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-toggle
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-clear
+		.ts-icon-slot {
+		font-size: 18px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-a
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-b
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-a
+		.ts-icon-svg,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-b
+		.ts-icon-svg {
+		width: 20px;
+		height: 20px;
+		font-size: 20px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-toggle
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-toggle
+		.ts-icon-svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-clear
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-clear
+		.ts-icon-svg {
+		width: 14px;
+		height: 14px;
+	}
+
+	.trackswitch .main-control .preset-selector {
+		font-size: 14px;
+	}
+
+	.trackswitch .main-control .timing {
+		font-size: 16px;
+	}
+}
+
+@media (max-width: 500px) {
+	.trackswitch.trackswitch {
+		--ts-main-control-playback-gap: 20px;
+	}
+}
+
+@media (max-width: 700px) {
+	.trackswitch li.track {
+		min-height: 40px;
+	}
+}
+
+@container ts-track-row (max-width: 700px) {
+	.trackswitch li.track .track-mix-controls {
+		gap: 10px;
+		padding-left: 10px;
+	}
+
+	.trackswitch li.track .mix-slider {
+		width: 68px;
+	}
+}
+
+@media (max-width: 700px) {
+	.trackswitch li.track .track-volume-icon {
+		font-size: 18px;
+		margin-right: 10px;
+	}
+
+	.trackswitch li.track .mix-slider::-webkit-slider-thumb {
+		width: 16px;
+		height: 16px;
+	}
+
+	.trackswitch li.track .mix-slider::-moz-range-thumb {
+		width: 16px;
+		height: 16px;
+	}
+}
+
+@container ts-track-row (max-width: 500px) {
+	.trackswitch li.track .track-mix-controls {
+		gap: 8px;
+		padding-left: 8px;
+	}
+
+	.trackswitch li.track .mix-slider {
+		width: 56px;
+	}
+
+	.trackswitch li.track .track-pan-label {
+		min-width: 22px;
+		font-size: 11px;
+	}
+}
+
+@container ts-waveform (max-width: 560px) {
+	.trackswitch .waveform-wrap .waveform-timing {
+		right: 6px;
+		padding: 3px 5px;
+		font-size: 10px;
+	}
+
+	.trackswitch .waveform-wrap .waveform-zoom {
+		left: 5px;
+		gap: 4px;
+		font-size: 10px;
+	}
+
+	.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap {
+		height: 16px;
+		width: clamp(46px, 22cqw, 140px);
+	}
+}
+
+@container ts-seekable (max-width: 560px) {
+	.trackswitch .seekable-img-wrap .seekwrap {
+		--ts-seek-marker-hit-width: 14px;
+	}
+}
+
+/* Tablet/mobile adjustments */
+@media (max-width: 700px) {
+	.trackswitch .overlay-activation #overlayinfo {
+		font-size: 8pt;
+		top: calc(50% + 42px);
+	}
+
+	.trackswitch .overlay-activation #overlayinfo span.info .ts-icon-slot {
+		font-size: 13pt;
+	}
+
+	.trackswitch .overlay-activation #overlayinfo span.text {
+		font-size: 11pt;
+		line-height: 1.2;
+	}
+
+	.trackswitch .overlay-shortcuts {
+		padding: 8px;
+	}
+
+	.trackswitch .shortcut-help-panel {
+		padding: 10px 12px;
+		font-size: 13px;
+	}
+
+	.trackswitch .shortcut-help-header {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 6px;
+		margin-bottom: 8px;
+	}
+
+	.trackswitch .shortcut-help-item {
+		grid-template-columns: 1fr;
+		gap: 4px;
+		padding: 7px 0;
+	}
+
+	.trackswitch .shortcut-help-keys {
+		justify-content: flex-start;
+		min-height: auto;
+	}
+
+	.trackswitch .shortcut-help-title {
+		font-size: 16px;
+	}
+
+	.trackswitch .shortcut-help-heading p,
+	.trackswitch .shortcut-help-footer {
+		font-size: 12px;
+		line-height: 1.2;
+	}
+
+	.trackswitch .warping-plot-host .warping-plot-axis text {
+		font-size: 16px;
+	}
+
+	.trackswitch .warping-matrix-panel {
+		min-height: 180px;
+	}
+}
+
+@media (max-width: 500px) {
+	.trackswitch .warping-plot-host .warping-plot-axis text {
+		font-size: 18px;
+	}
+}

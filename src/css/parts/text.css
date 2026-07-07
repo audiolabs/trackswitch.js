@@ -1,0 +1,10 @@
+.trackswitch .ts-text {
+	display: block;
+	width: 100%;
+	padding: 14px 16px;
+	color: var(--ts-color-text-primary);
+	font-family: var(--ts-font-ui);
+	font-size: 16px;
+	line-height: 1.35;
+	cursor: default;
+}

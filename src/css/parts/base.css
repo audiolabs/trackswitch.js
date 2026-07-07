@@ -1,0 +1,353 @@
+.trackswitch,
+.trackswitch *,
+.trackswitch *::before,
+.trackswitch *::after {
+	box-sizing: border-box;
+}
+
+.trackswitch.trackswitch {
+	background: var(--ts-color-surface-base);
+	border: 0;
+	position: relative;
+	container-type: inline-size;
+	container-name: ts-player;
+	margin: 10px;
+	overflow: hidden;
+	color: var(--ts-color-text-primary);
+	font-family: var(--ts-font-ui);
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 400;
+	letter-spacing: normal;
+	line-height: 1;
+	text-align: left;
+	text-decoration: none;
+	text-indent: 0;
+	text-transform: none;
+	white-space: normal;
+	word-spacing: normal;
+	/* Reset line-height to stop it inheriting from page */
+}
+
+.trackswitch.trackswitch > .ts-stack-section:not(.main-control) {
+	border-left: 1px solid var(--ts-color-border-mid);
+	border-right: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch.trackswitch > .ts-stack-section:not(.main-control):last-child {
+	border-bottom: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch.trackswitch
+	> .ts-stack-section:not(.main-control):has(
+		+ .ts-stack-section.ts-stack-section-hidden:last-child
+	) {
+	border-bottom: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch.trackswitch :is(p, ul, ol, li, div, span, label, a, i) {
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	font-style: inherit;
+	font-weight: inherit;
+	letter-spacing: inherit;
+	line-height: inherit;
+	text-align: inherit;
+	text-decoration: inherit;
+	text-indent: inherit;
+	text-transform: inherit;
+	white-space: inherit;
+	word-spacing: inherit;
+}
+
+.trackswitch.trackswitch :is(button, input, select, option, textarea) {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	background-image: none;
+	box-shadow: none;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	font-style: inherit;
+	font-weight: inherit;
+	letter-spacing: inherit;
+	line-height: inherit;
+	text-align: inherit;
+	text-decoration: none;
+	text-indent: 0;
+	text-transform: inherit;
+	white-space: inherit;
+	word-spacing: inherit;
+}
+
+.trackswitch.trackswitch button {
+	appearance: none;
+	-webkit-appearance: none;
+}
+
+.trackswitch.trackswitch ts-track {
+	display: none;
+}
+
+/* Reset list elements from bootstrap styling */
+.trackswitch.trackswitch ul,
+.trackswitch.trackswitch ol {
+	margin: 0;
+	padding: 0;
+}
+
+.trackswitch.trackswitch li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.trackswitch.trackswitch p {
+	margin: 0;
+}
+
+.trackswitch.trackswitch
+	> .ts-stack-section:not(.main-control)
+	+ .ts-stack-section {
+	border-top: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch.trackswitch .ts-customizable-panel-shell {
+	position: relative;
+	display: flex;
+	align-items: stretch;
+	width: 100%;
+}
+
+.trackswitch.trackswitch .ts-panel-handle {
+	position: relative;
+	z-index: 1;
+	flex: 0 0 24px;
+	align-self: stretch;
+	width: 20px;
+	min-width: 20px;
+	border: 0;
+	border-right: 1px solid var(--ts-color-border-mid);
+	border-radius: 0;
+	background: color-mix(
+		in srgb,
+		var(--ts-color-surface-base) 78%,
+		var(--ts-color-border-mid) 22%
+	);
+	color: var(--ts-color-text-secondary);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: grab;
+	touch-action: none;
+	padding: 0;
+}
+
+.trackswitch.trackswitch .ts-panel-handle:hover {
+	background: color-mix(
+		in srgb,
+		var(--ts-color-surface-base) 68%,
+		var(--ts-color-border-mid) 32%
+	);
+}
+
+.trackswitch.trackswitch .ts-panel-handle:active {
+	cursor: grabbing;
+}
+
+.trackswitch.trackswitch .ts-panel-handle:focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: 2px;
+}
+
+.trackswitch.trackswitch .ts-panel-handle-dots {
+	width: 4px;
+	height: 16px;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 3px;
+}
+
+.trackswitch.trackswitch .ts-panel-handle-dots span {
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.trackswitch.trackswitch .ts-customizable-panel-shell > :not(.ts-panel-handle) {
+	flex: 1 1 auto;
+	min-width: 0;
+	width: 100%;
+}
+
+.trackswitch.trackswitch .ts-panel-dragging {
+	position: fixed;
+	z-index: 999;
+	margin: 0;
+	opacity: 0.96;
+	cursor: grabbing;
+	pointer-events: none;
+	box-shadow: 0 12px 24px var(--ts-color-shadow-medium);
+}
+
+.trackswitch.trackswitch .ts-panel-drop-placeholder {
+	border-top: 2px dashed var(--ts-color-accent);
+	border-bottom: 2px dashed var(--ts-color-accent);
+	background: var(--ts-color-accent-soft-15);
+}
+
+.trackswitch.trackswitch.ts-panel-reorder-active {
+	user-select: none;
+}
+
+/* Shared inline SVG icon geometry */
+.trackswitch.trackswitch .ts-icon-slot {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	text-indent: 0;
+	line-height: 1;
+	pointer-events: none;
+}
+
+.trackswitch.trackswitch .ts-icon-slot svg {
+	display: block;
+	width: 1em;
+	height: 1em;
+}
+
+.trackswitch.trackswitch .volume-icon .ts-icon-slot {
+	width: 100%;
+	height: 100%;
+	justify-content: center;
+}
+
+.trackswitch.trackswitch .volume-icon .ts-icon-slot .ts-icon-svg {
+	width: 1em;
+	height: 1em;
+	flex: 0 0 1em;
+	transform-origin: left center;
+}
+
+/* Normalize FA volume glyphs that ship with different viewBox widths. */
+.trackswitch.trackswitch .volume-icon
+	.ts-icon-slot[data-icon="volume-xmark"]
+	.ts-icon-svg {
+	transform: scale(1.125);
+}
+
+.trackswitch.trackswitch
+	.volume-icon
+	.ts-icon-slot[data-icon="volume-low"]
+	.ts-icon-svg {
+	transform: scale(1);
+}
+
+.trackswitch.trackswitch
+	.volume-icon
+	.ts-icon-slot[data-icon="volume"]
+	.ts-icon-svg {
+	transform: scale(1);
+}
+
+.trackswitch.trackswitch
+	.volume-icon
+	.ts-icon-slot[data-icon="volume-high"]
+	.ts-icon-svg {
+	transform: translateX(-0.0625em) scale(1.25);
+}
+
+.trackswitch.trackswitch .ts-icon-slot.is-spinning {
+	animation: trackswitch-icon-spin 1s linear infinite;
+	transform-origin: center center;
+}
+
+.trackswitch.trackswitch
+	:is(.volume-slider, .mix-slider, .warping-tempo-slider) {
+	-webkit-appearance: none;
+	appearance: none;
+	width: var(--ts-slider-width);
+	height: var(--ts-slider-hit-size);
+	margin: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	cursor: pointer;
+}
+
+.trackswitch.trackswitch
+	:is(.volume-slider, .mix-slider, .warping-tempo-slider):focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: 3px;
+}
+
+.trackswitch.trackswitch
+	:is(
+		.volume-slider,
+		.mix-slider,
+		.warping-tempo-slider
+	)::-webkit-slider-runnable-track {
+	height: var(--ts-slider-track-size);
+	border-radius: 999px;
+	background: var(--ts-slider-track-color);
+}
+
+.trackswitch.trackswitch
+	:is(
+		.volume-slider,
+		.mix-slider,
+		.warping-tempo-slider
+	)::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: var(--ts-slider-thumb-size);
+	height: var(--ts-slider-thumb-size);
+	margin-top: calc(
+		(var(--ts-slider-track-size) - var(--ts-slider-thumb-size)) /
+		2
+	);
+	border: 0;
+	border-radius: 50%;
+	background: var(--ts-slider-thumb-color);
+	cursor: pointer;
+}
+
+.trackswitch.trackswitch
+	:is(.volume-slider, .mix-slider, .warping-tempo-slider)::-moz-range-track {
+	height: var(--ts-slider-track-size);
+	border: 0;
+	border-radius: 999px;
+	background: var(--ts-slider-track-color);
+}
+
+.trackswitch.trackswitch
+	:is(.volume-slider, .mix-slider, .warping-tempo-slider)::-moz-range-thumb {
+	width: var(--ts-slider-thumb-size);
+	height: var(--ts-slider-thumb-size);
+	border: 0;
+	border-radius: 50%;
+	background: var(--ts-slider-thumb-color);
+	cursor: pointer;
+}
+
+.trackswitch.trackswitch > p {
+	/* Player title <p> */
+	margin: 12px 10px;
+}
+
+@keyframes trackswitch-icon-spin {
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
+}

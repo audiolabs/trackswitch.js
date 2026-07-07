@@ -1,45 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Multi Track Audio Player</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-    <link rel="stylesheet" href="../dist/css/trackswitch.min.css" />
-    <style media="screen">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrackSwitch Examples</title>
+    <style>
         body {
-            font-family: sans-serif;
+            margin: 0;
+            padding: 40px;
+            color: #2f2f2f;
+            background: #f6f3ee;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        main {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 32px;
+            line-height: 1.1;
+        }
+
+        p {
+            margin: 0 0 28px;
+            color: #68645e;
+            line-height: 1.5;
+        }
+
+        nav {
+            display: grid;
+            gap: 10px;
+        }
+
+        a {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 18px;
+            border: 1px solid #d7d0c5;
+            border-radius: 8px;
+            color: #2f2f2f;
+            background: #fffdfa;
+            text-decoration: none;
+        }
+
+        a:hover {
+            border-color: #ed8c01;
+        }
+
+        span {
+            color: #ed8c01;
         }
     </style>
 </head>
 <body>
-
-<div class="player">
-    <img style="margin: 20px auto;" src="data/cover.png">
-    <img data-style="margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/mix.png">
-    <ts-track title="Violins" data-img="data/violins.png">
-        <ts-source src="data/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synths" data-img="data/synth.png">
-        <ts-source src="data/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="data/bass.png">
-        <ts-source src="data/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="data/drums.png">
-        <ts-source src="data/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-
-<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="crossorigin="anonymous"></script>
-<script src="../dist/js/trackswitch.min.js"></script>
-
-<script type="text/javascript">
-    jQuery(document).ready(function() {
-        jQuery(".player").trackSwitch(); // All other players are default
-    });
-</script>
+    <main>
+        <h1>Trackswitch.js - Examples</h1>
+        <nav>
+            <a href="/examples/default/">Default player <span>/examples/default/</span></a>
+            <a href="/examples/sync/">Sync player <span>/examples/sync/</span></a>
+            <a href="/examples/interactive_sync/">Interactive Sync <span>/examples/interactive_sync/</span></a>
+        </nav>
+    </main>
 </body>
 </html>
