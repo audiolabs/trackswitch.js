@@ -5,7 +5,7 @@ on:
     types: [published]
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -53,15 +53,6 @@ jobs:
       - name: Verify published package contents
         run: npm pack --dry-run
 
-      - name: Upload browser files to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
-            dist/js/trackswitch.js \
-            dist/js/trackswitch-interactive-worker.js \
-            --clobber
-            
       - name: Publish stable release
         if: ${{ !github.event.release.prerelease }}
         run: npm publish
@@ -69,3 +60,29 @@ jobs:
       - name: Publish prerelease to next
         if: ${{ github.event.release.prerelease }}
         run: npm publish --tag next
+
+      - name: Create GitHub release archive
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p trackswitch-release/dist/js
+
+          cp dist/js/trackswitch.js \
+             trackswitch-release/dist/js/
+
+          cp dist/js/trackswitch-interactive-worker.js \
+             trackswitch-release/dist/js/
+
+          cp LICENSE THIRD_PARTY_NOTICES.md \
+             trackswitch-release/
+
+          zip -r "trackswitch-${TAG_NAME}.zip" trackswitch-release
+
+      - name: Upload browser bundle to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$TAG_NAME" \
+            "trackswitch-${TAG_NAME}.zip" \
+            --clobber
