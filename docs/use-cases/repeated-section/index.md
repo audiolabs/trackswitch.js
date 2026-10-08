@@ -8,10 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # A Repeated Section
 
-Performances of the same musical work do not always play the same amount of music.
-As an example, we compare two performances of Mozart's *Piano Sonata No. 16 in C major, K. 545*, first movement. 
-The performers we compare are Bernd Krueger and Robin Alciatore.
-Krueger plays both written repeats while Alciatore's performance leaves both out:
+This page compares two performances of Mozart’s *Piano Sonata No. 16 in C major, K. 545*.
+Bernd Krueger plays both written repeats, while Robin Alciatore omits them.
+The alignment uses Krueger’s complete performance as its reference.
+It maps both repeated passages to the same passage in Alciatore’s shorter performance:
 
 - Krueger: `exposition → exposition → development + recapitulation → development + recapitulation`
 - Alciatore: `exposition → development + recapitulation`

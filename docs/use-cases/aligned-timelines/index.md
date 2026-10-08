@@ -8,10 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Aligned Timelines
 
-This player shows two performances of *Gefrorne Tränen* from Schubert’s Winterreise, D. 911, with the corresponding sheet music. 
-Both recordings coarsly follow the same musical structure, but their local timing differs.
-Trackswitch allows a way to specify an **alignment** between the two performances, since they live on different timelines.
-This way, both performances can be compared side-by-side and switched between based on the musical content.
+This page shows two performances of Franz Schubert’s *Gefrorne Tränen* and the corresponding sheet music.
+The performances have different tempos, so the same passage occurs at different times in each recording.
+An **alignment** CSV connects corresponding positions on their separate timelines.
+When you switch performances, playback continues at the same musical passage and the sheet music follows the active recording.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
@@ -74,7 +74,7 @@ Example for how to specify an alignment in trackswitch:
     "sc06": "time_Schubert_D911-03_SC06"
   },
   "outsideCoverage": "hold",
-  "duplicatePlacements": "average"
+  "duplicateAnchors": "average"
 }
 ```
 

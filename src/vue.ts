@@ -7,22 +7,23 @@ import {
 	ref,
 	watch,
 } from "vue";
-import type {
-	TrackSwitchController,
-	TrackSwitchEventMap,
-	TrackSwitchInit,
-} from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
+import type {
+	TrackSwitchController,
+	TrackSwitchEventMap,
+	TrackSwitchInit,
+} from "./types";
 
 type TrackSwitchVueEventHandlers = {
 	loaded: (payload: TrackSwitchEventMap["loaded"]) => true;
 	error: (payload: TrackSwitchEventMap["error"]) => true;
 	position: (payload: TrackSwitchEventMap["position"]) => true;
 	trackState: (payload: TrackSwitchEventMap["trackState"]) => true;
+	markers: (payload: TrackSwitchEventMap["markers"]) => true;
 };
 
 type TrackSwitchVueEmit = <K extends keyof TrackSwitchVueEventHandlers>(
@@ -52,6 +53,7 @@ function createTrackSwitchVueComponent(
 			error: (_payload: TrackSwitchEventMap["error"]) => true,
 			position: (_payload: TrackSwitchEventMap["position"]) => true,
 			trackState: (_payload: TrackSwitchEventMap["trackState"]) => true,
+			markers: (_payload: TrackSwitchEventMap["markers"]) => true,
 		} satisfies TrackSwitchVueEventHandlers,
 		setup(
 			props: { config: TrackSwitchInit },
@@ -123,6 +125,7 @@ function createTrackSwitchVueComponent(
 				bind(TRACKSWITCH_DOM_EVENTS.error, "error");
 				bind(TRACKSWITCH_DOM_EVENTS.position, "position");
 				bind(TRACKSWITCH_DOM_EVENTS.trackState, "trackState");
+				bind(TRACKSWITCH_DOM_EVENTS.markers, "markers");
 			});
 
 			onBeforeUnmount(() => {

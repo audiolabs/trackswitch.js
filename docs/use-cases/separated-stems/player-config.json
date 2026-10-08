@@ -62,7 +62,7 @@
 			"sc06Residual": "time_Schubert_D911-03_SC06"
 		},
 		"outsideCoverage": "hold",
-		"duplicatePlacements": "average"
+		"duplicateAnchors": "average"
 	},
 	"views": [
 		{

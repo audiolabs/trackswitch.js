@@ -9,6 +9,7 @@ testings.ipynb
 docs/js/trackswitch.min.js
 docs/js/trackswitch.js
 docs/js/trackswitch-interactive.js
+docs/js/trackswitch-builder.js
 docs/js/trackswitch-player.js
 docs/js/trackswitch-alignment-player.js
 docs/js/trackswitch-alignment-interactive.js
@@ -19,6 +20,12 @@ docs/js/basic-pitch/
 docs/css/trackswitch.min.css
 docs/assets/multitracks/
 docs/assets/alignment/
+docs/assets/chorale-bricks/
+docs/assets/multi-instrument-transcription/
+docs/assets/per-track-image/
+docs/assets/global-image/
+docs/assets/repeat/
+docs/assets/separation/
 .jekyll-cache/
 .jekyll-metadata
 .sass-cache/
@@ -41,3 +48,8 @@ tmp/
 .agents/
 .claude/
 .impeccable.md
+.playwright-cli/
+
+examples/
+docs/assets
+CLAUDE.md

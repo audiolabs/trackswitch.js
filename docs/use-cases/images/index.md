@@ -8,9 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Images
 
-trackswitch supports displaying images inside the player.
-There are two types of images: Simple images and per-track images. 
-Both image types can show a playhead and support seeking by clicking inside the image.
+This page shows how to display images inside a Trackswitch player.
+A simple image stays visible for all tracks, while a per-track image changes with the audible track.
+Both image types can show the playback position.
+They can also let users seek by clicking or dragging inside the image.
 
 ## Simple image
 

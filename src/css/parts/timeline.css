@@ -1,10 +1,10 @@
-/* Shared timeline geometry for main seekbar, waveform/MIDI overlays, and seekable images. */
+/* Shared timeline geometry for main seekbar, waveform/piano-roll overlays, and seekable images. */
 
 .trackswitch
 :is(
 	.main-control .seekbar,
 	.waveform-wrap .seekwrap,
-	.midi-wrap .seekwrap,
+	.piano-roll-wrap .seekwrap,
 	.seekable-img-wrap .seekwrap
 ) {
 	--ts-playhead-position: 0%;
@@ -20,7 +20,7 @@
 	--ts-zoom-viewport-width: 0px;
 }
 
-.trackswitch .midi-wrap .midi-zoom .midi-zoom-minimap {
+.trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-minimap {
 	--ts-zoom-viewport-left: 0px;
 	--ts-zoom-viewport-width: 0px;
 }
@@ -29,7 +29,7 @@
 	:is(
 		.main-control .seekbar .seekhead,
 		.waveform-wrap .seekwrap .seekhead,
-		.midi-wrap .seekwrap .seekhead,
+		.piano-roll-wrap .seekwrap .seekhead,
 		.seekable-img-wrap .seekwrap .seekhead
 	) {
 	position: absolute;
@@ -42,7 +42,7 @@
 	:is(
 		.main-control .seekbar .loop-marker,
 		.waveform-wrap .seekwrap .loop-marker,
-		.midi-wrap .seekwrap .loop-marker,
+		.piano-roll-wrap .seekwrap .loop-marker,
 		.seekable-img-wrap .seekwrap .loop-marker
 	) {
 	position: absolute;
@@ -59,7 +59,7 @@
 	:is(
 		.main-control .seekbar .loop-marker.marker-a,
 		.waveform-wrap .seekwrap .loop-marker.marker-a,
-		.midi-wrap .seekwrap .loop-marker.marker-a,
+		.piano-roll-wrap .seekwrap .loop-marker.marker-a,
 		.seekable-img-wrap .seekwrap .loop-marker.marker-a
 	) {
 	left: var(--ts-loop-marker-a);
@@ -69,7 +69,7 @@
 	:is(
 		.main-control .seekbar .loop-marker.marker-b,
 		.waveform-wrap .seekwrap .loop-marker.marker-b,
-		.midi-wrap .seekwrap .loop-marker.marker-b,
+		.piano-roll-wrap .seekwrap .loop-marker.marker-b,
 		.seekable-img-wrap .seekwrap .loop-marker.marker-b
 	) {
 	left: var(--ts-loop-marker-b);
@@ -79,7 +79,7 @@
 	:is(
 		.main-control .seekbar .loop-marker,
 		.waveform-wrap .seekwrap .loop-marker,
-		.midi-wrap .seekwrap .loop-marker,
+		.piano-roll-wrap .seekwrap .loop-marker,
 		.seekable-img-wrap .seekwrap .loop-marker
 	)::after {
 	content: "";
@@ -94,7 +94,7 @@
 	:is(
 		.main-control .seekbar .loop-region,
 		.waveform-wrap .seekwrap .loop-region,
-		.midi-wrap .seekwrap .loop-region,
+		.piano-roll-wrap .seekwrap .loop-region,
 		.seekable-img-wrap .seekwrap .loop-region
 	) {
 	position: absolute;
@@ -110,7 +110,7 @@
 	:is(
 		.main-control .seekbar .loop-region,
 		.waveform-wrap .seekwrap .loop-region,
-		.midi-wrap .seekwrap .loop-region,
+		.piano-roll-wrap .seekwrap .loop-region,
 		.seekable-img-wrap .seekwrap .loop-region
 	).active {
 	background-color: var(--ts-color-accent-soft-30);
@@ -119,12 +119,13 @@
 .trackswitch
 	:is(
 		.waveform-wrap .seekwrap .loop-marker,
-		.midi-wrap .seekwrap .loop-marker,
+		.piano-roll-wrap .seekwrap .loop-marker,
 		.seekable-img-wrap .seekwrap .loop-marker
 	)::after {
 	background: repeating-linear-gradient(
 		to bottom,
-		var(--ts-color-surface-panel-dark) 0 var(--ts-seek-marker-dash),
+		var(--loop-marker-color, var(--ts-color-surface-panel-dark)) 0
+			var(--ts-seek-marker-dash),
 		transparent var(--ts-seek-marker-dash)
 			calc(var(--ts-seek-marker-dash) + var(--ts-seek-marker-gap))
 	);

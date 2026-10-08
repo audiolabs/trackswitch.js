@@ -9,11 +9,11 @@ interactive_demo: true
 
 # Interactive Alignment
 
-This example shows that trackswitch can be extended to enable even more use cases.
-Here, we present here an interface built on top of trackswitch to perform alignment directly in the browser.
-It supports audio data, MusicXML, and MIDI. 
-Add your files (via drag-and-drop), and click on "Synchronize", which will compute the alignment locally on your computer. Then, inspect the result directly in the trackswitch player.
-Additionaly, you can download the alignment of the different timelines in CSV format.
+This page contains an extension that creates alignments directly in the browser.
+Drop audio, MusicXML, or MIDI files into the interface and select a synchronization method.
+The **Synchronize** action computes the alignment locally, so the files stay on your device.
+The extension loads the result into a Trackswitch player for playback and inspection.
+You can also download the aligned timeline positions as a CSV file.
 
 <div class="ts-usecase-showcase">
 

@@ -1,0 +1,64 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"soprano": {
+			"type": "audio",
+			"title": "Soprano - Alto saxophone",
+			"src": "../../assets/multi-instrument-transcription/01_as.mp3"
+		},
+		"alto": {
+			"type": "audio",
+			"title": "Alto - Clarinet",
+			"src": "../../assets/multi-instrument-transcription/02_cl.mp3"
+		},
+		"tenor": {
+			"type": "audio",
+			"title": "Tenor - Trombone",
+			"src": "../../assets/multi-instrument-transcription/03_tb.mp3"
+		},
+		"bass": {
+			"type": "audio",
+			"title": "Bass - Tuba",
+			"src": "../../assets/multi-instrument-transcription/04_tba.mp3"
+		},
+		"notes": {
+			"type": "midi",
+			"src": "../../assets/multi-instrument-transcription/transcription.mid"
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "timer", "fullscreen-control"]
+		},
+		{
+			"type": "pianoRoll",
+			"mediaID": "notes",
+			"height": 380,
+			"pianoKeyboard": true,
+			"noteRange": ["F2", "F5"],
+			"defaultZoom": 8,
+			"palette": "dark",
+			"noteTooltip": true,
+			"grid": "pitch",
+			"channelToTrackIDMap": {
+				"0": "soprano",
+				"1": "alto",
+				"2": "tenor",
+				"3": "bass"
+			},
+			"channelToLabelMap": {
+				"0": "Soprano",
+				"1": "Alto",
+				"2": "Tenor",
+				"3": "Bass"
+			},
+			"legend": "top-right"
+		},
+		{
+			"type": "trackList",
+			"tracks": ["soprano", "alto", "tenor", "bass"],
+			"trackPanControls": "balance"
+		}
+	]
+}

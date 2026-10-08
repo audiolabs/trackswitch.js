@@ -1,0 +1,47 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"input": {
+			"type": "audio",
+			"title": "Input signal",
+			"src": "../../assets/per-track-image/input.wav",
+			"solo": true
+		},
+		"desired": {
+			"type": "audio",
+			"title": "Desired non-reverberant signal",
+			"src": "../../assets/per-track-image/desired.wav"
+		},
+		"rlsScd": {
+			"type": "audio",
+			"title": "RLS-SCD with original variance estimator",
+			"src": "../../assets/per-track-image/rls-scd.wav"
+		},
+		"rlsScdMle": {
+			"type": "audio",
+			"title": "RLS-SCD with ML variance estimator",
+			"src": "../../assets/per-track-image/rls-scd-mle.wav"
+		},
+		"kalman": {
+			"type": "audio",
+			"title": "Proposed Kalman filter",
+			"src": "../../assets/per-track-image/kalman.wav"
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "timer", "fullscreen-control"]
+		},
+		{
+			"type": "waveform",
+			"tracks": "audible",
+			"height": 80
+		},
+		{
+			"type": "trackList",
+			"tracks": ["input", "desired", "rlsScd", "rlsScdMle", "kalman"],
+			"comparisonGroup": 0
+		}
+	]
+}

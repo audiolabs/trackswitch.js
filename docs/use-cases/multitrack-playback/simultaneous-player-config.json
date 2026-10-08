@@ -1,0 +1,45 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"violins": {
+			"type": "audio",
+			"title": "Violins",
+			"src": "../../assets/multitracks/violins.mp3",
+			"solo": true
+		},
+		"synths": {
+			"type": "audio",
+			"title": "Synths",
+			"src": "../../assets/multitracks/synth.mp3",
+			"solo": true
+		},
+		"bass": {
+			"type": "audio",
+			"title": "Bass",
+			"src": "../../assets/multitracks/bass.mp3",
+			"solo": true
+		},
+		"drums": {
+			"type": "audio",
+			"title": "Drums",
+			"src": "../../assets/multitracks/drums.mp3",
+			"solo": true
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "seekBar", "timer"]
+		},
+		{
+			"type": "waveform",
+			"tracks": "audible"
+		},
+		{
+			"type": "trackList",
+			"tracks": ["violins", "synths", "bass", "drums"],
+			"trackVolumeControls": true,
+			"trackPanControls": "balance"
+		}
+	]
+}

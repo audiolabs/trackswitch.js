@@ -8,9 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Shared Timeline - Groups
 
-A player can show more than one `trackList`, and each list decides on its own whether its tracks play together or one at a time. Combined with a shared timeline, this turns the player into an instrument chooser: every list covers one part of the arrangement, and the listener assembles an ensemble by picking one instrument per part.
-
-The player below contains a four-part chorale. Each voice was recorded with several different instruments, all following the same conductor, so every recording shares one timeline and no alignment is needed. Pick a different instrument for any voice to hear how it changes the ensemble.
+This page shows a four-part chorale with several instrument recordings for each voice.
+All recordings share the same timeline, so they do not need an alignment.
+Each voice has its own `trackList`, and each list keeps one instrument active.
+You can select one instrument for each voice and hear all four voices together.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
@@ -32,22 +33,22 @@ Audio data: S. Balke, A. Berndt, and M. Müller, “[ChoraleBricks: A Modular Mu
 
 ## How it works
 
-Each voice is one `trackList` view with a `soloGroup` of its own:
+Each voice is one `trackList` view with a `comparisonGroup` of its own:
 
 ```json
 {
   "type": "trackList",
   "tracks": ["sopranoFlute", "sopranoOboe", "sopranoClarinet", "sopranoTrumpet", "sopranoFlugelhorn"],
-  "soloGroup": 0,
+  "comparisonGroup": 0,
   "trackVolumeControls": true
 }
 ```
 
-`soloGroup` makes the rows of that list behave as radio buttons: selecting an instrument deselects the previous one, and the list always keeps one instrument active. It names the selection the list belongs to, and the alto, tenor, and bass lists name `1`, `2`, and `3`, so choosing a different soprano instrument leaves the other voices untouched. Four numbers therefore give four independent choices, and four instruments sound at once.
+`comparisonGroup` makes the rows of that list behave as radio buttons: selecting an instrument deselects the previous one, and the list always keeps one instrument active. It names the selection the list belongs to, and the alto, tenor, and bass lists name `1`, `2`, and `3`, so choosing a different soprano instrument leaves the other voices untouched. Four numbers therefore give four independent choices, and four instruments sound at once.
 
 Repeating a number does the opposite: lists that share one share the selection, so picking a track in either of them deselects whatever the other had. Four voices that all named `0` would let exactly one instrument sound in the whole player.
 
-The same player could mix modes. A list without a `soloGroup` toggles its tracks independently, so an ordinary stem mixer can sit next to these comparison groups in one player.
+The same player could mix modes. A list without a `comparisonGroup` toggles its tracks independently, so an ordinary stem mixer can sit next to these comparison groups in one player.
 
 A `separator` view in front of each list divides the voices:
 
@@ -68,4 +69,4 @@ The presets name a complete ensemble, one instrument per voice:
 }
 ```
 
-A preset activates exactly the tracks it names. Where a preset names several tracks of one `soloGroup`, that selection keeps the first of them, so a preset always resolves to a single instrument per voice. The player opens with the first preset in the file.
+A preset activates exactly the tracks it names. Where a preset names several tracks of one `comparisonGroup`, that selection keeps the first of them, so a preset always resolves to a single instrument per voice. The player opens with the first preset in the file.

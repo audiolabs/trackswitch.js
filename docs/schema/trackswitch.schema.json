@@ -38,6 +38,14 @@
 				},
 				"keyboard": {
 					"type": "boolean"
+				},
+				"normalizeLoudness": {
+					"type": "boolean",
+					"description": "Normalizes each track to -14 LUFS integrated loudness at load time."
+				},
+				"autoload": {
+					"type": "boolean",
+					"description": "Decodes and renders the waveforms as soon as the player is constructed, instead of waiting for the first click or keypress. This does not start playback, so it doesn't need a user gesture — browsers only gate actually producing sound, not decoding audio buffers."
 				}
 			},
 			"additionalProperties": false
@@ -111,13 +119,21 @@
 				"pan": {
 					"type": "number"
 				},
+				"volumeControl": {
+					"type": "boolean",
+					"description": "Overrides the owning trackList's `trackVolumeControls` for this track only."
+				},
+				"panControl": {
+					"$ref": "#/definitions/TrackPanControl",
+					"description": "Overrides the owning trackList's `trackPanControls` for this track only."
+				},
 				"startOffsetMs": {
 					"type": "number"
 				},
 				"endOffsetMs": {
 					"type": "number"
 				},
-				"srcSynchronized": {
+				"srcTimeScaled": {
 					"$ref": "#/definitions/SynchronizedAudioSourceConfig"
 				}
 			},
@@ -146,6 +162,10 @@
 		"TrackSwitchCssOverrides": {
 			"type": "object",
 			"properties": {
+				"--ts-font-ui": {
+					"type": "string",
+					"description": "Default: system-ui, sans-serif"
+				},
 				"--ts-color-text-primary": {
 					"type": "string",
 					"description": "Default: #000000"
@@ -366,6 +386,778 @@
 					"type": "string",
 					"description": "Default: rgba(237, 140, 1, 0.18)"
 				},
+				"--ts-color-channel-1": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent)"
+				},
+				"--ts-color-channel-1-soft-30": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-30)"
+				},
+				"--ts-color-channel-1-soft-55": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-55)"
+				},
+				"--ts-color-channel-2": {
+					"type": "string",
+					"description": "Default: #c03328"
+				},
+				"--ts-color-channel-2-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(192, 51, 40, 0.25)"
+				},
+				"--ts-color-channel-2-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(192, 51, 40, 0.55)"
+				},
+				"--ts-color-channel-3": {
+					"type": "string",
+					"description": "Default: #3d8b37"
+				},
+				"--ts-color-channel-3-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(61, 139, 55, 0.25)"
+				},
+				"--ts-color-channel-3-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(61, 139, 55, 0.55)"
+				},
+				"--ts-color-channel-4": {
+					"type": "string",
+					"description": "Default: #2f6fb0"
+				},
+				"--ts-color-channel-4-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(47, 111, 176, 0.25)"
+				},
+				"--ts-color-channel-4-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(47, 111, 176, 0.55)"
+				},
+				"--ts-color-channel-5": {
+					"type": "string",
+					"description": "Default: #9467bd"
+				},
+				"--ts-color-channel-5-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(148, 103, 189, 0.25)"
+				},
+				"--ts-color-channel-5-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(148, 103, 189, 0.55)"
+				},
+				"--ts-color-channel-6": {
+					"type": "string",
+					"description": "Default: #8c564b"
+				},
+				"--ts-color-channel-6-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(140, 86, 75, 0.25)"
+				},
+				"--ts-color-channel-6-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(140, 86, 75, 0.55)"
+				},
+				"--ts-color-channel-7": {
+					"type": "string",
+					"description": "Default: #e377c2"
+				},
+				"--ts-color-channel-7-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(227, 119, 194, 0.25)"
+				},
+				"--ts-color-channel-7-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(227, 119, 194, 0.55)"
+				},
+				"--ts-color-channel-8": {
+					"type": "string",
+					"description": "Default: #7f7f7f"
+				},
+				"--ts-color-channel-8-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(127, 127, 127, 0.25)"
+				},
+				"--ts-color-channel-8-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(127, 127, 127, 0.55)"
+				},
+				"--ts-color-channel-9": {
+					"type": "string",
+					"description": "Default: #bcbd22"
+				},
+				"--ts-color-channel-9-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(188, 189, 34, 0.25)"
+				},
+				"--ts-color-channel-9-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(188, 189, 34, 0.55)"
+				},
+				"--ts-color-channel-10": {
+					"type": "string",
+					"description": "Default: #17becf"
+				},
+				"--ts-color-channel-10-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(23, 190, 207, 0.25)"
+				},
+				"--ts-color-channel-10-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(23, 190, 207, 0.55)"
+				},
+				"--ts-color-channel-11": {
+					"type": "string",
+					"description": "Default: #669e2e"
+				},
+				"--ts-color-channel-11-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(102, 158, 46, 0.25)"
+				},
+				"--ts-color-channel-11-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(102, 158, 46, 0.55)"
+				},
+				"--ts-color-channel-12": {
+					"type": "string",
+					"description": "Default: #2e9e5d"
+				},
+				"--ts-color-channel-12-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(46, 158, 93, 0.25)"
+				},
+				"--ts-color-channel-12-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(46, 158, 93, 0.55)"
+				},
+				"--ts-color-channel-13": {
+					"type": "string",
+					"description": "Default: #2e379e"
+				},
+				"--ts-color-channel-13-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(46, 55, 158, 0.25)"
+				},
+				"--ts-color-channel-13-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(46, 55, 158, 0.55)"
+				},
+				"--ts-color-channel-14": {
+					"type": "string",
+					"description": "Default: #6f2e9e"
+				},
+				"--ts-color-channel-14-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(111, 46, 158, 0.25)"
+				},
+				"--ts-color-channel-14-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(111, 46, 158, 0.55)"
+				},
+				"--ts-color-channel-15": {
+					"type": "string",
+					"description": "Default: #9e2e9e"
+				},
+				"--ts-color-channel-15-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(158, 46, 158, 0.25)"
+				},
+				"--ts-color-channel-15-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(158, 46, 158, 0.55)"
+				},
+				"--ts-color-channel-16": {
+					"type": "string",
+					"description": "Default: #9e2e50"
+				},
+				"--ts-color-channel-16-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(158, 46, 80, 0.25)"
+				},
+				"--ts-color-channel-16-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(158, 46, 80, 0.55)"
+				},
+				"--ts-color-surface-base-dark": {
+					"type": "string",
+					"description": "Default: #2e2e2e"
+				},
+				"--ts-color-channel-1-dark": {
+					"type": "string",
+					"description": "Default: #e6a14c"
+				},
+				"--ts-color-channel-1-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(230, 161, 76, 0.25)"
+				},
+				"--ts-color-channel-1-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(230, 161, 76, 0.55)"
+				},
+				"--ts-color-channel-2-dark": {
+					"type": "string",
+					"description": "Default: #e6594c"
+				},
+				"--ts-color-channel-2-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(230, 89, 76, 0.25)"
+				},
+				"--ts-color-channel-2-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(230, 89, 76, 0.55)"
+				},
+				"--ts-color-channel-3-dark": {
+					"type": "string",
+					"description": "Default: #4ce654"
+				},
+				"--ts-color-channel-3-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(76, 230, 84, 0.25)"
+				},
+				"--ts-color-channel-3-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(76, 230, 84, 0.55)"
+				},
+				"--ts-color-channel-4-dark": {
+					"type": "string",
+					"description": "Default: #4c9ce6"
+				},
+				"--ts-color-channel-4-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(76, 156, 230, 0.25)"
+				},
+				"--ts-color-channel-4-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(76, 156, 230, 0.55)"
+				},
+				"--ts-color-channel-5-dark": {
+					"type": "string",
+					"description": "Default: #854ce6"
+				},
+				"--ts-color-channel-5-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(133, 76, 230, 0.25)"
+				},
+				"--ts-color-channel-5-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(133, 76, 230, 0.55)"
+				},
+				"--ts-color-channel-6-dark": {
+					"type": "string",
+					"description": "Default: #e6634c"
+				},
+				"--ts-color-channel-6-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(230, 99, 76, 0.25)"
+				},
+				"--ts-color-channel-6-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(230, 99, 76, 0.55)"
+				},
+				"--ts-color-channel-7-dark": {
+					"type": "string",
+					"description": "Default: #e64cb8"
+				},
+				"--ts-color-channel-7-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(230, 76, 184, 0.25)"
+				},
+				"--ts-color-channel-7-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(230, 76, 184, 0.55)"
+				},
+				"--ts-color-channel-8-dark": {
+					"type": "string",
+					"description": "Default: #b3b3b3"
+				},
+				"--ts-color-channel-8-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(179, 179, 179, 0.25)"
+				},
+				"--ts-color-channel-8-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(179, 179, 179, 0.55)"
+				},
+				"--ts-color-channel-9-dark": {
+					"type": "string",
+					"description": "Default: #e3e64c"
+				},
+				"--ts-color-channel-9-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(227, 230, 76, 0.25)"
+				},
+				"--ts-color-channel-9-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(227, 230, 76, 0.55)"
+				},
+				"--ts-color-channel-10-dark": {
+					"type": "string",
+					"description": "Default: #4ccfe6"
+				},
+				"--ts-color-channel-10-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(76, 207, 230, 0.25)"
+				},
+				"--ts-color-channel-10-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(76, 207, 230, 0.55)"
+				},
+				"--ts-color-channel-11-dark": {
+					"type": "string",
+					"description": "Default: #99e64c"
+				},
+				"--ts-color-channel-11-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(153, 230, 76, 0.25)"
+				},
+				"--ts-color-channel-11-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(153, 230, 76, 0.55)"
+				},
+				"--ts-color-channel-12-dark": {
+					"type": "string",
+					"description": "Default: #4ce68c"
+				},
+				"--ts-color-channel-12-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(76, 230, 140, 0.25)"
+				},
+				"--ts-color-channel-12-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(76, 230, 140, 0.55)"
+				},
+				"--ts-color-channel-13-dark": {
+					"type": "string",
+					"description": "Default: #4c59e6"
+				},
+				"--ts-color-channel-13-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(76, 89, 230, 0.25)"
+				},
+				"--ts-color-channel-13-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(76, 89, 230, 0.55)"
+				},
+				"--ts-color-channel-14-dark": {
+					"type": "string",
+					"description": "Default: #a64ce6"
+				},
+				"--ts-color-channel-14-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(166, 76, 230, 0.25)"
+				},
+				"--ts-color-channel-14-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(166, 76, 230, 0.55)"
+				},
+				"--ts-color-channel-15-dark": {
+					"type": "string",
+					"description": "Default: #e64ce6"
+				},
+				"--ts-color-channel-15-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(230, 76, 230, 0.25)"
+				},
+				"--ts-color-channel-15-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(230, 76, 230, 0.55)"
+				},
+				"--ts-color-channel-16-dark": {
+					"type": "string",
+					"description": "Default: #e64c7a"
+				},
+				"--ts-color-channel-16-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(230, 76, 122, 0.25)"
+				},
+				"--ts-color-channel-16-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(230, 76, 122, 0.55)"
+				},
+				"--ts-color-channel-1-colorblind": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent)"
+				},
+				"--ts-color-channel-1-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-30)"
+				},
+				"--ts-color-channel-1-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-55)"
+				},
+				"--ts-color-channel-2-colorblind": {
+					"type": "string",
+					"description": "Default: #56b4e9"
+				},
+				"--ts-color-channel-2-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(86, 180, 233, 0.25)"
+				},
+				"--ts-color-channel-2-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(86, 180, 233, 0.55)"
+				},
+				"--ts-color-channel-3-colorblind": {
+					"type": "string",
+					"description": "Default: #009e73"
+				},
+				"--ts-color-channel-3-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(0, 158, 115, 0.25)"
+				},
+				"--ts-color-channel-3-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(0, 158, 115, 0.55)"
+				},
+				"--ts-color-channel-4-colorblind": {
+					"type": "string",
+					"description": "Default: #b8a100"
+				},
+				"--ts-color-channel-4-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(184, 161, 0, 0.25)"
+				},
+				"--ts-color-channel-4-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(184, 161, 0, 0.55)"
+				},
+				"--ts-color-channel-5-colorblind": {
+					"type": "string",
+					"description": "Default: #0072b2"
+				},
+				"--ts-color-channel-5-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(0, 114, 178, 0.25)"
+				},
+				"--ts-color-channel-5-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(0, 114, 178, 0.55)"
+				},
+				"--ts-color-channel-6-colorblind": {
+					"type": "string",
+					"description": "Default: #d55e00"
+				},
+				"--ts-color-channel-6-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(213, 94, 0, 0.25)"
+				},
+				"--ts-color-channel-6-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(213, 94, 0, 0.55)"
+				},
+				"--ts-color-channel-7-colorblind": {
+					"type": "string",
+					"description": "Default: #cc79a7"
+				},
+				"--ts-color-channel-7-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(204, 121, 167, 0.25)"
+				},
+				"--ts-color-channel-7-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(204, 121, 167, 0.55)"
+				},
+				"--ts-color-channel-8-colorblind": {
+					"type": "string",
+					"description": "Default: #7f7f7f"
+				},
+				"--ts-color-channel-8-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(127, 127, 127, 0.25)"
+				},
+				"--ts-color-channel-8-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(127, 127, 127, 0.55)"
+				},
+				"--ts-color-channel-9-colorblind": {
+					"type": "string",
+					"description": "Default: #f5bc6c"
+				},
+				"--ts-color-channel-9-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(245, 188, 108, 0.25)"
+				},
+				"--ts-color-channel-9-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(245, 188, 108, 0.55)"
+				},
+				"--ts-color-channel-10-colorblind": {
+					"type": "string",
+					"description": "Default: #9dd4f2"
+				},
+				"--ts-color-channel-10-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(157, 212, 242, 0.25)"
+				},
+				"--ts-color-channel-10-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(157, 212, 242, 0.55)"
+				},
+				"--ts-color-channel-11-colorblind": {
+					"type": "string",
+					"description": "Default: #6bc7ae"
+				},
+				"--ts-color-channel-11-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(107, 199, 174, 0.25)"
+				},
+				"--ts-color-channel-11-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(107, 199, 174, 0.55)"
+				},
+				"--ts-color-channel-12-colorblind": {
+					"type": "string",
+					"description": "Default: #d6c86b"
+				},
+				"--ts-color-channel-12-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(214, 200, 107, 0.25)"
+				},
+				"--ts-color-channel-12-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(214, 200, 107, 0.55)"
+				},
+				"--ts-color-channel-13-colorblind": {
+					"type": "string",
+					"description": "Default: #6badd2"
+				},
+				"--ts-color-channel-13-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(107, 173, 210, 0.25)"
+				},
+				"--ts-color-channel-13-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(107, 173, 210, 0.55)"
+				},
+				"--ts-color-channel-14-colorblind": {
+					"type": "string",
+					"description": "Default: #e7a26b"
+				},
+				"--ts-color-channel-14-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(231, 162, 107, 0.25)"
+				},
+				"--ts-color-channel-14-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(231, 162, 107, 0.55)"
+				},
+				"--ts-color-channel-15-colorblind": {
+					"type": "string",
+					"description": "Default: #e1b1cc"
+				},
+				"--ts-color-channel-15-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(225, 177, 204, 0.25)"
+				},
+				"--ts-color-channel-15-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(225, 177, 204, 0.55)"
+				},
+				"--ts-color-channel-16-colorblind": {
+					"type": "string",
+					"description": "Default: #b5b5b5"
+				},
+				"--ts-color-channel-16-colorblind-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(181, 181, 181, 0.25)"
+				},
+				"--ts-color-channel-16-colorblind-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(181, 181, 181, 0.55)"
+				},
+				"--ts-color-channel-1-colorblind-dark": {
+					"type": "string",
+					"description": "Default: var(--ts-color-channel-1-dark)"
+				},
+				"--ts-color-channel-1-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: var( --ts-color-channel-1-dark-soft-30 )"
+				},
+				"--ts-color-channel-1-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: var( --ts-color-channel-1-dark-soft-55 )"
+				},
+				"--ts-color-channel-2-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #7bc5ee"
+				},
+				"--ts-color-channel-2-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(123, 197, 238, 0.25)"
+				},
+				"--ts-color-channel-2-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(123, 197, 238, 0.55)"
+				},
+				"--ts-color-channel-3-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #38b392"
+				},
+				"--ts-color-channel-3-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(56, 179, 146, 0.25)"
+				},
+				"--ts-color-channel-3-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(56, 179, 146, 0.55)"
+				},
+				"--ts-color-channel-4-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #c8b638"
+				},
+				"--ts-color-channel-4-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(200, 182, 56, 0.25)"
+				},
+				"--ts-color-channel-4-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(200, 182, 56, 0.55)"
+				},
+				"--ts-color-channel-5-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #3891c3"
+				},
+				"--ts-color-channel-5-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(56, 145, 195, 0.25)"
+				},
+				"--ts-color-channel-5-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(56, 145, 195, 0.55)"
+				},
+				"--ts-color-channel-6-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #de8138"
+				},
+				"--ts-color-channel-6-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(222, 129, 56, 0.25)"
+				},
+				"--ts-color-channel-6-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(222, 129, 56, 0.55)"
+				},
+				"--ts-color-channel-7-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #d796ba"
+				},
+				"--ts-color-channel-7-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(215, 150, 186, 0.25)"
+				},
+				"--ts-color-channel-7-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(215, 150, 186, 0.55)"
+				},
+				"--ts-color-channel-8-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #9b9b9b"
+				},
+				"--ts-color-channel-8-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(155, 155, 155, 0.25)"
+				},
+				"--ts-color-channel-8-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(155, 155, 155, 0.55)"
+				},
+				"--ts-color-channel-9-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #f7cb8d"
+				},
+				"--ts-color-channel-9-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(247, 203, 141, 0.25)"
+				},
+				"--ts-color-channel-9-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(247, 203, 141, 0.55)"
+				},
+				"--ts-color-channel-10-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #b3ddf5"
+				},
+				"--ts-color-channel-10-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(179, 221, 245, 0.25)"
+				},
+				"--ts-color-channel-10-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(179, 221, 245, 0.55)"
+				},
+				"--ts-color-channel-11-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #8cd3c0"
+				},
+				"--ts-color-channel-11-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(140, 211, 192, 0.25)"
+				},
+				"--ts-color-channel-11-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(140, 211, 192, 0.55)"
+				},
+				"--ts-color-channel-12-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #dfd58c"
+				},
+				"--ts-color-channel-12-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(223, 213, 140, 0.25)"
+				},
+				"--ts-color-channel-12-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(223, 213, 140, 0.55)"
+				},
+				"--ts-color-channel-13-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #8cc0dc"
+				},
+				"--ts-color-channel-13-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(140, 192, 220, 0.25)"
+				},
+				"--ts-color-channel-13-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(140, 192, 220, 0.55)"
+				},
+				"--ts-color-channel-14-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #ecb78c"
+				},
+				"--ts-color-channel-14-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(236, 183, 140, 0.25)"
+				},
+				"--ts-color-channel-14-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(236, 183, 140, 0.55)"
+				},
+				"--ts-color-channel-15-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #e8c3d7"
+				},
+				"--ts-color-channel-15-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(232, 195, 215, 0.25)"
+				},
+				"--ts-color-channel-15-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(232, 195, 215, 0.55)"
+				},
+				"--ts-color-channel-16-colorblind-dark": {
+					"type": "string",
+					"description": "Default: #c5c5c5"
+				},
+				"--ts-color-channel-16-colorblind-dark-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(197, 197, 197, 0.25)"
+				},
+				"--ts-color-channel-16-colorblind-dark-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(197, 197, 197, 0.55)"
+				},
 				"--ts-color-overlay-dim": {
 					"type": "string",
 					"description": "Default: rgba(0, 0, 0, 0.5)"
@@ -538,6 +1330,10 @@
 					"type": "string",
 					"description": "Default: 2px"
 				},
+				"--ts-piano-roll-keyboard-width": {
+					"type": "string",
+					"description": "Default: 64px"
+				},
 				"--ts-panel-gutter-sm": {
 					"type": "string",
 					"description": "Default: 12px"
@@ -589,6 +1385,25 @@
 			},
 			"additionalProperties": false,
 			"description": "Overrides for the player's public `--ts-*` theming custom properties, set on the element the block belongs to. Custom properties inherit, so a block on a view reaches everything that view renders — an accent colour set on one waveform recolours that waveform alone — while the top-level block on `TrackSwitchInit` reaches the whole player."
+		},
+		"TrackPanControl": {
+			"anyOf": [
+				{
+					"$ref": "#/definitions/TrackPanAlgorithm"
+				},
+				{
+					"type": "string",
+					"const": "none"
+				}
+			],
+			"description": "A pan control's algorithm, or `\"none\"` to hide the control entirely."
+		},
+		"TrackPanAlgorithm": {
+			"type": "string",
+			"enum": [
+				"balance",
+				"pan"
+			]
 		},
 		"SynchronizedAudioSourceConfig": {
 			"type": "object",
@@ -692,8 +1507,8 @@
 				"outsideCoverage": {
 					"$ref": "#/definitions/OutsideCoverageMode"
 				},
-				"duplicatePlacements": {
-					"$ref": "#/definitions/DuplicatePlacementPolicy"
+				"duplicateAnchors": {
+					"$ref": "#/definitions/DuplicateAnchorPolicy"
 				}
 			},
 			"required": [
@@ -710,26 +1525,37 @@
 				"extrapolate",
 				"error"
 			],
-			"description": "What a projection does for positions outside a timeline's coverage — the span its alignment placements actually annotate."
+			"description": "What a projection does for positions outside a timeline's coverage — the span its alignment anchors actually annotate."
 		},
-		"DuplicatePlacementPolicy": {
+		"DuplicateAnchorPolicy": {
 			"type": "string",
 			"enum": [
 				"first",
 				"average",
 				"error"
 			],
-			"description": "How a projection resolves several alignment rows that place one timeline at the same position — the shape a repeat produces, where one performance revisits a stretch the other plays only once."
+			"description": "How a projection resolves several anchors that put one timeline at the same position — the shape a repeat produces, where one performance revisits a stretch the other plays only once."
 		},
 		"MarkersConfig": {
 			"type": "object",
 			"additionalProperties": {
-				"$ref": "#/definitions/MarkerSetSourceConfig"
+				"$ref": "#/definitions/MarkerSequenceSourceConfig"
 			}
 		},
-		"MarkerSetSourceConfig": {
+		"MarkerSequenceSourceConfig": {
 			"type": "object",
 			"properties": {
+				"type": {
+					"$ref": "#/definitions/MarkerSequenceType",
+					"description": "Whether markers represent independent points or consecutive segment starts."
+				},
+				"colors": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "Segment label -> CSS color. Requires a segment sequence with labelCol."
+				},
 				"src": {
 					"type": "string"
 				},
@@ -746,10 +1572,18 @@
 				}
 			},
 			"required": [
+				"type",
 				"src",
 				"timeCol"
 			],
 			"additionalProperties": false
+		},
+		"MarkerSequenceType": {
+			"type": "string",
+			"enum": [
+				"points",
+				"segments"
+			]
 		},
 		"PresetsConfig": {
 			"type": "object",
@@ -790,7 +1624,7 @@
 					"$ref": "#/definitions/TrackSwitchWaveformViewConfig"
 				},
 				{
-					"$ref": "#/definitions/TrackSwitchMidiViewConfig"
+					"$ref": "#/definitions/TrackSwitchPianoRollViewConfig"
 				},
 				{
 					"$ref": "#/definitions/TrackSwitchSheetMusicViewConfig"
@@ -851,8 +1685,9 @@
 		"MarkerLayerConfig": {
 			"type": "object",
 			"properties": {
-				"set": {
-					"type": "string"
+				"sequence": {
+					"type": "string",
+					"description": "The marker sequence this layer draws, or \"alignment\" for the anchors."
 				},
 				"color": {
 					"type": "string"
@@ -878,7 +1713,7 @@
 				}
 			},
 			"required": [
-				"set"
+				"sequence"
 			],
 			"additionalProperties": false
 		},
@@ -943,6 +1778,9 @@
 				"maxZoom": {
 					"type": "number"
 				},
+				"defaultZoom": {
+					"type": "number"
+				},
 				"playbackFollowMode": {
 					"$ref": "#/definitions/WaveformPlaybackFollowMode"
 				},
@@ -976,7 +1814,8 @@
 				"off",
 				"center",
 				"jump"
-			]
+			],
+			"description": "How a zoomable surface moves with playback."
 		},
 		"WaveformTimeAxis": {
 			"type": "string",
@@ -986,12 +1825,12 @@
 			],
 			"description": "Whether a fixed-track waveform uses the shared duration or its own duration."
 		},
-		"TrackSwitchMidiViewConfig": {
+		"TrackSwitchPianoRollViewConfig": {
 			"type": "object",
 			"properties": {
 				"type": {
 					"type": "string",
-					"const": "midi"
+					"const": "pianoRoll"
 				},
 				"mediaID": {
 					"$ref": "#/definitions/MediaId"
@@ -1002,11 +1841,87 @@
 				"maxZoom": {
 					"type": "number"
 				},
+				"defaultZoom": {
+					"type": "number"
+				},
 				"playbackFollowMode": {
-					"$ref": "#/definitions/WaveformPlaybackFollowMode"
+					"$ref": "#/definitions/WaveformPlaybackFollowMode",
+					"description": "Ignored while `pianoKeyboard` is on — see there for what takes over."
 				},
 				"timer": {
 					"type": "boolean"
+				},
+				"pianoKeyboard": {
+					"type": "boolean",
+					"description": "Draws a piano keyboard beside the pitch axis and pins the playhead to its edge, so the notes fly into the keys and the key of every sounding note lights up in the colour of its channel. Defaults to `false`.\n\nAlso switches the roll to a pinned-left follow mode that holds the playhead against the keys and scrolls the notes underneath it instead of whatever `playbackFollowMode` says, and changes the note grid's drag gesture: dragging pans the sheet directly under the pointer, panning playback position along with it, rather than jumping to the clicked spot."
+				},
+				"noteRange": {
+					"$ref": "#/definitions/MidiNoteRange",
+					"description": "The pitch axis of the roll. `\"automatic\"` (the default) spans every note of the file with two semitones of padding on each side; a pair fixes it."
+				},
+				"grid": {
+					"type": "string",
+					"enum": [
+						"none",
+						"time",
+						"pitch",
+						"both"
+					],
+					"description": "Draws reference lines behind the note events. `\"time\"` draws vertical lines at a round interval of the unit this view's medium declares its timeline in; `\"pitch\"` bands the rows of the black keys; `\"both\"` draws both. Defaults to `\"none\"`. A pitch grid needs a few pixels per semitone to read, and is left out on a roll too short for its note range."
+				},
+				"noteTooltip": {
+					"type": "boolean",
+					"description": "Shows a readout of the note event under the cursor: its pitch, channel, start, end, duration and velocity. Defaults to `false`. When `channelToLabelMap` names the hovered note's channel, its label is shown in place of the plain channel number."
+				},
+				"channelToLabelMap": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "Labels MIDI channels, keyed by channel number (e.g. `{ \"1\": \"Piano\" }`). Shown on note hover when `noteTooltip` is on, and in the legend when `legend` is not `\"none\"`. A channel with no entry falls back to its plain number."
+				},
+				"legend": {
+					"$ref": "#/definitions/PianoRollLegendPosition",
+					"description": "Draws a legend naming every channel `channelToLabelMap` labels, each entry paired with the channel's colour, at the given position. Defaults to `\"none\"`."
+				},
+				"velocityBars": {
+					"type": "boolean",
+					"description": "Draws a bar inside each note event showing its velocity. Defaults to `false`."
+				},
+				"velocityOpacity": {
+					"type": "boolean",
+					"description": "Fades note events by their velocity rather than drawing them solid. Defaults to `false`."
+				},
+				"channelToTrackIDMap": {
+					"type": "object",
+					"additionalProperties": {
+						"anyOf": [
+							{
+								"$ref": "#/definitions/TrackId"
+							},
+							{
+								"type": "array",
+								"items": {
+									"$ref": "#/definitions/TrackId"
+								}
+							}
+						]
+					},
+					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel is drawn while any of its tracks is audible — naming every track of a `comparisonGroup` keeps the channel visible as the selection moves between them. Two channels may name the same track; the track's row then splits its colour across both."
+				},
+				"colorPerChannel": {
+					"type": "boolean",
+					"description": "Gives every channel in the file its own palette colour, independently of `channelToTrackIDMap`. Defaults to `true`. With this off, every channel draws in the plain, unpaired colour regardless of the map."
+				},
+				"palette": {
+					"type": "string",
+					"enum": [
+						"light",
+						"dark",
+						"colorblind-light",
+						"colorblind-dark"
+					],
+					"description": "The channel colour set and background this view draws with. `\"dark\"` variants pair a dark surface with channel colours re-tuned for it; `\"colorblind-*\"` variants use a colorblind-friendly hue set instead of the default one. Defaults to `\"light\"`. Individual channels or the background can still be overridden with `css`."
 				},
 				"markerLayers": {
 					"type": "array",
@@ -1023,6 +1938,35 @@
 				"mediaID"
 			],
 			"additionalProperties": false
+		},
+		"MidiNoteRange": {
+			"anyOf": [
+				{
+					"type": "string",
+					"const": "automatic"
+				},
+				{
+					"type": "array",
+					"items": {
+						"type": [
+							"string",
+							"number"
+						],
+						"description": "A pitch as configuration writes it: a MIDI note number, or a name in scientific pitch notation such as `\"C4\"`, `\"F#3\"` or `\"Bb-1\"`, where middle C is C4 = 60."
+					},
+					"minItems": 2,
+					"maxItems": 2
+				}
+			],
+			"description": "The pitch axis of a piano roll: derived from the file, or fixed to a range."
+		},
+		"PianoRollLegendPosition": {
+			"type": "string",
+			"enum": [
+				"none",
+				"top-right"
+			],
+			"description": "Where a piano roll's legend is drawn, or `\"none\"` to leave it off. Only `\"top-right\"` is implemented today; the type is a union so more positions can be added later without a breaking change."
 		},
 		"TrackSwitchSheetMusicViewConfig": {
 			"type": "object",
@@ -1166,9 +2110,9 @@
 					"type": "string",
 					"description": "Labels the list. Alignment shows it on the row that selects the list as a whole."
 				},
-				"soloGroup": {
+				"comparisonGroup": {
 					"type": "number",
-					"description": "Names the selection this list belongs to, which permits only one audible track at a time — its rows behave as radio buttons. Lists that name the same number share that one selection, so picking a track in one of them deselects whatever the others had. Any non-negative integer works; distinct numbers are independent selections.\n\nOmit it to let the list's tracks sound together, each row an ordinary toggle.\n\nUnder alignment it decides which level of the selection hierarchy the list contributes: with a `soloGroup` every row is a selectable timeline of its own, without one the list is a single selectable timeline whose rows mix freely inside it — which requires all of its tracks to share one alignment timeline. Alignment plays one timeline at a time across the whole player, so an aligned player has at most one `soloGroup` to share."
+					"description": "Names the selection this list belongs to, which permits only one audible track at a time — its rows behave as radio buttons. Lists that name the same number share that one selection, so picking a track in one of them deselects whatever the others had. Any non-negative integer works; distinct numbers are independent selections.\n\nOmit it to let the list's tracks sound together, each row an ordinary toggle.\n\nUnder alignment it decides which level of the selection hierarchy the list contributes: with a `comparisonGroup` every row is a selectable timeline of its own, without one the list is a single selectable timeline whose rows mix freely inside it — which requires all of its tracks to share one alignment timeline. Alignment plays one timeline at a time across the whole player, so an aligned player has at most one `comparisonGroup` to share."
 				},
 				"rowHeight": {
 					"type": "number"
@@ -1177,15 +2121,11 @@
 					"type": "boolean"
 				},
 				"trackPanControls": {
-					"anyOf": [
-						{
-							"$ref": "#/definitions/TrackPanAlgorithm"
-						},
-						{
-							"type": "boolean",
-							"const": false
-						}
-					]
+					"$ref": "#/definitions/TrackPanControl"
+				},
+				"channelColorIcons": {
+					"type": "boolean",
+					"description": "Repeats a track's piano-roll channel colour(s) on its `solo` icon. Defaults to `true`. Set to `false` to keep every row's icon in the plain foreground colour regardless of channel pairing."
 				}
 			},
 			"required": [
@@ -1193,13 +2133,6 @@
 				"tracks"
 			],
 			"additionalProperties": false
-		},
-		"TrackPanAlgorithm": {
-			"type": "string",
-			"enum": [
-				"balance",
-				"pan"
-			]
 		},
 		"TrackSwitchNavigationBarViewConfig": {
 			"type": "object",
@@ -1216,6 +2149,10 @@
 				},
 				"repeatEnabled": {
 					"type": "boolean"
+				},
+				"globalPanControl": {
+					"$ref": "#/definitions/TrackPanAlgorithm",
+					"description": "Pan algorithm for the global pan control shown when `controls` includes `\"globalPan\"`."
 				}
 			},
 			"required": [
@@ -1229,12 +2166,15 @@
 			"enum": [
 				"playback",
 				"globalVolume",
+				"globalPan",
 				"markerNavigation",
+				"markerEditing",
 				"looping",
 				"sync",
 				"presets",
 				"timer",
-				"seekBar"
+				"seekBar",
+				"fullscreen-control"
 			]
 		}
 	},

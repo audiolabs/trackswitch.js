@@ -1,4 +1,4 @@
-import type { TrackSourceDefinition, TrackTiming } from "../domain/types";
+import type { TrackSourceDefinition, TrackTiming } from "../types";
 
 export function inferSourceMimeType(
 	sourceUrl: string,

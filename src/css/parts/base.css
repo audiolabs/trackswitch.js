@@ -221,6 +221,14 @@
 	display: block;
 	width: 1em;
 	height: 1em;
+	/*
+	 * Most icon paths touch their viewBox edge exactly. An SVG viewport clips by
+	 * default, so at fractional rasterisation scales (icon sizes of 14/18px,
+	 * fractional device pixel ratios) the outermost antialiased pixel row gets
+	 * shaved and the icon looks flattened on one side — visible on some page
+	 * loads and zoom levels but not others.
+	 */
+	overflow: visible;
 }
 
 .trackswitch.trackswitch .volume-icon .ts-icon-slot {

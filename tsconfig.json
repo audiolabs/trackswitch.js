@@ -8,6 +8,11 @@
 		"skipLibCheck": true,
 		"lib": ["DOM", "ES2017"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.d.ts", "type-tests/**/*.ts"],
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.d.ts",
+		"extensions/**/*.ts",
+		"type-tests/**/*.ts"
+	],
 	"exclude": ["dist", "node_modules"]
 }

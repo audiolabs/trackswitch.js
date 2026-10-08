@@ -22,8 +22,16 @@ declare module "papaparse" {
 		};
 	}
 
+	export interface UnparseConfig {
+		newline?: string;
+	}
+
 	export interface PapaStatic {
 		parse<T = string[]>(input: string, config?: ParseConfig): ParseResult<T>;
+		unparse(
+			input: { fields: string[]; data: unknown[][] },
+			config?: UnparseConfig,
+		): string;
 	}
 
 	const Papa: PapaStatic;

@@ -79,10 +79,13 @@ function readRuleBody(css, selector, path) {
 
 /**
  * Splits a rule body into `name: value` declarations. Values may span lines, so
- * this splits on semicolons rather than newlines.
+ * this splits on semicolons rather than newlines. Comments go first: a comment
+ * sits in the same chunk as the declaration that follows it, and would
+ * otherwise be read as part of that declaration's name.
  */
 function readDeclarations(body) {
 	return body
+		.replace(/\/\*[\s\S]*?\*\//g, "")
 		.split(";")
 		.map((declaration) => declaration.trim())
 		.filter((declaration) => declaration.length > 0)

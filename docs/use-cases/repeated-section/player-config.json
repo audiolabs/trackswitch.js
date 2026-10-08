@@ -23,12 +23,14 @@
 	},
 	"markers": {
 		"kruegerSections": {
+			"type": "segments",
 			"src": "krueger-markers.csv",
 			"timeline": "krueger",
 			"timeCol": "time",
 			"labelCol": "label"
 		},
 		"alciatoreSections": {
+			"type": "segments",
 			"src": "alciatore-markers.csv",
 			"timeline": "alciatore",
 			"timeCol": "time",
@@ -48,7 +50,7 @@
 			"timeAxis": "individual",
 			"markerLayers": [
 				{
-					"set": "kruegerSections",
+					"sequence": "kruegerSections",
 					"color": "var(--ts-color-accent)",
 					"line": "solid"
 				}
@@ -62,7 +64,7 @@
 			"timeAxis": "individual",
 			"markerLayers": [
 				{
-					"set": "alciatoreSections",
+					"sequence": "alciatoreSections",
 					"color": "var(--ts-color-accent)",
 					"line": "solid"
 				}
@@ -71,7 +73,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["krueger", "alciatore"],
-			"soloGroup": 0
+			"comparisonGroup": 0
 		}
 	]
 }

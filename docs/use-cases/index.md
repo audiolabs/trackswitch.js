@@ -8,8 +8,8 @@ body_class: docs-page docs-page--narrow
 
 # Tutorials & Use Cases
 
-Here you can find different examples on how to configure and use trackswitch for your use case.
-We show pre-configured players and explain the main concepts behind it.
+These tutorials show how to configure Trackswitch for common music processing tasks.
+Each page contains a working player and explains the important parts of its JSON configuration.
 
 ## Basic
 
@@ -37,10 +37,10 @@ We show pre-configured players and explain the main concepts behind it.
   </li>
   
   <li class="ts-usecase-card">
-    <h2><a href="{{ '/use-cases/markers-across-timelines/' | relative_url }}">Markers</a></h2>
+    <h2><a href="{{ '/use-cases/markers/' | relative_url }}">Markers</a></h2>
     <p>
-      This player shows marker projection. One annotation file contains positions on the timeline of one performance.
-      The other performance shows these markers at the corresponding musical positions.
+      Compare measure points and colored structural segments on two aligned performances
+      of Schubert's <em>Gefrorne Tränen</em>.
     </p>
   </li>
 </ul>
@@ -48,6 +48,14 @@ We show pre-configured players and explain the main concepts behind it.
 ## Advanced
 
 <ul class="ts-usecase-list">
+  <li class="ts-usecase-card">
+    <h2><a href="{{ '/use-cases/score-following/' | relative_url }}">Score Following</a></h2>
+    <p>
+      A score view that highlights the measure being heard, and measures that seek the recording
+      when clicked. Seconds and measures connected by one alignment.
+    </p>
+  </li>
+
   <li class="ts-usecase-card">
     <h2><a href="{{ '/use-cases/shared-timeline-groups/' | relative_url }}">Shared Timeline - Groups</a></h2>
     <p>
@@ -69,6 +77,15 @@ We show pre-configured players and explain the main concepts behind it.
     <p>
       Two performances, each taken apart into harmonic, percussive and residual stems.
       The first level of selection picks the performance, the second mixes the stems inside it.
+    </p>
+  </li>
+
+  <li class="ts-usecase-card">
+    <h2><a href="{{ '/use-cases/multi-instrument-transcription/' | relative_url }}">Piano Roll</a></h2>
+    <p>
+      One MIDI file transcribes a four-part ensemble, each channel taking a colour of its own.
+      A second player pairs each channel with a recording, drawing it only while that instrument
+      is audible, and shows the same transcription flying into a piano keyboard.
     </p>
   </li>
 

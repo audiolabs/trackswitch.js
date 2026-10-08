@@ -44,7 +44,7 @@ const buildTargets = {
 			outDir: "dist/interactive",
 			assetsInlineLimit: Number.MAX_SAFE_INTEGER,
 			lib: {
-				entry: resolve(rootDir, "src/interactive-browser.ts"),
+				entry: resolve(rootDir, "extensions/interactive-alignment/browser.ts"),
 				name: "TrackSwitchInteractive",
 				formats: ["iife"],
 				fileName: () => "trackswitch-interactive.js",
@@ -62,7 +62,10 @@ const buildTargets = {
 			target: "es2020",
 			outDir: "dist/interactive",
 			lib: {
-				entry: resolve(rootDir, "src/interactive/worker/alignment-worker.ts"),
+				entry: resolve(
+					rootDir,
+					"extensions/interactive-alignment/worker/alignment-worker.ts",
+				),
 				formats: ["es"],
 				fileName: () => "trackswitch-interactive-worker.js",
 			},
@@ -71,6 +74,22 @@ const buildTargets = {
 					banner,
 					inlineDynamicImports: true,
 				},
+			},
+		},
+	},
+	builder: {
+		build: {
+			...commonBuild,
+			outDir: "dist/docs",
+			assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+			lib: {
+				entry: resolve(rootDir, "src/builder/index.ts"),
+				name: "TrackSwitchBuilder",
+				formats: ["iife"],
+				fileName: () => "trackswitch-builder.js",
+			},
+			rollupOptions: {
+				output: iifeOutput,
 			},
 		},
 	},
@@ -103,6 +122,16 @@ const buildTargets = {
 
 export default defineConfig(({ mode }) => {
 	const buildTarget = Object.hasOwn(buildTargets, mode) ? mode : "browser";
+	const config = buildTargets[buildTarget as keyof typeof buildTargets];
 
-	return buildTargets[buildTarget as keyof typeof buildTargets];
+	// `npm run docs:watch` writes the bundles straight into the Jekyll site;
+	// their file names already match the ones docs:assets copies them to.
+	if (process.env.TRACKSWITCH_DOCS_WATCH === "1") {
+		return {
+			...config,
+			build: { ...config.build, outDir: "docs/js", watch: {} },
+		};
+	}
+
+	return config;
 });

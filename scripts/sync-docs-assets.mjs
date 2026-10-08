@@ -18,6 +18,18 @@ const docsAssets = [
 		source: "dist/interactive/trackswitch-interactive-worker.js",
 		docs: "docs/js/trackswitch-interactive-worker.js",
 	},
+	{
+		source: "dist/docs/trackswitch-builder.js",
+		docs: "docs/js/trackswitch-builder.js",
+	},
+	{
+		source: "LICENSE",
+		docs: "docs/assets/builder/LICENSE",
+	},
+	{
+		source: "THIRD_PARTY_NOTICES.md",
+		docs: "docs/assets/builder/THIRD_PARTY_NOTICES.md",
+	},
 ];
 
 /**
@@ -71,6 +83,20 @@ const remoteDocsAssets = [
 			{ from: "spl_L15_kalman.png", to: "kalman.png" },
 			{ from: "spl_L15_rls-scd.png", to: "rls-scd.png" },
 			{ from: "spl_L15_rls-scd-mle.png", to: "rls-scd-mle.png" },
+		],
+	},
+	{
+		docs: "docs/assets/multi-instrument-transcription",
+		baseUrl:
+			"https://www.audiolabs-erlangen.de/content/resources/MIR/00_2026-ChoraleWind/0_Drese_JesuGehVoran/tracks",
+		files: ["01_as.mp3", "02_cl.mp3", "03_tb.mp3", "04_tba.mp3"],
+	},
+	{
+		docs: "docs/assets/multi-instrument-transcription",
+		baseUrl:
+			"https://www.audiolabs-erlangen.de/content/resources/MIR/00_2026-ChoraleWind/0_Drese_JesuGehVoran",
+		files: [
+			{ from: "126_Drese_JesuGehVoran_02-expr.mid", to: "transcription.mid" },
 		],
 	},
 	{

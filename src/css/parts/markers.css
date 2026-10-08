@@ -7,6 +7,46 @@
 	pointer-events: none;
 }
 
+.trackswitch .timeline-segment {
+	--ts-segment-position: 0%;
+	--ts-segment-width: 0%;
+	--ts-marker-highlight-color: var(--ts-color-accent);
+	--ts-marker-line-width: 1px;
+	position: absolute;
+	inset-block: 0;
+	left: var(--ts-segment-position);
+	width: var(--ts-segment-width);
+	min-width: var(--ts-marker-line-width);
+	box-sizing: border-box;
+	border-inline-start: var(--ts-marker-line-width) solid
+		var(--ts-marker-highlight-color);
+	background: color-mix(
+		in srgb,
+		var(--ts-marker-highlight-color) 14%,
+		transparent
+	);
+	color: var(--ts-color-text-primary);
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.trackswitch .timeline-segment-label {
+	position: absolute;
+	top: 7px;
+	left: 7px;
+	max-width: calc(100% - 14px);
+	padding: 2px 4px;
+	border-radius: 3px;
+	background: var(--ts-color-surface-raised-72);
+	font-family: var(--ts-font-ui);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .trackswitch
 	.timeline-marker-layer:has(
 		.timeline-marker:is(:hover, :focus-visible, :active, .is-active)
@@ -151,4 +191,123 @@
 	.trackswitch.trackswitch .timeline-marker-label {
 		transition: none;
 	}
+}
+
+/* Marker editing ----------------------------------------------------------- */
+
+/* The armed tool's own icon is the cursor; its hotspot is the foot of the stem. */
+.trackswitch.marker-adding .seekwrap:not(.main-control .seekwrap) {
+	cursor:
+		url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M2.5 2.5h9.8L8.5 7.6v13.9H6.3V7.6L2.5 2.5Zm13.4 7.4h2.2v3.5h3.4v2.2h-3.4v3.5h-2.2v-3.5h-3.4v-2.2h3.4V9.9Z%22 fill=%22%23000%22 stroke=%22%23fff%22 stroke-width=%221.2%22 stroke-linejoin=%22round%22 paint-order=%22stroke%22/%3E%3C/svg%3E")
+		7 21,
+		crosshair;
+}
+
+.trackswitch.marker-removing .timeline-marker {
+	cursor:
+		url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M2.5 2.5h9.8L8.5 7.6v13.9H6.3V7.6L2.5 2.5Zm10 10.9h9v2.2h-9v-2.2Z%22 fill=%22%23000%22 stroke=%22%23fff%22 stroke-width=%221.2%22 stroke-linejoin=%22round%22 paint-order=%22stroke%22/%3E%3C/svg%3E")
+		7 21,
+		pointer;
+}
+
+.trackswitch .marker-label-editor {
+	--ts-marker-position: 0%;
+	position: absolute;
+	top: 4px;
+	left: var(--ts-marker-position);
+	z-index: 6;
+	display: flex;
+	gap: 2px;
+	padding-inline-start: 4px;
+	border-inline-start: 1px solid var(--ts-color-accent);
+	height: calc(100% - 4px);
+	align-items: flex-start;
+	pointer-events: none;
+}
+
+.trackswitch .marker-label-editor-before {
+	transform: translateX(-100%);
+	padding-inline: 0 4px;
+	border-inline-start: 0;
+	border-inline-end: 1px solid var(--ts-color-accent);
+}
+
+.trackswitch.trackswitch .marker-label-input {
+	width: 120px;
+	height: 22px;
+	padding: 0 6px;
+	box-sizing: border-box;
+	border: 1px solid var(--ts-color-accent);
+	border-radius: 3px;
+	background: var(--ts-color-surface-raised-72);
+	color: var(--ts-color-text-primary);
+	font: 600 11px / 1.2 var(--ts-font-ui);
+	pointer-events: auto;
+}
+
+.trackswitch.trackswitch .marker-label-input:focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: 1px;
+}
+
+.trackswitch.trackswitch .marker-label-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 1px solid var(--ts-color-accent);
+	border-radius: 3px;
+	background: var(--ts-color-surface-raised-72);
+	color: var(--ts-color-text-primary);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.trackswitch .marker-label-remove .ts-icon-slot,
+.trackswitch .marker-label-remove .ts-icon-svg {
+	width: 11px;
+	height: 11px;
+	font-size: 11px;
+}
+
+.trackswitch .marker-loupe {
+	position: fixed;
+	z-index: 1000;
+	box-sizing: content-box;
+	border: 1px solid var(--ts-color-accent);
+	border-radius: 4px;
+	box-shadow: 0 4px 14px var(--ts-color-surface-panel-dark-50);
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.trackswitch .marker-loupe-canvas {
+	display: block;
+}
+
+.trackswitch .marker-loupe-line {
+	position: absolute;
+	inset-block: 0;
+	left: 50%;
+	width: 1px;
+	background: var(--ts-color-accent);
+	transform: translateX(-50%);
+}
+
+.trackswitch .marker-loupe-readout {
+	position: absolute;
+	right: 4px;
+	bottom: 3px;
+	padding: 1px 4px;
+	border-radius: 3px;
+	background: var(--ts-color-surface-raised-72);
+	color: var(--ts-color-text-primary);
+	font: 600 11px / 1.2 var(--ts-font-ui);
+	font-variant-numeric: tabular-nums;
+}
+
+.trackswitch.marker-editing .timeline-marker {
+	touch-action: none;
 }

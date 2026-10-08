@@ -42,7 +42,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["mix", "kick", "bass", "piano"],
-			"soloGroup": 0
+			"comparisonGroup": 0
 		}
 	]
 }

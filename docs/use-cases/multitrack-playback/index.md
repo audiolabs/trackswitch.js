@@ -8,26 +8,50 @@ body_class: docs-page docs-page--narrow
 
 # Multitrack Playback
 
-Trackswitch is a multitrack audio player. 
-Multiple audio files are loaded into the player and can be played back in two different modes: default or solo.
-In default mode, multiple tracks can be selected and played back simultaneosly, while in solo mode, only one track is played at a time.
+This page shows how to play several synchronized audio files in one player.
+In simultaneous listening mode, users can select and mix multiple tracks.
+In comparative listening mode, only one track plays at a time, which makes direct comparisons easy.
 
-A simple multitrack trackswitch player can be used to compare the output of different processing methods. 
-The player below uses solo mode to compares several dereverberation methods.
+## Simultaneous listening
+
+This player mixes violin, synth, bass, and drum stems of an arrangement.
+All four tracks play together by default, and the per-track volume and pan controls let listeners adjust the mix.
 
 <div class="ts-usecase-showcase">
-  <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
+  <aside class="ts-usecase-showcase__code-callout" aria-label="Copy simultaneous listening player code">
     <h4 class="ts-usecase-showcase__code-title">Hover to show player config</h4>
     <button class="ts-copy-btn" type="button">Copy to clipboard</button>
   </aside>
 
   <div class="ts-usecase-showcase__player-stage">
     <trackswitch-player
-      config-src="player-config.json"
+      config-src="simultaneous-player-config.json"
       style="display: block;"></trackswitch-player>
   </div>
 
-  <div class="ts-usecase-showcase__snippet-panel" aria-label="Code preview">
+  <div class="ts-usecase-showcase__snippet-panel" aria-label="Simultaneous listening code preview">
+    <pre class="ts-usecase-showcase__snippet-shell"><code></code></pre>
+  </div>
+</div>
+
+## Comparative listening
+
+This player uses solo mode to compare the output of several dereverberation methods.
+Selecting a track mutes the others, so only one method plays at a time.
+
+<div class="ts-usecase-showcase">
+  <aside class="ts-usecase-showcase__code-callout" aria-label="Copy comparative listening player code">
+    <h4 class="ts-usecase-showcase__code-title">Hover to show player config</h4>
+    <button class="ts-copy-btn" type="button">Copy to clipboard</button>
+  </aside>
+
+  <div class="ts-usecase-showcase__player-stage">
+    <trackswitch-player
+      config-src="comparative-player-config.json"
+      style="display: block;"></trackswitch-player>
+  </div>
+
+  <div class="ts-usecase-showcase__snippet-panel" aria-label="Comparative listening code preview">
     <pre class="ts-usecase-showcase__snippet-shell"><code></code></pre>
   </div>
 </div>

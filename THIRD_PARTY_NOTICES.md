@@ -12,11 +12,8 @@ the applicable license notices.
   repository.
 - `dist/js/trackswitch.js` is a self-contained browser bundle and includes
   third-party runtime code listed below.
-- `dist/js/trackswitch-interactive-worker.js` contains project worker runtime
-  code only and does not embed additional third-party package code beyond what
-  is already covered below.
 - `dist/esm/**/*.js` includes bundled third-party runtime code and embedded
-  Font Awesome SVG path data from `src/ui/icons.ts`.
+  Font Awesome SVG path data from `src/views/icons.ts`.
 - The project code itself remains licensed under MIT (see `LICENSE`).
 
 ## Included Third-Party Packages
@@ -27,8 +24,8 @@ the applicable license notices.
 | --- | --- | --- |
 | @tonejs/midi | 2.0.28 | MIT |
 | d3 | 7.9.0 | ISC |
-| opensheetmusicdisplay | 2.0.0 | BSD-3-Clause |
-| papaparse | 5.5.3 | MIT |
+| opensheetmusicdisplay | 2.1.2 | BSD-3-Clause |
+| papaparse | 5.5.4 | MIT |
 
 ### Embedded third-party artwork in distributed JavaScript
 
@@ -76,6 +73,7 @@ No Font Awesome runtime/package code is bundled in the published artifacts.
 - The Font Awesome SIL OFL 1.1 license for font files does not apply here
   because these distributed artifacts do not bundle Font Awesome webfont or
   desktop font files.
+  
 ## Full License Texts
 
 The license texts below are embedded once per license family and apply to the

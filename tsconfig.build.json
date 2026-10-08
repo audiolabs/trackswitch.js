@@ -9,10 +9,5 @@
 		"outDir": "./dist/types"
 	},
 	"include": ["src/**/*.ts", "src/**/*.d.ts"],
-	"exclude": [
-		"dist",
-		"node_modules",
-		"src/interactive/**",
-		"src/interactive-browser.ts"
-	]
+	"exclude": ["dist", "node_modules", "src/builder/**"]
 }

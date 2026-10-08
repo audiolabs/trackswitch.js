@@ -66,7 +66,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["input", "desired", "rlsScd", "rlsScdMle", "kalman"],
-			"soloGroup": 0
+			"comparisonGroup": 0
 		}
 	]
 }

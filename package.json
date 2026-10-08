@@ -84,10 +84,12 @@
 	"scripts": {
 		"clean": "rimraf dist",
 		"build": "npm run build:browser && npm run build:esm && npm run build:types && npm run generate",
+		"postbuild": "node scripts/copy-dist-notices.mjs",
 		"build:browser": "vite build --mode browser",
 		"build:interactive": "npm run build:interactive-browser && npm run build:interactive-worker",
 		"build:interactive-browser": "vite build --mode interactive-browser",
 		"build:interactive-worker": "vite build --mode interactive-worker",
+		"build:builder": "vite build --mode builder",
 		"build:all": "npm run build && npm run build:interactive",
 		"build:esm": "vite build --mode esm",
 		"tokens:build": "node scripts/generate-css-tokens.mjs",
@@ -96,7 +98,8 @@
 		"generate": "npm run tokens:build && npm run schema:build",
 		"generate:check": "npm run generate && git diff --exit-code -- src/generated docs/schema docs/_includes/css-tokens.md",
 		"docs:assets": "node scripts/sync-docs-assets.mjs",
-		"docs:build": "npm run build:all && npm run docs:assets",
+		"docs:watch": "node scripts/docs-watch.mjs",
+		"docs:build": "npm run build:all && npm run build:builder && npm run docs:assets",
 		"build:types": "tsc --project tsconfig.build.json",
 		"prebuild": "npm run clean",
 		"prepack": "npm run build",
@@ -108,16 +111,17 @@
 	"dependencies": {
 		"@tonejs/midi": "^2.0.28",
 		"d3": "^7.9.0",
-		"opensheetmusicdisplay": "^2.1.1",
+		"fflate": "0.8.3",
+		"opensheetmusicdisplay": "^2.2.0",
 		"papaparse": "^5.5.4"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.6",
+		"@biomejs/biome": "^2.5.8",
 		"@types/d3": "^7.4.3",
 		"rimraf": "^6.1.3",
 		"ts-json-schema-generator": "^2.9.0",
-		"tsx": "^4.23.5",
+		"tsx": "^4.23.12",
 		"typescript": "^7.0.2",
-		"vite": "^8.2.0"
+		"vite": "^8.2.1"
 	}
 }

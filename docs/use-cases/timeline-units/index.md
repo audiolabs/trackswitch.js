@@ -8,8 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Timeline Units
 
-Timelines are an abstract concept in trackswitch.
-Per definition, a timeline is an ordered sequence of numerical positions that allows for linear interpolation between consecutive elements.
+This page shows how Trackswitch uses different units for different media timelines.
+Audio can use seconds or samples, MIDI can use seconds or ticks, and sheet music uses measures.
+Set `timelineUnit` on a media entry when you do not want its default unit.
+The alignment CSV can then connect positions that use different units.
 
 Trackswitch supports the following timeline units, depending on the type of media:
 
@@ -20,13 +22,10 @@ Trackswitch supports the following timeline units, depending on the type of medi
 | Sheet Music | measures | measures |
 | Image | percent (of the image width), pixels | percent (of the image width) |
 
-Note: For MIDI ticks, the tick conversion runs through the MIDI header rather than a plain division by PPQ, so a file with tempo changes converts correctly across the whole piece.
+Note: Trackswitch uses the MIDI header for tick conversion, so tempo changes convert correctly across the complete piece.
 
-Timelines are usually bound to a medium, except for the reference timeline. 
-The reference timeline will always be printed as seconds.
-
-We show an example of this in the player below with our running example of *Gefrorne Tränen* from Schubert's Winterreise, D. 911.
-We show the sheet music, a piano roll (MIDI) with MIDI ticks as a timeline unit, and the recorded performance HU33 with audio samples as a timeline unit.
+The reference timeline is independent of a medium and the player displays it in seconds.
+The example connects measures, MIDI ticks, and audio samples for three versions of Schubert’s *Gefrorne Tränen*.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
@@ -94,7 +93,7 @@ what a score plays back in:
     "notes": "notes_ticks"
   },
   "outsideCoverage": "hold",
-  "duplicatePlacements": "average"
+  "duplicateAnchors": "average"
 }
 ```
 
@@ -104,7 +103,7 @@ names a place in the music rather than a place in one recording.
 
 ## Further Notes
 
-- Marker CSV entries for the `timeCol` column must be in the specified unit of the timeline the marker set belongs to.
+- Marker CSV entries for the `timeCol` column must be in the specified unit of the timeline the marker sequence belongs to.
 
 See [Aligned Timelines]({{ '/use-cases/aligned-timelines/' | relative_url }}) for the
 alignment model itself, and the

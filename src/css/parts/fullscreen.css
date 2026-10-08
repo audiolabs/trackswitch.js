@@ -1,0 +1,32 @@
+/* FULLSCREEN MODE ----------------------------------------------------------- */
+
+/* Lifts the player out of the page flow into a viewport-anchored overlay, kept
+   off the screen edges by a margin, with the page behind it dimmed through a
+   box-shadow spread rather than a separate backdrop element. */
+.trackswitch.trackswitch.ts-fullscreen {
+	position: fixed;
+	inset: 48px;
+	margin: 0;
+	z-index: 2147483000;
+	overflow-y: auto;
+	box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
+}
+
+/* The nav bar and track rows grow taller in fullscreen — padding and row
+   height only, so icons and text keep their normal size. */
+.trackswitch.trackswitch.ts-fullscreen {
+	--ts-main-control-height: 32px;
+	--ts-main-control-padding-block-start: 16px;
+	--ts-main-control-padding-block-end: 16px;
+	--ts-track-min-height: 44px;
+	--ts-track-padding-block: 14px;
+}
+
+/* On mobile the margin that sets the fullscreen overlay off the screen
+   edges just wastes space the device can't use for anything else — fill
+   the viewport completely instead. */
+@media (max-width: 700px) {
+	.trackswitch.trackswitch.ts-fullscreen {
+		inset: 0;
+	}
+}

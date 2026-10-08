@@ -6,8 +6,11 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 
 <section class="ts-hero">
   <div class="ts-hero__row">
+    <input type="checkbox" id="ts-nav-toggle" class="ts-nav-toggle" aria-label="Toggle navigation menu" />
+    <label for="ts-nav-toggle" class="ts-nav-toggle__button" aria-hidden="true"><span></span></label>
     <nav class="site-nav ts-hero__nav" aria-label="Documentation">
       <a href="{{ '/documentation.html' | relative_url }}">Documentation</a>
+      <a href="{{ '/builder.html' | relative_url }}">Builder</a>
       <a href="{{ '/use-cases/' | relative_url }}">Tutorials &amp; Use Cases</a>
       <a href="{{ '/references.html' | relative_url }}">References</a>
       <a href="{{ '/citation.html' | relative_url }}">Cite</a>
@@ -21,6 +24,9 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     <div class="ts-hero__actions" aria-label="Downloads and links">
       <a class="ts-icon-link" href="https://www.npmjs.com/package/trackswitch" aria-label="View trackswitch on npm">
         <span class="ts-icon-link__badge" aria-hidden="true">npm</span>
+        <svg class="ts-icon-link__npm-logo" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
+        </svg>
       </a>
       <a class="ts-icon-link" href="https://github.com/audiolabs/trackswitch.js" aria-label="View the repository on GitHub">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -94,6 +100,14 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         <label class="ts-control-row">
 		  <span>Per-Track Volume</span>
           <input type="checkbox" name="trackVolumeControls" checked />
+        </label>
+        <label class="ts-control-row">
+		  <span>Global Panning</span>
+          <select name="globalPanControl">
+            <option value="off" selected>Off</option>
+            <option value="balance">Balance</option>
+			<option value="pan">Pan</option>
+          </select>
         </label>
         <label class="ts-control-row">
 		  <span>Per-Track Panning</span>
@@ -171,8 +185,8 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="trackImageBySolo" />
         </label>
         <label class="ts-control-row">
-          <span>MIDI</span>
-          <input type="checkbox" name="midi" />
+          <span>Piano Roll</span>
+          <input type="checkbox" name="pianoRoll" />
         </label>
         <label class="ts-control-row">
           <span>Sheet Music</span>

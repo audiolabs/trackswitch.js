@@ -61,17 +61,21 @@ jobs:
         if: ${{ github.event.release.prerelease }}
         run: npm publish --tag next
 
+      - name: Build interactive extension
+        run: npm run build:interactive
+
       - name: Create GitHub release archive
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          mkdir -p trackswitch-release/dist/js
+          mkdir -p trackswitch-release/dist/js trackswitch-release/dist/interactive
 
           cp dist/js/trackswitch.js \
              trackswitch-release/dist/js/
 
-          cp dist/js/trackswitch-interactive-worker.js \
-             trackswitch-release/dist/js/
+          cp dist/interactive/trackswitch-interactive.js \
+             dist/interactive/trackswitch-interactive-worker.js \
+             trackswitch-release/dist/interactive/
 
           cp LICENSE THIRD_PARTY_NOTICES.md \
              trackswitch-release/

@@ -1,0 +1,64 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"score": {
+			"type": "musicxml",
+			"src": "../../assets/alignment/Schubert_D911-03.xml"
+		},
+		"hu33": {
+			"type": "audio",
+			"title": "Performance HU33",
+			"src": "../../assets/alignment/Schubert_D911-03_HU33.wav",
+			"startOffsetMs": 200,
+			"endOffsetMs": 6200
+		}
+	},
+	"alignment": {
+		"src": "../../assets/alignment/alignment.csv",
+		"referenceTimeline": "hu33",
+		"timelines": {
+			"score": "measure_Schubert_D911-03_2",
+			"hu33": "time_Schubert_D911-03_HU33"
+		},
+		"outsideCoverage": "hold",
+		"duplicateAnchors": "average"
+	},
+	"markers": {
+		"measures": {
+			"type": "points",
+			"src": "../../assets/alignment/HU33-markers.csv",
+			"timeline": "hu33",
+			"timeCol": "start",
+			"labelCol": "label"
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "markerNavigation", "looping", "timer"]
+		},
+		{
+			"type": "sheetMusic",
+			"mediaID": "score",
+			"maxHeight": 360,
+			"followPlayback": true,
+			"cursorColor": "#ed8c01"
+		},
+		{
+			"type": "waveform",
+			"tracks": ["hu33"],
+			"height": 90,
+			"markerLayers": [
+				{
+					"sequence": "measures",
+					"color": "#ed8c01",
+					"line": "dashed"
+				}
+			]
+		},
+		{
+			"type": "trackList",
+			"tracks": ["hu33"]
+		}
+	]
+}

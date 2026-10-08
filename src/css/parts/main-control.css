@@ -9,6 +9,7 @@
 }
 
 .trackswitch .main-control ul.control {
+	position: relative;
 	background-color: var(--ts-color-surface-panel-dark);
 	min-height: var(--ts-main-control-height);
 	padding-block-start: var(--ts-main-control-padding-block-start);
@@ -19,6 +20,18 @@
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--ts-main-control-row-gap) var(--ts-main-control-column-gap);
+}
+
+/* fullscreen-control is pinned to the top-right corner (see below). Room for
+   it is reserved only on the items that sit at the right edge of the first
+   row, so a seekbar wrapped onto its own row can still span the full width. */
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.timing,
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.settings-button,
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.seekwrap:first-child {
+	margin-inline-end: calc(
+		var(--ts-main-control-icon-size) +
+		var(--ts-main-control-column-gap)
+	);
 }
 
 .trackswitch .main-control ul.control > li {
@@ -34,6 +47,11 @@
 .trackswitch .main-control .timing {
 	margin-left: auto;
 	text-align: right;
+	font-family: monospace;
+	white-space: nowrap;
+	/* The row is a flex container, so the whitespace around the "/" separator is
+	   dropped. A word unit like "measure 3" needs it back. */
+	gap: 0.35em;
 }
 
 .trackswitch .main-control .settings-button {
@@ -43,6 +61,10 @@
 
 .trackswitch .main-control .seekwrap {
 	flex: 1 1 240px;
+	overflow: visible;
+	height: var(--ts-main-seek-hit-height);
+	cursor: pointer;
+	min-width: 200px;
 }
 
 /* Playback group (play/stop/repeat) */
@@ -66,6 +88,25 @@
 .trackswitch .main-control .settings-button {
 	width: var(--ts-main-control-icon-size);
 	height: var(--ts-main-control-icon-size);
+}
+
+/* Always pinned to the top-right corner, further right than the timer and
+   out of the wrapping flex flow entirely, so it never drops to a lower row
+   no matter how much else wraps below it. (Selector is qualified with
+   "ul.control >" - not just ".main-control" - to outrank the generic
+   ".control li.button:not(.sync-global) { position: relative }" rule in
+   tracks.css, which ties on class-specificity and would otherwise win by
+   source order.) */
+.trackswitch .main-control ul.control > li.fullscreen-toggle.button {
+	position: absolute;
+	/* top/right offsets are relative to ul.control's own padding-box edge, not
+	   its content edge, so the bar's padding has to be added back explicitly.
+	   The li inherits min-height:row-height from the generic "ul.control > li"
+	   rule, same as every sibling group, so no extra centering term is needed. */
+	top: var(--ts-main-control-padding-block-start);
+	right: var(--ts-main-control-padding-inline);
+	width: var(--ts-main-control-icon-size);
+	margin: 0;
 }
 
 .trackswitch .main-control .sync-global {
@@ -96,24 +137,7 @@
 	pointer-events: none;
 }
 
-/* Timing */
-.trackswitch .main-control .timing {
-	font-family: monospace;
-	white-space: nowrap;
-	/* The row is a flex container, so the whitespace around the "/" separator is
-	   dropped. A word unit like "measure 3" needs it back. */
-	gap: 0.35em;
-}
-
 /* Seekbar */
-.trackswitch .main-control .seekwrap {
-	overflow: visible;
-	height: var(--ts-main-seek-hit-height);
-	cursor: pointer;
-	min-width: 200px;
-	width: 100%;
-}
-
 .trackswitch .main-control .seekwrap .seekbar {
 	background-color: var(--ts-color-accent);
 	height: var(--ts-seekbar-height);
@@ -153,6 +177,26 @@
 }
 
 .trackswitch .main-control .volume-slider {
+	--ts-slider-track-color: var(--ts-color-surface-control);
+}
+
+/* Pan control */
+.trackswitch .main-control .pan-control {
+	display: flex;
+	align-items: center;
+}
+
+.trackswitch .main-control .pan-label {
+	color: var(--ts-color-text-muted);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	margin-right: 8px;
+	min-width: 24px;
+}
+
+.trackswitch .main-control .pan-slider {
 	--ts-slider-track-color: var(--ts-color-surface-control);
 }
 
@@ -200,30 +244,105 @@
 	font-size: 16px;
 }
 
+/* Marker editing */
+.trackswitch .main-control .marker-editing-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* The tools belong to the edit button: they open beside it as one framed group. */
+.trackswitch .main-control .marker-editing-tools {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0 4px;
+	border: 1px solid var(--ts-color-surface-control);
+	border-radius: 4px;
+}
+
+.trackswitch .main-control .marker-editing-tools[hidden] {
+	display: none;
+}
+
+.trackswitch .main-control .marker-editing-controls .button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: var(--ts-main-control-large-button-size);
+	color: var(--ts-color-text-muted);
+	transition:
+		color 100ms ease-out,
+		opacity 100ms ease-out;
+}
+
+.trackswitch
+	.main-control
+	.marker-editing-controls
+	.button:hover:not(:disabled),
+.trackswitch .main-control .marker-editing-controls .button:focus-visible {
+	color: var(--ts-color-text-inverse);
+}
+
+/* A tool that is switched on reads as a lit key, not just a brighter icon. */
+.trackswitch.trackswitch .main-control .marker-editing-controls .button.checked {
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-accent);
+	border-radius: 3px;
+}
+
+.trackswitch .main-control .marker-editing-controls .button:focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: 2px;
+}
+
+.trackswitch .main-control .marker-editing-controls .button:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+
+.trackswitch .main-control .marker-editing-controls .ts-icon-slot,
+.trackswitch .main-control .marker-editing-controls .ts-icon-svg {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+}
+
+.trackswitch .main-control .marker-edit-sequence {
+	appearance: auto;
+	background-color: var(--ts-color-surface-control);
+	color: var(--ts-color-text-muted);
+	border: 1px solid var(--ts-color-surface-panel-dark);
+	box-sizing: border-box;
+	height: var(--ts-preset-selector-height);
+	max-width: 140px;
+	padding: 0 4px;
+	font: 12px var(--ts-font-ui);
+	cursor: pointer;
+	border-radius: 4px;
+}
+
 .trackswitch
 	.main-control
 	.playback-group
 	> .playback-controls
 	> li.button
 	.ts-icon-slot,
-.trackswitch .main-control .settings-button .ts-icon-slot {
+.trackswitch .main-control .settings-button .ts-icon-slot,
+.trackswitch .main-control li.fullscreen-toggle.button .ts-icon-slot {
 	font-size: var(--ts-main-control-icon-size);
 }
 
 /* Loop group */
-.trackswitch .main-control .control > li.loop-group > .loop-controls {
+.trackswitch .main-control .control li.loop-group > .loop-controls {
 	display: flex;
 	align-items: center;
 	gap: var(--ts-main-control-loop-gap);
 	margin-right: -6px;
 }
 
-.trackswitch
-	.main-control
-	.control
-	> li.loop-group
-	> .loop-controls
-	> li.button {
+.trackswitch .main-control .control li.loop-group > .loop-controls > li.button {
 	margin: 0;
 	width: var(--ts-main-control-large-button-size);
 	height: var(--ts-main-control-large-button-size);
@@ -235,7 +354,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-a
 	.ts-icon-slot {
@@ -247,7 +366,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-a
 	.ts-icon-svg {
@@ -258,7 +377,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-b
 	.ts-icon-slot {
@@ -270,7 +389,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-b
 	.ts-icon-svg {
@@ -281,7 +400,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-toggle
 	.ts-icon-slot {
@@ -293,7 +412,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-clear
 	.ts-icon-slot {
@@ -306,7 +425,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-toggle
 	.ts-icon-svg {
@@ -317,7 +436,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-clear
 	.ts-icon-svg {

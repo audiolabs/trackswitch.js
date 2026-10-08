@@ -1,23 +1,24 @@
-import { ElementConfigError, loadElementConfig } from "./config/element-config";
+import { ElementConfigError, loadElementConfig } from "./config/config";
+import { createTrackSwitch } from "./player/player";
+import { ensureTrackSwitchStyles } from "./shared/styles";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchEventName,
 	TrackSwitchInit,
-} from "./domain/types";
-import { createTrackSwitch } from "./player/factory";
-import { ensureTrackSwitchStyles } from "./shared/styles";
+} from "./types";
 import {
 	describeError,
 	renderTrackSwitchErrorPanel,
 	renderTrackSwitchLoadingPanel,
-} from "./ui/render-status-panel";
+} from "./views/layout";
 
 export type TrackswitchDomEventName =
 	| "trackswitch-loaded"
 	| "trackswitch-error"
 	| "trackswitch-position"
-	| "trackswitch-track-state";
+	| "trackswitch-track-state"
+	| "trackswitch-markers";
 
 export interface TrackswitchPlayerElement extends HTMLElement {
 	config: TrackSwitchInit | undefined;
@@ -34,6 +35,7 @@ export const TRACKSWITCH_DOM_EVENTS: Record<
 	error: "trackswitch-error",
 	position: "trackswitch-position",
 	trackState: "trackswitch-track-state",
+	markers: "trackswitch-markers",
 };
 
 function dispatchTrackSwitchEvent<K extends TrackSwitchEventName>(
@@ -232,6 +234,9 @@ abstract class TrackswitchPlayerBase
 			),
 			controller.on("trackState", (detail) =>
 				dispatchTrackSwitchEvent(this, "trackState", detail),
+			),
+			controller.on("markers", (detail) =>
+				dispatchTrackSwitchEvent(this, "markers", detail),
 			),
 		];
 	}

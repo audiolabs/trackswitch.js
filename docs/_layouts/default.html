@@ -11,6 +11,7 @@
   <meta name="description" content="{{ page.description | default: site.description }}" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#383838">
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
 </head>
 
@@ -22,6 +23,7 @@
       <nav class="site-nav" aria-label="Documentation">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
         <a href="{{ '/documentation.html' | relative_url }}"{% if page.url == '/documentation.html' %} aria-current="page"{% endif %}>Documentation</a>
+        <a href="{{ '/builder.html' | relative_url }}"{% if page.url == '/builder.html' %} aria-current="page"{% endif %}>Builder</a>
         <a href="{{ '/use-cases/' | relative_url }}"{% if page.url contains '/use-cases/' %} aria-current="page"{% endif %}>Tutorials &amp; Use Cases</a>
         <a href="{{ '/references.html' | relative_url }}"{% if page.url == '/references.html' %} aria-current="page"{% endif %}>References</a>
         <a href="{{ '/citation.html' | relative_url }}"{% if page.url == '/citation.html' %} aria-current="page"{% endif %}>Cite</a>
@@ -62,6 +64,9 @@
   {% endif %}
   {% if page.toc_script or page.url == '/documentation.html' %}
   <script src="{{ '/js/configuration-toc.js' | relative_url }}"></script>
+  {% endif %}
+  {% if page.builder %}
+  <script src="{{ '/js/trackswitch-builder.js' | relative_url }}"></script>
   {% endif %}
 </body>
 

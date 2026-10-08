@@ -2,14 +2,14 @@
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"entry": [
 		"src/browser.ts",
-		"src/interactive/worker/alignment-worker.ts",
+		"extensions/interactive-alignment/worker/alignment-worker.ts",
 		"src/index.ts",
 		"src/element.ts",
 		"src/react.ts",
 		"src/vue.ts",
 		"src/svelte.ts",
-		"src/interactive.ts",
+		"extensions/interactive-alignment/browser.ts",
 		"docs/js/*.js"
 	],
-	"project": ["src/**/*.ts", "docs/js/*.js"]
+	"project": ["src/**/*.ts", "extensions/**/*.ts", "docs/js/*.js"]
 }

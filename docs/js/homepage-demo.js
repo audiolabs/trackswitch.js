@@ -12,8 +12,8 @@
 		return control.type === "checkbox" ? control.checked : control.value;
 	}
 
-	function markerLayer(set) {
-		return { set: set, color: "#ed8c01", line: "dashed" };
+	function markerLayer(sequence) {
+		return { sequence: sequence, color: "#ed8c01", line: "dashed" };
 	}
 
 	/** Omits `markerLayers` entirely when there are none, rather than sending `[]`. */
@@ -36,11 +36,11 @@
 			tabView: false,
 			keyboard: true,
 		},
-		// Nothing for `alignment`: outsideCoverage and duplicatePlacements both
+		// Nothing for `alignment`: outsideCoverage and duplicateAnchors both
 		// default to "error", so the values the showcase sets are load-bearing.
 		markerLayer: { line: "dashed", foldToReference: false },
 		view: {
-			navigationBar: { repeatEnabled: false },
+			navigationBar: { repeatEnabled: false, globalPanControl: "balance" },
 			trackList: {
 				trackVolumeControls: false,
 				trackPanControls: false,
@@ -55,7 +55,7 @@
 				// No `timer`: a waveform reads `config.timer ?? isAlignmentMode()`, so
 				// omitting it is not the same as setting it false once aligned.
 			},
-			midi: {
+			pianoRoll: {
 				height: 180,
 				maxZoom: 5,
 				playbackFollowMode: "center",
@@ -168,9 +168,9 @@
 		views.push({
 			type: "trackList",
 			tracks: ["violins", "synths", "bass", "drums"],
-			// `soloGroup` names the selection the list belongs to, which lets one of
+			// `comparisonGroup` names the selection the list belongs to, which lets one of
 			// its tracks sound at a time. Without one the stems mix freely.
-			soloGroup: controls.exclusiveSolo ? 0 : undefined,
+			comparisonGroup: controls.exclusiveSolo ? 0 : undefined,
 			trackVolumeControls: controls.trackVolumeControls,
 			trackPanControls: controls.trackPanControls,
 		});
@@ -184,6 +184,7 @@
 		if (controls.markers) {
 			config.markers = {
 				sections: {
+					type: "segments",
 					src: basePath + "/showcase-markers.csv",
 					timeCol: "time",
 					labelCol: "label",
@@ -219,7 +220,7 @@
 				src: basePath + "/Schubert_D911-03.xml",
 			};
 		}
-		if (controls.midi) {
+		if (controls.pianoRoll) {
 			media.midi = { type: "midi", src: basePath + "/Schubert_D911-03.mid" };
 		}
 		Object.assign(media, {
@@ -229,7 +230,7 @@
 				src: basePath + "/Schubert_D911-03_HU33.wav",
 				startOffsetMs: 200,
 				endOffsetMs: 5800,
-				srcSynchronized: {
+				srcTimeScaled: {
 					src: basePath + "/Schubert_D911-03_HU33.wav",
 					startOffsetMs: 200,
 					endOffsetMs: 5800,
@@ -241,7 +242,7 @@
 				src: basePath + "/Schubert_D911-03_SC06.wav",
 				startOffsetMs: 600,
 				endOffsetMs: 300,
-				srcSynchronized: {
+				srcTimeScaled: {
 					src: basePath + "/Schubert_D911-03_SC06_syncronized.wav",
 						startOffsetMs: 300,
 						endOffsetMs: 5800,
@@ -263,15 +264,16 @@
 				cursorAlpha: 0.4,
 			});
 		}
-		if (controls.midi) {
+		if (controls.pianoRoll) {
 			views.push(
 				withMarkerLayers(
 					{
-						type: "midi",
+						type: "pianoRoll",
 						mediaID: "midi",
 						height: 180,
 						maxZoom: 5,
-						playbackFollowMode: controls.playbackFollowMode,
+						pianoKeyboard: true,
+						colorPerChannel: true,
 						timer: true,
 					},
 					markerLayersA,
@@ -288,7 +290,7 @@
 		}
 		if (controls.waveform) {
 			var alignmentLayer = [
-				{ set: "alignment", line: "dashed", foldToReference: true },
+				{ sequence: "alignment", line: "dashed", foldToReference: true },
 			];
 			[
 				{ track: "hu33", layers: markerLayersA },
@@ -319,7 +321,7 @@
 			// of them can sound at a time.
 			type: "trackList",
 			tracks: ["hu33", "sc06"],
-			soloGroup: 0,
+			comparisonGroup: 0,
 			trackVolumeControls: controls.trackVolumeControls,
 			trackPanControls: controls.trackPanControls,
 		});
@@ -339,7 +341,7 @@
 				referenceTimeline: "hu33",
 				timelines: timelines,
 				outsideCoverage: "hold",
-				duplicatePlacements: "average",
+				duplicateAnchors: "average",
 			},
 			views: views,
 			features: buildFeatures(controls),
@@ -347,16 +349,24 @@
 		if (controls.markers) {
 			config.markers = {
 				hu33Measures: {
+					type: "points",
 					src: basePath + "/HU33-markers.csv",
 					timeline: "hu33",
 					timeCol: "start",
 					labelCol: "label",
 				},
 				sc06Structure: {
+					type: "segments",
 					src: basePath + "/SC06-markers.csv",
 					timeline: "sc06",
 					timeCol: "start",
 					labelCol: "structure",
+					colors: {
+						I: "var(--ts-color-channel-1)",
+						A: "var(--ts-color-channel-2)",
+						B: "var(--ts-color-channel-3)",
+						C: "var(--ts-color-channel-4)",
+					},
 				},
 			};
 		}
@@ -378,6 +388,7 @@
 			controls: [
 				"playback",
 				controls.globalVolume && "globalVolume",
+				controls.globalPan && "globalPan",
 				controls.markers && "markerNavigation",
 				controls.looping && "looping",
 				"sync",
@@ -386,6 +397,7 @@
 				controls.seekBar && "seekBar",
 			].filter(Boolean),
 			repeatEnabled: controls.repeatEnabled,
+			globalPanControl: controls.globalPanControl,
 		};
 	}
 
@@ -458,7 +470,7 @@
 			var names = [
 				"looping", "globalVolume", "trackVolumeControls",
 				"customizablePanelOrder", "presets", "seekBar", "timer", "keyboard",
-				"waveform", "midi", "text", "alignedPlayhead", "showAlignmentPoints",
+				"waveform", "pianoRoll", "text", "alignedPlayhead", "showAlignmentPoints",
 				"markers", "sheetNotePreview", "warpingMatrix", "customImage",
 				"trackImageBySolo", "exclusiveSolo", "tabView",
 				"muteOtherPlayerInstances", "repeatEnabled"
@@ -491,6 +503,14 @@
 			);
 			result.trackPanControls =
 				trackPanControls === "off" ? false : trackPanControls;
+			var globalPanControl = readControl(
+				controlsRoot,
+				"globalPanControl",
+				"off",
+			);
+			result.globalPan = globalPanControl !== "off";
+			result.globalPanControl =
+				globalPanControl === "off" ? "balance" : globalPanControl;
 			return result;
 		}
 
@@ -551,7 +571,7 @@
 				"alignedPlayhead",
 				"showAlignmentPoints",
 				"waveformTimeAxis",
-				"midi",
+				"pianoRoll",
 				"sheetNotePreview",
 				"warpingMatrix",
 			].forEach(function (name) {

@@ -1,56 +1,77 @@
 /* Main-control layout adapts to container width; touch sizing adapts to viewport width. */
-@container ts-main-control (max-width: 1000px) {
-	.trackswitch .main-control ul.control {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		row-gap: var(--ts-main-control-row-gap);
-		column-gap: var(--ts-main-control-column-gap);
-		min-height: var(--ts-main-control-height);
-		padding-block-start: var(--ts-main-control-padding-block-start);
-		padding-block-end: var(--ts-main-control-padding-block-end);
-		padding-inline: var(--ts-main-control-padding-inline);
-	}
 
-	.trackswitch .main-control .settings-button {
-		margin-left: auto;
-	}
-
-	.trackswitch .main-control .timing {
-		flex: 0 0 auto;
-		margin-left: auto;
-		text-align: right;
-	}
-
+/* Below 700px the seek bar always claims its own full-width row, whatever
+   controls are configured around it - the buttons/timer still wrap normally
+   via the base flex layout. */
+@container ts-main-control (max-width: 700px) {
 	.trackswitch .main-control .seekwrap {
 		flex: 0 0 100%;
 		min-width: 0;
-		width: 100%;
 		margin: 0;
 		padding: 0;
 	}
 }
 
+/* Corner-anchored rows: every control group takes half a row, so a row holds
+   at most two groups - the first pinned left, the second pinned right. A group
+   that ends up alone on its row (last of its kind, or followed by the timer or
+   seek bar, which own a full row) is centered instead. */
 @container ts-main-control (max-width: 700px) {
-	.trackswitch .main-control .volume,
-	.trackswitch .main-control .preset-selector-wrap {
-		align-self: center;
+	.trackswitch .main-control ul.control > li:not(.seekwrap, .fullscreen-toggle, .timing) {
+		flex: 0 0 calc(50% - var(--ts-main-control-column-gap) / 2);
+		min-width: 0;
+		margin-inline: 0;
 	}
 
-	.trackswitch .main-control .timing {
-		flex: 0 0 100%;
+	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+		justify-content: flex-start;
+	}
+
+	.trackswitch .main-control ul.control > li:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+		justify-content: flex-end;
+	}
+
+	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
+	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(+ :is(.timing, .seekwrap)) {
+		flex-basis: 100%;
 		justify-content: center;
-		justify-self: center;
-		margin-left: 0;
+	}
+
+	/* The sync toggle is itself the button, so it keeps its own width and is
+	   positioned with margins rather than stretched over the half-row cell. */
+	.trackswitch .main-control ul.control > li.sync-global {
+		flex: 0 0 auto;
+		justify-content: center;
+	}
+
+	.trackswitch .main-control ul.control > li.sync-global:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+		margin-left: auto;
+	}
+
+	.trackswitch .main-control ul.control > li.sync-global:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
+	.trackswitch .main-control ul.control > li.sync-global:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(+ :is(.timing, .seekwrap)) {
+		margin-inline: auto;
+	}
+
+	.trackswitch .main-control ul.control > li.timing {
+		flex: 0 0 100%;
+		margin-inline: 0;
+		justify-content: center;
 		text-align: center;
 	}
 
-	.trackswitch .main-control ul.control > .timing {
-		margin-left: 0;
+	.trackswitch .main-control .volume-control {
+		width: 100%;
+		max-width: 200px;
 	}
 
-	.trackswitch .main-control .seekwrap {
+	.trackswitch .main-control .volume-control .volume-slider {
+		flex: 1 1 auto;
 		min-width: 0;
+	}
+
+	.trackswitch .main-control .control li.loop-group > .loop-controls {
+		margin-right: 0;
 	}
 }
 
@@ -58,90 +79,30 @@
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-a,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-b,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-toggle,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-clear {
 		z-index: 2;
 		touch-action: manipulation;
 		pointer-events: auto;
-	}
-}
-
-@container ts-main-control (max-width: 500px) {
-	.trackswitch .main-control ul.control {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		grid-auto-rows: var(--ts-main-control-row-height);
-		align-items: center;
-		column-gap: var(--ts-main-control-column-gap);
-		row-gap: var(--ts-main-control-row-gap);
-	}
-
-	.trackswitch .main-control .playback-group {
-		grid-column: auto;
-		min-width: 0;
-	}
-
-	.trackswitch .main-control .volume {
-		grid-column: auto;
-		justify-self: end;
-		margin: 0;
-	}
-
-	.trackswitch .main-control .marker-navigation-group {
-		grid-column: auto;
-		justify-self: start;
-		margin: 0;
-	}
-
-	.trackswitch .main-control .loop-group {
-		grid-column: auto;
-		justify-self: end;
-		margin: 0;
-	}
-
-	.trackswitch .main-control .preset-selector-wrap {
-		grid-column: auto;
-		min-width: 0;
-		margin: 0;
-	}
-
-	.trackswitch .main-control .sync-global,
-	.trackswitch .main-control .settings-button {
-		grid-column: auto;
-	}
-
-	.trackswitch .main-control .timing {
-		grid-column: 1 / -1;
-		justify-self: center;
-		margin: 0;
-		text-align: center;
-	}
-
-	.trackswitch .main-control .seekwrap {
-		grid-column: 1 / -1;
-		width: 100%;
-		min-width: 0;
-		margin: 0;
-		padding: 0;
 	}
 }
 
@@ -152,11 +113,14 @@
 	}
 
 	.trackswitch .main-control .sync-global {
-		min-width: 68px;
-		height: 26px;
-		line-height: 26px;
-		font-size: 14px;
-		padding: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 52px;
+		height: 22px;
+		line-height: 1;
+		font-size: 12px;
+		padding: 0 8px;
 	}
 
 	.trackswitch .main-control .volume-control .volume-icon {
@@ -169,10 +133,8 @@
 		--ts-slider-thumb-size: 16px;
 	}
 
-	.trackswitch .main-control .control > li.loop-group > .loop-controls {
+	.trackswitch .main-control .control li.loop-group > .loop-controls {
 		gap: 6px;
-		position: relative;
-		top: 2px;
 	}
 
 	.trackswitch .main-control .marker-navigation-controls {
@@ -190,14 +152,14 @@
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-toggle
 		.ts-icon-slot,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-clear
 		.ts-icon-slot {
@@ -207,28 +169,28 @@
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-a
 		.ts-icon-slot,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-b
 		.ts-icon-slot,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-a
 		.ts-icon-svg,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-b
 		.ts-icon-svg {
@@ -240,14 +202,14 @@
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-toggle
 		.ts-icon-slot,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-toggle
 		.ts-icon-svg {
@@ -258,14 +220,14 @@
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-clear
 		.ts-icon-slot,
 	.trackswitch
 		.main-control
 		.control
-		> li.loop-group
+		li.loop-group
 		> .loop-controls
 		> li.loop-clear
 		.ts-icon-svg {
@@ -278,7 +240,16 @@
 	}
 
 	.trackswitch .main-control .timing {
-		font-size: 16px;
+		font-size: 18px;
+	}
+
+	/* Doubled .trackswitch outranks the ts-waveform container-narrow rule
+	   below, which shares the same class-count specificity and would
+	   otherwise win by source order on viewports narrow enough to trigger
+	   both. */
+	.trackswitch.trackswitch .waveform-wrap .waveform-timing,
+	.trackswitch .piano-roll-wrap .piano-roll-timing {
+		font-size: 13px;
 	}
 }
 
@@ -313,16 +284,8 @@
 		margin-right: 10px;
 	}
 
-	.trackswitch
-		li.track:not([data-row-height])
-		.mix-slider::-webkit-slider-thumb {
-		width: 16px;
-		height: 16px;
-	}
-
-	.trackswitch li.track:not([data-row-height]) .mix-slider::-moz-range-thumb {
-		width: 16px;
-		height: 16px;
+	.trackswitch li.track:not([data-row-height]) .mix-slider {
+		--ts-slider-thumb-size: 16px;
 	}
 }
 

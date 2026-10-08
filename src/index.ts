@@ -1,20 +1,25 @@
-import { defaultFeatures, normalizeFeatures } from "./domain/options";
-import { createInitialPlayerState, playerStateReducer } from "./domain/state";
+import { defaultFeatures, normalizeFeatures } from "./config/config";
 import {
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
 	TrackswitchPlayer,
 } from "./element";
-import { WaveformEngine } from "./engine/waveform-engine";
-import { createTrackSwitch } from "./player/factory";
+import { WaveformEngine } from "./media/waveform-engine";
+import { createTrackSwitch } from "./player/player";
+import { createInitialPlayerState, playerStateReducer } from "./player/state";
 import { inferSourceMimeType } from "./shared/audio";
 import { formatSecondsToHHMMSSmmm } from "./shared/format";
 
 export type {
+	TrackswitchDomEventName,
+	TrackswitchPlayerElement,
+} from "./element";
+export type {
 	AlignmentConfig,
 	LoopMarker,
 	MarkerLayerConfig,
-	MarkerSetSourceConfig,
+	MarkerSequenceSourceConfig,
+	MarkerSequenceType,
 	MarkersConfig,
 	MediaConfig,
 	MediaEntryConfig,
@@ -35,10 +40,10 @@ export type {
 	TrackSwitchFeatures,
 	TrackSwitchImageViewConfig,
 	TrackSwitchInit,
-	TrackSwitchMidiViewConfig,
 	TrackSwitchNavigationBarControl,
 	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchPerTrackImageViewConfig,
+	TrackSwitchPianoRollViewConfig,
 	TrackSwitchSeparatorViewConfig,
 	TrackSwitchSheetMusicViewConfig,
 	TrackSwitchSnapshot,
@@ -49,11 +54,7 @@ export type {
 	TrackSwitchWarpingMatrixViewConfig,
 	TrackSwitchWaveformViewConfig,
 	WaveformTimeAxis,
-} from "./domain/types";
-export type {
-	TrackswitchDomEventName,
-	TrackswitchPlayerElement,
-} from "./element";
+} from "./types";
 export {
 	createInitialPlayerState,
 	createTrackSwitch,

@@ -20,7 +20,7 @@ const expectedViewTypes = [
 	"image",
 	"perTrackImage",
 	"waveform",
-	"midi",
+	"pianoRoll",
 	"sheetMusic",
 	"warpingMatrix",
 	"text",
@@ -31,10 +31,10 @@ const expectedViewTypes = [
 const expectedMediaTypes = ["audio", "midi", "musicxml", "image"];
 
 const generatorConfig = {
-	path: fromRoot("src/domain/types.ts"),
+	path: fromRoot("src/types.ts"),
 	tsconfig: fromRoot("tsconfig.json"),
 	type: "TrackSwitchInit",
-	// Carries the prose in src/domain/types.ts through as `description`, which is
+	// Carries the prose in src/types.ts through as `description`, which is
 	// what editors show on hover — the point of publishing the schema at all.
 	jsDoc: "extended",
 	topRef: false,

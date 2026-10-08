@@ -7,6 +7,8 @@ export interface ParsedCsvRecords {
 
 interface ParseCsvRecordsOptions {
 	emptyDataError: string;
+	/** Accepts a file that holds a header row and nothing else. */
+	allowNoRows?: boolean;
 	transformHeader?(header: string): string;
 }
 
@@ -37,7 +39,10 @@ export function parseCsvRecords(
 				.filter((field) => field.length > 0)
 		: [];
 
-	if (headers.length === 0 || parsed.data.length === 0) {
+	if (
+		headers.length === 0 ||
+		(parsed.data.length === 0 && !options.allowNoRows)
+	) {
 		throw new Error(options.emptyDataError);
 	}
 
@@ -45,6 +50,19 @@ export function parseCsvRecords(
 		headers: headers,
 		rows: parsed.data,
 	};
+}
+
+export function formatCsvRecords(
+	headers: readonly string[],
+	rows: ReadonlyArray<Readonly<Record<string, unknown>>>,
+): string {
+	return Papa.unparse(
+		{
+			fields: [...headers],
+			data: rows.map((row) => headers.map((header) => row[header] ?? "")),
+		},
+		{ newline: "\n" },
+	);
 }
 
 function formatPapaErrors(

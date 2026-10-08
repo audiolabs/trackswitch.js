@@ -215,42 +215,6 @@
 	outline-offset: 2px;
 }
 
-.trackswitch .marker-navigation-loop-fields {
-	border: 0;
-	margin: 16px 0 0;
-	padding: 14px 0 0;
-}
-
-.trackswitch .marker-navigation-loop-grid {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: 8px;
-}
-
-.trackswitch .marker-navigation-loop-column {
-	display: grid;
-	grid-template-columns: 34px minmax(0, 1fr);
-	align-items: center;
-	gap: 8px;
-}
-
-.trackswitch .marker-navigation-loop-point {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	box-sizing: border-box;
-	width: 34px;
-	height: 34px;
-	aspect-ratio: 1;
-	border: 1px solid var(--ts-color-border-mid-55);
-	background: var(--ts-color-surface-raised-86);
-	color: var(--ts-color-text-primary);
-	border-radius: 4px;
-	font-family: var(--ts-font-ui);
-	font-size: 12px;
-	font-weight: 700;
-}
-
 .trackswitch .marker-navigation-error {
 	min-height: 16px;
 	color: var(--ts-color-text-error);

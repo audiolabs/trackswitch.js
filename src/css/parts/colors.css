@@ -60,6 +60,231 @@
 	--ts-color-accent-soft-50: rgba(237, 140, 1, 0.5);
 	--ts-color-accent-soft-55: rgba(237, 140, 1, 0.55);
 	--ts-color-accent-shadow: rgba(237, 140, 1, 0.18);
+
+	/*
+	 * Piano-roll channel colours, handed out in this order to the channels a
+	 * `pianoRoll` view colours (see `colorPerChannel`), one per MIDI channel
+	 * (1-16). The first one is the accent, so a roll with a single channel
+	 * keeps the look of an unpaired one. 2-10 continue with the tab10
+	 * categorical palette's remaining entries; 11-16 extend it with matching
+	 * hues. The dark-background counterparts follow below.
+	 */
+	--ts-color-channel-1: var(--ts-color-accent);
+	--ts-color-channel-1-soft-30: var(--ts-color-accent-soft-30);
+	--ts-color-channel-1-soft-55: var(--ts-color-accent-soft-55);
+	--ts-color-channel-2: #c03328;
+	--ts-color-channel-2-soft-30: rgba(192, 51, 40, 0.25);
+	--ts-color-channel-2-soft-55: rgba(192, 51, 40, 0.55);
+	--ts-color-channel-3: #3d8b37;
+	--ts-color-channel-3-soft-30: rgba(61, 139, 55, 0.25);
+	--ts-color-channel-3-soft-55: rgba(61, 139, 55, 0.55);
+	--ts-color-channel-4: #2f6fb0;
+	--ts-color-channel-4-soft-30: rgba(47, 111, 176, 0.25);
+	--ts-color-channel-4-soft-55: rgba(47, 111, 176, 0.55);
+	--ts-color-channel-5: #9467bd;
+	--ts-color-channel-5-soft-30: rgba(148, 103, 189, 0.25);
+	--ts-color-channel-5-soft-55: rgba(148, 103, 189, 0.55);
+	--ts-color-channel-6: #8c564b;
+	--ts-color-channel-6-soft-30: rgba(140, 86, 75, 0.25);
+	--ts-color-channel-6-soft-55: rgba(140, 86, 75, 0.55);
+	--ts-color-channel-7: #e377c2;
+	--ts-color-channel-7-soft-30: rgba(227, 119, 194, 0.25);
+	--ts-color-channel-7-soft-55: rgba(227, 119, 194, 0.55);
+	--ts-color-channel-8: #7f7f7f;
+	--ts-color-channel-8-soft-30: rgba(127, 127, 127, 0.25);
+	--ts-color-channel-8-soft-55: rgba(127, 127, 127, 0.55);
+	--ts-color-channel-9: #bcbd22;
+	--ts-color-channel-9-soft-30: rgba(188, 189, 34, 0.25);
+	--ts-color-channel-9-soft-55: rgba(188, 189, 34, 0.55);
+	--ts-color-channel-10: #17becf;
+	--ts-color-channel-10-soft-30: rgba(23, 190, 207, 0.25);
+	--ts-color-channel-10-soft-55: rgba(23, 190, 207, 0.55);
+	--ts-color-channel-11: #669e2e;
+	--ts-color-channel-11-soft-30: rgba(102, 158, 46, 0.25);
+	--ts-color-channel-11-soft-55: rgba(102, 158, 46, 0.55);
+	--ts-color-channel-12: #2e9e5d;
+	--ts-color-channel-12-soft-30: rgba(46, 158, 93, 0.25);
+	--ts-color-channel-12-soft-55: rgba(46, 158, 93, 0.55);
+	--ts-color-channel-13: #2e379e;
+	--ts-color-channel-13-soft-30: rgba(46, 55, 158, 0.25);
+	--ts-color-channel-13-soft-55: rgba(46, 55, 158, 0.55);
+	--ts-color-channel-14: #6f2e9e;
+	--ts-color-channel-14-soft-30: rgba(111, 46, 158, 0.25);
+	--ts-color-channel-14-soft-55: rgba(111, 46, 158, 0.55);
+	--ts-color-channel-15: #9e2e9e;
+	--ts-color-channel-15-soft-30: rgba(158, 46, 158, 0.25);
+	--ts-color-channel-15-soft-55: rgba(158, 46, 158, 0.55);
+	--ts-color-channel-16: #9e2e50;
+	--ts-color-channel-16-soft-30: rgba(158, 46, 80, 0.25);
+	--ts-color-channel-16-soft-55: rgba(158, 46, 80, 0.55);
+
+	/*
+	 * The `pianoRoll` view's dark palette: the same 16 channels re-tuned
+	 * (brighter, more saturated) to stay legible against
+	 * `--ts-color-surface-base-dark`, plus that background itself. Selected
+	 * per view with `palette: "dark"`; a view's `css` block can still override
+	 * any one of these on top.
+	 */
+	--ts-color-surface-base-dark: #2e2e2e;
+	--ts-color-channel-1-dark: #e6a14c;
+	--ts-color-channel-1-dark-soft-30: rgba(230, 161, 76, 0.25);
+	--ts-color-channel-1-dark-soft-55: rgba(230, 161, 76, 0.55);
+	--ts-color-channel-2-dark: #e6594c;
+	--ts-color-channel-2-dark-soft-30: rgba(230, 89, 76, 0.25);
+	--ts-color-channel-2-dark-soft-55: rgba(230, 89, 76, 0.55);
+	--ts-color-channel-3-dark: #4ce654;
+	--ts-color-channel-3-dark-soft-30: rgba(76, 230, 84, 0.25);
+	--ts-color-channel-3-dark-soft-55: rgba(76, 230, 84, 0.55);
+	--ts-color-channel-4-dark: #4c9ce6;
+	--ts-color-channel-4-dark-soft-30: rgba(76, 156, 230, 0.25);
+	--ts-color-channel-4-dark-soft-55: rgba(76, 156, 230, 0.55);
+	--ts-color-channel-5-dark: #854ce6;
+	--ts-color-channel-5-dark-soft-30: rgba(133, 76, 230, 0.25);
+	--ts-color-channel-5-dark-soft-55: rgba(133, 76, 230, 0.55);
+	--ts-color-channel-6-dark: #e6634c;
+	--ts-color-channel-6-dark-soft-30: rgba(230, 99, 76, 0.25);
+	--ts-color-channel-6-dark-soft-55: rgba(230, 99, 76, 0.55);
+	--ts-color-channel-7-dark: #e64cb8;
+	--ts-color-channel-7-dark-soft-30: rgba(230, 76, 184, 0.25);
+	--ts-color-channel-7-dark-soft-55: rgba(230, 76, 184, 0.55);
+	--ts-color-channel-8-dark: #b3b3b3;
+	--ts-color-channel-8-dark-soft-30: rgba(179, 179, 179, 0.25);
+	--ts-color-channel-8-dark-soft-55: rgba(179, 179, 179, 0.55);
+	--ts-color-channel-9-dark: #e3e64c;
+	--ts-color-channel-9-dark-soft-30: rgba(227, 230, 76, 0.25);
+	--ts-color-channel-9-dark-soft-55: rgba(227, 230, 76, 0.55);
+	--ts-color-channel-10-dark: #4ccfe6;
+	--ts-color-channel-10-dark-soft-30: rgba(76, 207, 230, 0.25);
+	--ts-color-channel-10-dark-soft-55: rgba(76, 207, 230, 0.55);
+	--ts-color-channel-11-dark: #99e64c;
+	--ts-color-channel-11-dark-soft-30: rgba(153, 230, 76, 0.25);
+	--ts-color-channel-11-dark-soft-55: rgba(153, 230, 76, 0.55);
+	--ts-color-channel-12-dark: #4ce68c;
+	--ts-color-channel-12-dark-soft-30: rgba(76, 230, 140, 0.25);
+	--ts-color-channel-12-dark-soft-55: rgba(76, 230, 140, 0.55);
+	--ts-color-channel-13-dark: #4c59e6;
+	--ts-color-channel-13-dark-soft-30: rgba(76, 89, 230, 0.25);
+	--ts-color-channel-13-dark-soft-55: rgba(76, 89, 230, 0.55);
+	--ts-color-channel-14-dark: #a64ce6;
+	--ts-color-channel-14-dark-soft-30: rgba(166, 76, 230, 0.25);
+	--ts-color-channel-14-dark-soft-55: rgba(166, 76, 230, 0.55);
+	--ts-color-channel-15-dark: #e64ce6;
+	--ts-color-channel-15-dark-soft-30: rgba(230, 76, 230, 0.25);
+	--ts-color-channel-15-dark-soft-55: rgba(230, 76, 230, 0.55);
+	--ts-color-channel-16-dark: #e64c7a;
+	--ts-color-channel-16-dark-soft-30: rgba(230, 76, 122, 0.25);
+	--ts-color-channel-16-dark-soft-55: rgba(230, 76, 122, 0.55);
+
+	/*
+	 * The `pianoRoll` view's colorblind-friendly palette: channels 1-8 take an
+	 * Okabe-Ito-derived hue set (chosen for CVD distinguishability rather than
+	 * even hue spacing), channels 9-16 repeat those hues as a lighter tint so
+	 * every channel still reads as a variant of one of the eight base hues.
+	 * The first colour is still the accent, matching the default palette.
+	 */
+	--ts-color-channel-1-colorblind: var(--ts-color-accent);
+	--ts-color-channel-1-colorblind-soft-30: var(--ts-color-accent-soft-30);
+	--ts-color-channel-1-colorblind-soft-55: var(--ts-color-accent-soft-55);
+	--ts-color-channel-2-colorblind: #56b4e9;
+	--ts-color-channel-2-colorblind-soft-30: rgba(86, 180, 233, 0.25);
+	--ts-color-channel-2-colorblind-soft-55: rgba(86, 180, 233, 0.55);
+	--ts-color-channel-3-colorblind: #009e73;
+	--ts-color-channel-3-colorblind-soft-30: rgba(0, 158, 115, 0.25);
+	--ts-color-channel-3-colorblind-soft-55: rgba(0, 158, 115, 0.55);
+	--ts-color-channel-4-colorblind: #b8a100;
+	--ts-color-channel-4-colorblind-soft-30: rgba(184, 161, 0, 0.25);
+	--ts-color-channel-4-colorblind-soft-55: rgba(184, 161, 0, 0.55);
+	--ts-color-channel-5-colorblind: #0072b2;
+	--ts-color-channel-5-colorblind-soft-30: rgba(0, 114, 178, 0.25);
+	--ts-color-channel-5-colorblind-soft-55: rgba(0, 114, 178, 0.55);
+	--ts-color-channel-6-colorblind: #d55e00;
+	--ts-color-channel-6-colorblind-soft-30: rgba(213, 94, 0, 0.25);
+	--ts-color-channel-6-colorblind-soft-55: rgba(213, 94, 0, 0.55);
+	--ts-color-channel-7-colorblind: #cc79a7;
+	--ts-color-channel-7-colorblind-soft-30: rgba(204, 121, 167, 0.25);
+	--ts-color-channel-7-colorblind-soft-55: rgba(204, 121, 167, 0.55);
+	--ts-color-channel-8-colorblind: #7f7f7f;
+	--ts-color-channel-8-colorblind-soft-30: rgba(127, 127, 127, 0.25);
+	--ts-color-channel-8-colorblind-soft-55: rgba(127, 127, 127, 0.55);
+	--ts-color-channel-9-colorblind: #f5bc6c;
+	--ts-color-channel-9-colorblind-soft-30: rgba(245, 188, 108, 0.25);
+	--ts-color-channel-9-colorblind-soft-55: rgba(245, 188, 108, 0.55);
+	--ts-color-channel-10-colorblind: #9dd4f2;
+	--ts-color-channel-10-colorblind-soft-30: rgba(157, 212, 242, 0.25);
+	--ts-color-channel-10-colorblind-soft-55: rgba(157, 212, 242, 0.55);
+	--ts-color-channel-11-colorblind: #6bc7ae;
+	--ts-color-channel-11-colorblind-soft-30: rgba(107, 199, 174, 0.25);
+	--ts-color-channel-11-colorblind-soft-55: rgba(107, 199, 174, 0.55);
+	--ts-color-channel-12-colorblind: #d6c86b;
+	--ts-color-channel-12-colorblind-soft-30: rgba(214, 200, 107, 0.25);
+	--ts-color-channel-12-colorblind-soft-55: rgba(214, 200, 107, 0.55);
+	--ts-color-channel-13-colorblind: #6badd2;
+	--ts-color-channel-13-colorblind-soft-30: rgba(107, 173, 210, 0.25);
+	--ts-color-channel-13-colorblind-soft-55: rgba(107, 173, 210, 0.55);
+	--ts-color-channel-14-colorblind: #e7a26b;
+	--ts-color-channel-14-colorblind-soft-30: rgba(231, 162, 107, 0.25);
+	--ts-color-channel-14-colorblind-soft-55: rgba(231, 162, 107, 0.55);
+	--ts-color-channel-15-colorblind: #e1b1cc;
+	--ts-color-channel-15-colorblind-soft-30: rgba(225, 177, 204, 0.25);
+	--ts-color-channel-15-colorblind-soft-55: rgba(225, 177, 204, 0.55);
+	--ts-color-channel-16-colorblind: #b5b5b5;
+	--ts-color-channel-16-colorblind-soft-30: rgba(181, 181, 181, 0.25);
+	--ts-color-channel-16-colorblind-soft-55: rgba(181, 181, 181, 0.55);
+
+	/* The colorblind palette re-tuned for `--ts-color-surface-base-dark`. */
+	--ts-color-channel-1-colorblind-dark: var(--ts-color-channel-1-dark);
+	--ts-color-channel-1-colorblind-dark-soft-30: var(
+		--ts-color-channel-1-dark-soft-30
+	);
+	--ts-color-channel-1-colorblind-dark-soft-55: var(
+		--ts-color-channel-1-dark-soft-55
+	);
+	--ts-color-channel-2-colorblind-dark: #7bc5ee;
+	--ts-color-channel-2-colorblind-dark-soft-30: rgba(123, 197, 238, 0.25);
+	--ts-color-channel-2-colorblind-dark-soft-55: rgba(123, 197, 238, 0.55);
+	--ts-color-channel-3-colorblind-dark: #38b392;
+	--ts-color-channel-3-colorblind-dark-soft-30: rgba(56, 179, 146, 0.25);
+	--ts-color-channel-3-colorblind-dark-soft-55: rgba(56, 179, 146, 0.55);
+	--ts-color-channel-4-colorblind-dark: #c8b638;
+	--ts-color-channel-4-colorblind-dark-soft-30: rgba(200, 182, 56, 0.25);
+	--ts-color-channel-4-colorblind-dark-soft-55: rgba(200, 182, 56, 0.55);
+	--ts-color-channel-5-colorblind-dark: #3891c3;
+	--ts-color-channel-5-colorblind-dark-soft-30: rgba(56, 145, 195, 0.25);
+	--ts-color-channel-5-colorblind-dark-soft-55: rgba(56, 145, 195, 0.55);
+	--ts-color-channel-6-colorblind-dark: #de8138;
+	--ts-color-channel-6-colorblind-dark-soft-30: rgba(222, 129, 56, 0.25);
+	--ts-color-channel-6-colorblind-dark-soft-55: rgba(222, 129, 56, 0.55);
+	--ts-color-channel-7-colorblind-dark: #d796ba;
+	--ts-color-channel-7-colorblind-dark-soft-30: rgba(215, 150, 186, 0.25);
+	--ts-color-channel-7-colorblind-dark-soft-55: rgba(215, 150, 186, 0.55);
+	--ts-color-channel-8-colorblind-dark: #9b9b9b;
+	--ts-color-channel-8-colorblind-dark-soft-30: rgba(155, 155, 155, 0.25);
+	--ts-color-channel-8-colorblind-dark-soft-55: rgba(155, 155, 155, 0.55);
+	--ts-color-channel-9-colorblind-dark: #f7cb8d;
+	--ts-color-channel-9-colorblind-dark-soft-30: rgba(247, 203, 141, 0.25);
+	--ts-color-channel-9-colorblind-dark-soft-55: rgba(247, 203, 141, 0.55);
+	--ts-color-channel-10-colorblind-dark: #b3ddf5;
+	--ts-color-channel-10-colorblind-dark-soft-30: rgba(179, 221, 245, 0.25);
+	--ts-color-channel-10-colorblind-dark-soft-55: rgba(179, 221, 245, 0.55);
+	--ts-color-channel-11-colorblind-dark: #8cd3c0;
+	--ts-color-channel-11-colorblind-dark-soft-30: rgba(140, 211, 192, 0.25);
+	--ts-color-channel-11-colorblind-dark-soft-55: rgba(140, 211, 192, 0.55);
+	--ts-color-channel-12-colorblind-dark: #dfd58c;
+	--ts-color-channel-12-colorblind-dark-soft-30: rgba(223, 213, 140, 0.25);
+	--ts-color-channel-12-colorblind-dark-soft-55: rgba(223, 213, 140, 0.55);
+	--ts-color-channel-13-colorblind-dark: #8cc0dc;
+	--ts-color-channel-13-colorblind-dark-soft-30: rgba(140, 192, 220, 0.25);
+	--ts-color-channel-13-colorblind-dark-soft-55: rgba(140, 192, 220, 0.55);
+	--ts-color-channel-14-colorblind-dark: #ecb78c;
+	--ts-color-channel-14-colorblind-dark-soft-30: rgba(236, 183, 140, 0.25);
+	--ts-color-channel-14-colorblind-dark-soft-55: rgba(236, 183, 140, 0.55);
+	--ts-color-channel-15-colorblind-dark: #e8c3d7;
+	--ts-color-channel-15-colorblind-dark-soft-30: rgba(232, 195, 215, 0.25);
+	--ts-color-channel-15-colorblind-dark-soft-55: rgba(232, 195, 215, 0.55);
+	--ts-color-channel-16-colorblind-dark: #c5c5c5;
+	--ts-color-channel-16-colorblind-dark-soft-30: rgba(197, 197, 197, 0.25);
+	--ts-color-channel-16-colorblind-dark-soft-55: rgba(197, 197, 197, 0.55);
+
 	--ts-color-overlay-dim: rgba(0, 0, 0, 0.5);
 	--ts-color-overlay-dim-68: rgba(0, 0, 0, 0.65);
 	--ts-color-overlay-dim-48: rgba(0, 0, 0, 0.48);

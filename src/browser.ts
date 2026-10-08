@@ -1,18 +1,18 @@
-import { ElementConfigError, loadElementConfig } from "./config/element-config";
+import { ElementConfigError, loadElementConfig } from "./config/config";
 import {
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
 	TrackswitchPlayer,
 } from "./element";
-import { createTrackSwitch } from "./player/factory";
-import { parseNumericCsv } from "./shared/alignment";
+import { parseNumericCsv } from "./model/alignment";
+import { createTrackSwitch } from "./player/player";
 import { ensureTrackSwitchStyles } from "./shared/styles";
-import { renderIconSlotHtml } from "./ui/icons";
+import { renderIconSlotHtml } from "./views/icons";
 import {
 	describeError,
 	renderTrackSwitchErrorPanel,
 	renderTrackSwitchLoadingPanel,
-} from "./ui/render-status-panel";
+} from "./views/layout";
 
 defineTrackswitchDefaultElement();
 

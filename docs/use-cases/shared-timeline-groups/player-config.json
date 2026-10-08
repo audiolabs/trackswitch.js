@@ -138,7 +138,7 @@
 				"sopranoTrumpet",
 				"sopranoFlugelhorn"
 			],
-			"soloGroup": 0,
+			"comparisonGroup": 0,
 			"rowHeight": 36
 		},
 		{
@@ -152,7 +152,7 @@
 				"altoFlugelhorn",
 				"altoTrumpet"
 			],
-			"soloGroup": 1,
+			"comparisonGroup": 1,
 			"rowHeight": 36
 		},
 		{
@@ -161,7 +161,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["tenorBaritone", "tenorBaritoneSaxophone"],
-			"soloGroup": 2,
+			"comparisonGroup": 2,
 			"rowHeight": 36
 		},
 		{
@@ -176,7 +176,7 @@
 				"bassTrombone",
 				"bassTuba"
 			],
-			"soloGroup": 3,
+			"comparisonGroup": 3,
 			"rowHeight": 36
 		}
 	]

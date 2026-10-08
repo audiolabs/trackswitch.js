@@ -1,13 +1,13 @@
-import type {
-	TrackSwitchController,
-	TrackSwitchEventMap,
-	TrackSwitchInit,
-} from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
+import type {
+	TrackSwitchController,
+	TrackSwitchEventMap,
+	TrackSwitchInit,
+} from "./types";
 
 export type TrackswitchSvelteVariant = "default" | "sync";
 
@@ -18,6 +18,7 @@ export interface TrackswitchSvelteOptions {
 	onError?: (payload: TrackSwitchEventMap["error"]) => void;
 	onPosition?: (payload: TrackSwitchEventMap["position"]) => void;
 	onTrackState?: (payload: TrackSwitchEventMap["trackState"]) => void;
+	onMarkers?: (payload: TrackSwitchEventMap["markers"]) => void;
 }
 
 export interface TrackswitchSvelteAction {
@@ -77,6 +78,11 @@ export function useTrackswitch(
 			node,
 			TRACKSWITCH_DOM_EVENTS.trackState,
 			() => currentOptions.onTrackState,
+		),
+		bindEvent(
+			node,
+			TRACKSWITCH_DOM_EVENTS.markers,
+			() => currentOptions.onMarkers,
 		),
 	];
 

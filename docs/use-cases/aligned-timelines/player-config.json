@@ -1,17 +1,13 @@
 {
 	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
 	"media": {
-		"score": {
-			"type": "musicxml",
-			"src": "../../assets/alignment/Schubert_D911-03.xml"
-		},
 		"hu33": {
 			"type": "audio",
 			"title": "Performance HU33",
 			"src": "../../assets/alignment/Schubert_D911-03_HU33.wav",
 			"startOffsetMs": 200,
 			"endOffsetMs": 6200,
-			"srcSynchronized": {
+			"srcTimeScaled": {
 				"src": "../../assets/alignment/Schubert_D911-03_HU33.wav",
 				"startOffsetMs": 200,
 				"endOffsetMs": 6200
@@ -23,7 +19,7 @@
 			"src": "../../assets/alignment/Schubert_D911-03_SC06.wav",
 			"startOffsetMs": 600,
 			"endOffsetMs": 300,
-			"srcSynchronized": {
+			"srcTimeScaled": {
 				"src": "../../assets/alignment/Schubert_D911-03_SC06_syncronized.wav",
 				"startOffsetMs": 300,
 				"endOffsetMs": 6900
@@ -34,23 +30,16 @@
 		"src": "../../assets/alignment/alignment.csv",
 		"referenceTimeline": "hu33",
 		"timelines": {
-			"score": "measure_Schubert_D911-03_2",
 			"hu33": "time_Schubert_D911-03_HU33",
 			"sc06": "time_Schubert_D911-03_SC06"
 		},
 		"outsideCoverage": "hold",
-		"duplicatePlacements": "average"
+		"duplicateAnchors": "average"
 	},
 	"views": [
 		{
 			"type": "navigationBar",
 			"controls": ["playback", "globalVolume", "looping", "sync", "timer"]
-		},
-		{
-			"type": "sheetMusic",
-			"mediaID": "score",
-			"maxHeight": 340,
-			"cursorColor": "#999999"
 		},
 		{
 			"type": "waveform",
@@ -67,7 +56,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["hu33", "sc06"],
-			"soloGroup": 0,
+			"comparisonGroup": 0,
 			"trackVolumeControls": true,
 			"trackPanControls": "balance"
 		}

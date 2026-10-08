@@ -1,0 +1,75 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"hu33": {
+			"type": "audio",
+			"title": "Performance HU33",
+			"src": "../../assets/alignment/Schubert_D911-03_HU33.wav"
+		},
+		"sc06": {
+			"type": "audio",
+			"title": "Performance SC06",
+			"src": "../../assets/alignment/Schubert_D911-03_SC06.wav"
+		}
+	},
+	"alignment": {
+		"src": "../../assets/alignment/alignment.csv",
+		"referenceTimeline": "reference",
+		"timelines": {
+			"reference": "time_sync_reference",
+			"hu33": "time_Schubert_D911-03_HU33",
+			"sc06": "time_Schubert_D911-03_SC06"
+		}
+	},
+	"markers": {
+		"hu33Structure": {
+			"type": "segments",
+			"src": "Schubert_D911-03_HU33.csv",
+			"timeline": "hu33",
+			"timeCol": "start",
+			"labelCol": "structure",
+			"colors": {
+				"I": "var(--ts-color-channel-1)",
+				"A": "var(--ts-color-channel-2)",
+				"B": "var(--ts-color-channel-3)",
+				"C": "var(--ts-color-channel-4)"
+			}
+		},
+		"sc06Structure": {
+			"type": "segments",
+			"src": "Schubert_D911-03_SC06.csv",
+			"timeline": "sc06",
+			"timeCol": "start",
+			"labelCol": "structure",
+			"colors": {
+				"I": "var(--ts-color-channel-1)",
+				"A": "var(--ts-color-channel-2)",
+				"B": "var(--ts-color-channel-3)",
+				"C": "var(--ts-color-channel-4)"
+			}
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "markerNavigation", "looping", "timer"]
+		},
+		{
+			"type": "waveform",
+			"tracks": ["hu33"],
+			"height": 110,
+			"markerLayers": [{ "sequence": "hu33Structure" }]
+		},
+		{
+			"type": "waveform",
+			"tracks": ["sc06"],
+			"height": 110,
+			"markerLayers": [{ "sequence": "sc06Structure" }]
+		},
+		{
+			"type": "trackList",
+			"tracks": ["hu33", "sc06"],
+			"comparisonGroup": 0
+		}
+	]
+}
