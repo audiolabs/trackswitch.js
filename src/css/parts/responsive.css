@@ -17,22 +17,41 @@
    that ends up alone on its row (last of its kind, or followed by the timer or
    seek bar, which own a full row) is centered instead. */
 @container ts-main-control (max-width: 700px) {
-	.trackswitch .main-control ul.control > li:not(.seekwrap, .fullscreen-toggle, .timing) {
+	.trackswitch
+		.main-control
+		ul.control
+		> li:not(.seekwrap, .fullscreen-toggle, .timing) {
 		flex: 0 0 calc(50% - var(--ts-main-control-column-gap) / 2);
 		min-width: 0;
 		margin-inline: 0;
 	}
 
-	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+	.trackswitch
+		.main-control
+		ul.control
+		> li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)) {
 		justify-content: flex-start;
 	}
 
-	.trackswitch .main-control ul.control > li:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+	.trackswitch
+		.main-control
+		ul.control
+		> li:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
 		justify-content: flex-end;
 	}
 
-	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
-	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(+ :is(.timing, .seekwrap)) {
+	.trackswitch
+		.main-control
+		ul.control
+		> li:nth-child(
+			odd of :not(.seekwrap, .fullscreen-toggle, .timing)
+		):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
+	.trackswitch
+		.main-control
+		ul.control
+		> li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(
+			+ :is(.timing, .seekwrap)
+		) {
 		flex-basis: 100%;
 		justify-content: center;
 	}
@@ -44,12 +63,27 @@
 		justify-content: center;
 	}
 
-	.trackswitch .main-control ul.control > li.sync-global:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+	.trackswitch
+		.main-control
+		ul.control
+		> li.sync-global:nth-child(
+			even of :not(.seekwrap, .fullscreen-toggle, .timing)
+		) {
 		margin-left: auto;
 	}
 
-	.trackswitch .main-control ul.control > li.sync-global:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
-	.trackswitch .main-control ul.control > li.sync-global:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(+ :is(.timing, .seekwrap)) {
+	.trackswitch
+		.main-control
+		ul.control
+		> li.sync-global:nth-child(
+			odd of :not(.seekwrap, .fullscreen-toggle, .timing)
+		):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
+	.trackswitch
+		.main-control
+		ul.control
+		> li.sync-global:nth-child(
+			odd of :not(.seekwrap, .fullscreen-toggle, .timing)
+		):has(+ :is(.timing, .seekwrap)) {
 		margin-inline: auto;
 	}
 

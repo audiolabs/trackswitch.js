@@ -26,8 +26,14 @@
    it is reserved only on the items that sit at the right edge of the first
    row, so a seekbar wrapped onto its own row can still span the full width. */
 .trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.timing,
-.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.settings-button,
-.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.seekwrap:first-child {
+.trackswitch
+	.main-control
+	ul.control:has(> li.fullscreen-toggle)
+	> li.settings-button,
+.trackswitch
+	.main-control
+	ul.control:has(> li.fullscreen-toggle)
+	> li.seekwrap:first-child {
 	margin-inline-end: calc(
 		var(--ts-main-control-icon-size) +
 		var(--ts-main-control-column-gap)
@@ -286,7 +292,10 @@
 }
 
 /* A tool that is switched on reads as a lit key, not just a brighter icon. */
-.trackswitch.trackswitch .main-control .marker-editing-controls .button.checked {
+.trackswitch.trackswitch
+	.main-control
+	.marker-editing-controls
+	.button.checked {
 	color: var(--ts-color-text-inverse);
 	background: var(--ts-color-accent);
 	border-radius: 3px;
