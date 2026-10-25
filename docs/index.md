@@ -146,6 +146,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="waveform" checked />
         </label>
         <label class="ts-control-row">
+          <span>Spectrogram</span>
+          <input type="checkbox" name="spectrogram" />
+        </label>
+        <label class="ts-control-row">
           <span>Waveform Time Axis</span>
           <select name="waveformTimeAxis">
             <option value="shared" selected>Shared</option>
@@ -211,6 +215,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         <label class="ts-control-row">
           <span>Tab View</span>
           <input type="checkbox" name="tabView" />
+        </label>
+        <label class="ts-control-row">
+          <span>Lock Zoom of All Views</span>
+          <input type="checkbox" name="lockZoom" />
         </label>
       </div>
 

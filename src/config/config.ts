@@ -1113,6 +1113,7 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	keyboard: true,
 	normalizeLoudness: false,
 	autoload: false,
+	lockZoom: false,
 };
 
 const featureKeys = new Set<keyof TrackSwitchFeatures>(

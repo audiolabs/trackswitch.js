@@ -30,6 +30,14 @@ Each page contains a working player and explains the important parts of its JSON
   </li>
 
   <li class="ts-usecase-card">
+    <h2><a href="{{ '/use-cases/spectrogram-views/' | relative_url }}">Spectrogram Views</a></h2>
+    <p>
+      Show the magnitude spectrogram of the audible mix or of chosen tracks, on linear, log, mel,
+      or Bark frequency axes labelled in Hz or note names, and split it into left and right channels.
+    </p>
+  </li>
+
+  <li class="ts-usecase-card">
     <h2><a href="{{ '/use-cases/images/' | relative_url }}">Seekable Images</a></h2>
     <p>
       Display a seekable plot for all tracks, or show a different plot for each active track.

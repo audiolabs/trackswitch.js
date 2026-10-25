@@ -312,6 +312,11 @@ export class ViewRenderer {
 	public isTrackAudible: (trackIndex: number) => boolean = () => true;
 	/** Whether a `trackList` is the selected timeline of an aligned player. */
 	public isTrackListUnitActive: (groupIndex: number) => boolean = () => false;
+	/**
+	 * Told whenever a zoomable surface scrolls, by the listener or by the
+	 * player, so the controller can carry the viewport to locked surfaces.
+	 */
+	public onTimelineViewportScroll: (seekWrap: HTMLElement) => void = () => {};
 	public hasAlignment = false;
 	public referenceTimelineUnit: TimelineUnit = "seconds";
 	public referenceTimelineId: string | null = null;
@@ -897,7 +902,7 @@ export class ViewRenderer {
 
 	public findStereoWaveformChannelMismatch(
 		runtimes: TrackRuntime[],
-	): { runtime: TrackRuntime; channels: number } | null {
+	): ReturnType<typeof viewRendererWaveform.findStereoWaveformChannelMismatch> {
 		return viewRendererWaveform.findStereoWaveformChannelMismatch(
 			this,
 			runtimes,

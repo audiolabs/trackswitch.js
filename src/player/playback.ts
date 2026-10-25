@@ -41,6 +41,7 @@ import {
 	unregisterController,
 } from "./player";
 import { type PlayerAction, playerStateReducer } from "./state";
+import { alignLockedZoom, syncLockedZoom } from "./zoom-lock";
 
 function getLoadErrorMessage(error: unknown): string {
 	if (error instanceof Error && error.message.trim().length > 0) {
@@ -118,7 +119,7 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 			return;
 		}
 
-		ctx.waveformEngine.summarizeShownTracks(ctx.runtimes, ctx.views);
+		ctx.waveformEngine.prepareShownTracks(ctx.runtimes, ctx.views);
 
 		ctx.isLoading = false;
 		ctx.renderer.setOverlayLoading(false);
@@ -138,7 +139,7 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 		if (stereoMismatch) {
 			const { runtime, channels } = stereoMismatch;
 			ctx.handleError(
-				`A stereo waveform needs two-channel audio, but "${
+				`A stereo ${stereoMismatch.view} needs two-channel audio, but "${
 					runtime.definition.title ?? runtime.definition.id
 				}" has ${channels} channel${channels === 1 ? "" : "s"}.`,
 			);
@@ -226,6 +227,7 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 
 		ctx.updateMainControls();
 		ctx.applyTrackProperties();
+		alignLockedZoom(ctx);
 
 		ctx.emit("loaded", {
 			longestDuration: ctx.longestDuration,
@@ -1275,6 +1277,7 @@ export function onWaveformZoomWheel(
 
 	if (changed) {
 		ctx.requestWaveformRender();
+		syncLockedZoom(ctx, seekWrap);
 		ctx.updateMainControls();
 	}
 }
@@ -1324,6 +1327,7 @@ export function onPianoRollZoomWheel(
 	);
 
 	if (changed) {
+		syncLockedZoom(ctx, seekWrap);
 		ctx.updateMainControls();
 	}
 }
@@ -1823,6 +1827,7 @@ export function updatePinchZoom(
 		if (ctx.isWaveformSeekSurface(ctx.pinchZoomState.seekWrap)) {
 			ctx.requestWaveformRender();
 		}
+		syncLockedZoom(ctx, ctx.pinchZoomState.seekWrap);
 		ctx.updateMainControls();
 	}
 

@@ -299,28 +299,50 @@ function storeCompactChunk(
 	compact.data.set(waveformKernel.input16.subarray(0, count), start);
 }
 
-/** A compact copy of one channel of `buffer`. */
-function compactBufferChannel(
+/** A compact copy of one channel of `buffer`, or of the average of all. */
+function compactBuffer(
 	buffer: AudioBuffer,
-	channel: number,
+	channel: number | "average",
 ): CompactChannel {
 	const waveformKernel = getKernel();
 	const compact = createCompactChannel(buffer.length);
-	const contributions: WaveformContribution[] = [
-		{
-			source: new BufferChannelSource(buffer, channel),
-			gain: 1,
-			offset: 0,
-			start: 0,
-			end: buffer.length,
-		},
-	];
+	const contributions =
+		channel === "average"
+			? averageContributions(buffer)
+			: [
+					{
+						source: new BufferChannelSource(buffer, channel),
+						gain: 1,
+						offset: 0,
+						start: 0,
+						end: buffer.length,
+					},
+				];
 	for (let start = 0; start < buffer.length; start += SUMMARY_CHUNK_SAMPLES) {
 		const count = Math.min(SUMMARY_CHUNK_SAMPLES, buffer.length - start);
 		mixChunk(waveformKernel, contributions, start, count);
 		storeCompactChunk(waveformKernel, compact, start, count);
 	}
 	return compact;
+}
+
+/** The average of a buffer's channels, read straight from the buffer. */
+function averageContributions(
+	buffer: AudioBuffer,
+	span: { offset: number; start: number; end: number } = {
+		offset: 0,
+		start: 0,
+		end: buffer.length,
+	},
+): WaveformContribution[] {
+	const gain = 1 / buffer.numberOfChannels;
+	return Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
+		source: new BufferChannelSource(buffer, channel),
+		gain,
+		offset: span.offset,
+		start: span.start,
+		end: span.end,
+	}));
 }
 
 /** Writes one entry of `coarse` for every `SUMMARY_LEVEL_FACTOR` of `level`. */
@@ -485,6 +507,18 @@ export interface WaveformSignal {
 	read(start: number, out: Float32Array, count: number): void;
 }
 
+/**
+ * A signal that is only ever read sample by sample, so it needs no summary:
+ * what a spectrogram analyses.
+ */
+export interface WaveformMixReader {
+	/** Equal for two readers exactly when they read the same samples. */
+	readonly key: string;
+	readonly sampleRate: number;
+	/** Fills `out[0, count)` with the samples from `start` on. */
+	read(start: number, out: Float32Array, count: number): void;
+}
+
 let nextSignalId = 0;
 
 /**
@@ -553,7 +587,21 @@ interface MixRequest {
 	onReady: () => void;
 }
 
-/** Tells summaries apart in mix keys. */
+/** Tells buffers apart in mix keys. */
+const bufferIds = new WeakMap<AudioBuffer, number>();
+let nextBufferId = 0;
+
+function getBufferId(buffer: AudioBuffer): number {
+	let id = bufferIds.get(buffer);
+	if (id === undefined) {
+		id = nextBufferId;
+		nextBufferId += 1;
+		bufferIds.set(buffer, id);
+	}
+	return id;
+}
+
+/** Tells summaries apart in signal keys. */
 const summaryIds = new WeakMap<WaveformSummary, number>();
 let nextSummaryId = 0;
 
@@ -654,17 +702,10 @@ export class WaveformEngine {
 	 */
 	createSummary(buffer: AudioBuffer): WaveformSummary {
 		const compact = createCompactChannel(buffer.length);
-		const gain = 1 / buffer.numberOfChannels;
 		const build = summarize(
 			buffer.sampleRate,
 			buffer.length,
-			Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
-				source: new BufferChannelSource(buffer, channel),
-				gain,
-				offset: 0,
-				start: 0,
-				end: buffer.length,
-			})),
+			averageContributions(buffer),
 			compact,
 		);
 		for (;;) {
@@ -679,29 +720,21 @@ export class WaveformEngine {
 	/**
 	 * Summarizes the audio of every track some waveform among `views` can
 	 * show, and drops what was kept for the rest: a summary and the compact
-	 * copy beside it take a fair share of the decoded audio's memory again.
+	 * copy beside it take a fair share of the decoded audio's memory again. A
+	 * track only a spectrogram shows keeps its compact copies, which its mixes
+	 * read, but needs no summary.
 	 */
-	summarizeShownTracks(
+	prepareShownTracks(
 		runtimes: TrackRuntime[],
 		views: TrackSwitchViewConfig[],
 	): void {
-		const shownIds = new Set<TrackId>();
-		let showsAll = false;
-		views.forEach((view) => {
-			if (view.type !== "waveform") {
-				return;
-			}
-			if (view.tracks === undefined || view.tracks === "audible") {
-				showsAll = true;
-			} else {
-				view.tracks.forEach((id) => {
-					shownIds.add(id);
-				});
-			}
-		});
+		const summarized = collectShownTracks(views, "waveform");
+		const analysed = collectShownTracks(views, "spectrogram");
 
 		runtimes.forEach((runtime) => {
-			const shown = showsAll || shownIds.has(runtime.definition.id);
+			const id = runtime.definition.id;
+			const summarize = summarized === "all" || summarized.has(id);
+			const keep = summarize || analysed === "all" || analysed.has(id);
 			const sources: Array<TrackLoadedSource | null> = [
 				runtime.baseSource,
 				runtime.syncedSource,
@@ -710,12 +743,14 @@ export class WaveformEngine {
 				if (!source?.buffer) {
 					return;
 				}
-				if (shown) {
+				if (summarize) {
 					if (!source.waveformSummary) {
 						source.waveformSummary = this.createSummary(source.buffer);
 					}
 				} else {
 					source.waveformSummary = null;
+				}
+				if (!keep) {
 					this.compactAverages.delete(source.buffer);
 					this.compactChannels.delete(source.buffer);
 				}
@@ -751,7 +786,6 @@ export class WaveformEngine {
 		const peak = querySummary(summary, span.start, span.end, range)
 			? Math.max(-range.min, range.max)
 			: 0;
-		const gain = 1 / buffer.numberOfChannels;
 		const signal = new SummarySignal(
 			key,
 			buffer.sampleRate,
@@ -760,13 +794,7 @@ export class WaveformEngine {
 			peak,
 			summary,
 			span.offset,
-			Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
-				source: new BufferChannelSource(buffer, channel),
-				gain,
-				offset: span.offset,
-				start: span.start,
-				end: span.end,
-			})),
+			averageContributions(buffer, span),
 		);
 		this.trackSignals.set(summary, signal);
 		return signal;
@@ -803,6 +831,54 @@ export class WaveformEngine {
 		return this.mixRequests.get(requester)?.wanted
 			? (this.deliveredSignals.get(requester) ?? null)
 			: null;
+	}
+
+	/**
+	 * What `runtimes` sound like together in `lane`, on a shared timeline of
+	 * `duration` seconds, as `getSignal` describes it — but read sample by
+	 * sample, without a summary, so it is ready right away. Null with nothing
+	 * to read.
+	 */
+	getMixReader(
+		runtimes: TrackRuntime[],
+		duration: number,
+		lane: WaveformLane,
+	): WaveformMixReader | null {
+		const sources = runtimes.filter(
+			(runtime) => runtime.buffer && runtime.timing,
+		);
+		if (sources.length === 0) {
+			return null;
+		}
+
+		if (lane === "mono" && sources.length === 1) {
+			const buffer = sources[0].buffer as AudioBuffer;
+			const span = resolveTrackSampleSpan(
+				buffer,
+				sources[0].timing as TrackTiming,
+			);
+			const contributions = averageContributions(buffer, span);
+			return {
+				key: [
+					"track",
+					getBufferId(buffer),
+					span.offset,
+					span.start,
+					span.end,
+				].join(":"),
+				sampleRate: buffer.sampleRate,
+				read: (start, out, count) =>
+					readContributions(contributions, start, out, count),
+			};
+		}
+
+		const mix = this.describeMix(sources, duration, lane);
+		return {
+			key: mix.key,
+			sampleRate: mix.sampleRate,
+			read: (start, out, count) =>
+				readContributions(mix.contributions, start, out, count),
+		};
 	}
 
 	private resolveSignal(
@@ -905,7 +981,7 @@ export class WaveformEngine {
 				}));
 			}
 			return {
-				summaryId: getSummaryId(runtime.waveformSummary as WaveformSummary),
+				bufferId: getBufferId(buffer),
 				span: resolveTrackSampleSpan(buffer, runtime.timing as TrackTiming),
 				channels,
 			};
@@ -927,7 +1003,7 @@ export class WaveformEngine {
 			);
 			keys.push(
 				[
-					part.summaryId,
+					part.bufferId,
 					part.span.offset,
 					part.span.start,
 					part.span.end,
@@ -957,9 +1033,8 @@ export class WaveformEngine {
 	private getCompactAverage(buffer: AudioBuffer): CompactChannel {
 		let compact = this.compactAverages.get(buffer);
 		if (!compact) {
-			// Summarizing a buffer compacts its average along the way.
-			this.createSummary(buffer);
-			compact = this.compactAverages.get(buffer) as CompactChannel;
+			compact = compactBuffer(buffer, "average");
+			this.compactAverages.set(buffer, compact);
 		}
 		return compact;
 	}
@@ -968,7 +1043,7 @@ export class WaveformEngine {
 	private getCompactChannels(buffer: AudioBuffer): CompactChannel[] {
 		let compacts = this.compactChannels.get(buffer);
 		if (!compacts) {
-			compacts = [0, 1].map((channel) => compactBufferChannel(buffer, channel));
+			compacts = [0, 1].map((channel) => compactBuffer(buffer, channel));
 			this.compactChannels.set(buffer, compacts);
 		}
 		return compacts;
@@ -1046,6 +1121,29 @@ export class WaveformEngine {
 
 		this.scheduleMixJobs();
 	}
+}
+
+/**
+ * The tracks the views of `type` among `views` can show: every one when some
+ * view follows whichever is audible.
+ */
+function collectShownTracks(
+	views: TrackSwitchViewConfig[],
+	type: "waveform" | "spectrogram",
+): Set<TrackId> | "all" {
+	const shownIds = new Set<TrackId>();
+	for (const view of views) {
+		if (view.type !== type) {
+			continue;
+		}
+		if (view.tracks === undefined || view.tracks === "audible") {
+			return "all";
+		}
+		view.tracks.forEach((id) => {
+			shownIds.add(id);
+		});
+	}
+	return shownIds;
 }
 
 function resolveFixedWaveformTrackIndex(

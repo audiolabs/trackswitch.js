@@ -1738,6 +1738,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				// so whatever the readout points at has moved on.
 				hidePianoRollTooltip(metadata);
 				ctx.schedulePianoRollNoteRefresh();
+				ctx.onTimelineViewportScroll(metadata.seekWrap);
 			},
 			{ passive: true },
 		);

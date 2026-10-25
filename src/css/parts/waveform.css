@@ -231,3 +231,45 @@
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-viewport {
 	z-index: 2;
 }
+
+/* SPECTROGRAM ------------------------------------------------------------- */
+
+/* A spectrogram is a waveform surface with a different drawing: the
+ * magnitude runs from the background up to the dark grey of the navigation
+ * bar. */
+.trackswitch .spectrogram-wrap {
+	--spectrogram-background: var(--ts-color-text-inverse);
+	--spectrogram-color: var(--ts-color-surface-panel-dark);
+}
+
+/* Labels the frequency axis of one lane along its left edge. */
+.trackswitch .waveform-wrap .spectrogram-axis {
+	position: absolute;
+	left: 0;
+	pointer-events: none;
+}
+
+.trackswitch .waveform-wrap .spectrogram-axis-tick {
+	position: absolute;
+	left: 0;
+	padding: 1px 4px 1px 8px;
+	transform: translateY(50%);
+	border-radius: 0 3px 3px 0;
+	font-family: monospace;
+	font-size: 10px;
+	line-height: 1.2;
+	white-space: nowrap;
+	color: var(--ts-color-text-secondary);
+	background: var(--ts-color-surface-raised-72);
+	user-select: none;
+}
+
+.trackswitch .waveform-wrap .spectrogram-axis-tick::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 50%;
+	width: 5px;
+	height: 1px;
+	background: var(--ts-color-text-secondary);
+}

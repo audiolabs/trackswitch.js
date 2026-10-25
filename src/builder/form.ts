@@ -66,6 +66,8 @@ const NAVIGATION_CONTROLS = [
 const FIELD_DEFAULTS: Record<string, unknown> = {
 	align: "center",
 	alignedPlayhead: false,
+	amplitude: "log1p",
+	axisLabels: "hz",
 	autoload: false,
 	bold: false,
 	channelColorIcons: true,
@@ -75,17 +77,23 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	cursorAlpha: 0.4,
 	defaultZoom: 5,
 	duplicateAnchors: "first",
+	dynamicRange: 80,
 	endOffsetMs: 0,
 	foldToReference: false,
 	fontSize: 16,
+	fftSize: 4096,
 	followPlayback: true,
+	frequencyScale: "linear",
+	gamma: 10000,
 	globalPanControl: "balance",
 	grid: "none",
+	hopSize: 2048,
 	height: 150,
 	italic: false,
 	keyboard: true,
 	legend: "none",
 	line: "dashed",
+	lockZoom: false,
 	lineWidth: 1,
 	maxHeight: 380,
 	maxWidth: 1000,
@@ -120,6 +128,7 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	velocityOpacity: false,
 	volume: 1,
 	volumeControl: false,
+	window: "hann",
 };
 
 function titleFor(key: string): string {
@@ -173,8 +182,13 @@ function defaultFieldValue(
 			context.target.viewType ??
 			context.project.views.find((entry) => entry.id === context.target.id)
 				?.config.type;
-		if (key === "maxZoom" && viewType === "waveform") return 0;
+		if (
+			key === "maxZoom" &&
+			(viewType === "waveform" || viewType === "spectrogram")
+		)
+			return 0;
 		if (key === "height" && viewType === "pianoRoll") return 180;
+		if (key === "height" && viewType === "spectrogram") return 200;
 		if (key === "height" && viewType === "warpingMatrix") return "";
 	}
 	const describedDefault = node.description?.match(/^Default: (.+)$/)?.[1];

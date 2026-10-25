@@ -74,6 +74,7 @@ const MARKER_LAYER_VIEW_TYPES = new Set([
 	"image",
 	"perTrackImage",
 	"waveform",
+	"spectrogram",
 	"pianoRoll",
 ]);
 
@@ -81,6 +82,7 @@ const VIEW_LABELS: Record<(typeof BUILDER_VIEW_TYPES)[number], string> = {
 	image: "Image",
 	perTrackImage: "Per-track image",
 	waveform: "Waveform",
+	spectrogram: "Spectrogram",
 	pianoRoll: "Piano roll",
 	sheetMusic: "Sheet music",
 	warpingMatrix: "Warping matrix",
@@ -141,6 +143,7 @@ function defaultView(
 		case "perTrackImage":
 			return { type };
 		case "waveform":
+		case "spectrogram":
 			return { type, tracks: "audible" };
 		case "pianoRoll":
 			return {

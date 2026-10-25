@@ -442,7 +442,10 @@ export function renameMediaId(
 		) {
 			config.mediaID = newId;
 		}
-		if (config.type === "waveform" && Array.isArray(config.tracks)) {
+		if (
+			(config.type === "waveform" || config.type === "spectrogram") &&
+			Array.isArray(config.tracks)
+		) {
 			replaceInTracks(config.tracks, oldId, newId);
 		}
 		if (config.type === "trackList")
@@ -534,7 +537,10 @@ export function detachMedia(project: BuilderProject, mediaId: string): void {
 			if (fallback) config.mediaID = fallback;
 			else removedViewIds.add(view.id);
 		}
-		if (config.type === "waveform" && Array.isArray(config.tracks)) {
+		if (
+			(config.type === "waveform" || config.type === "spectrogram") &&
+			Array.isArray(config.tracks)
+		) {
 			if (config.tracks.includes(mediaId)) {
 				const remaining = config.tracks.filter((track) => track !== mediaId);
 				config.tracks = remaining.length ? remaining : "audible";

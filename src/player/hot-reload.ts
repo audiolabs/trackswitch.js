@@ -27,6 +27,7 @@ import {
 	createTrackRuntime,
 	resetDisabledTrackVolumeControls,
 } from "./state";
+import { alignLockedZoom } from "./zoom-lock";
 
 function buildPresetEntries(
 	config: NormalizedTrackSwitchConfig,
@@ -186,6 +187,7 @@ function restoreZoomState(
 			state.viewportStart,
 		);
 	});
+	alignLockedZoom(controller);
 }
 
 function restoreAudioPreservingState(
@@ -262,7 +264,7 @@ async function applyAudioPreservingConfig(
 	);
 	controller.media = config.media;
 	controller.views = config.views;
-	controller.waveformEngine.summarizeShownTracks(
+	controller.waveformEngine.prepareShownTracks(
 		controller.runtimes,
 		config.views,
 	);
@@ -364,7 +366,7 @@ async function updateConfigNow(
 		stagedRuntimes = nextRuntimes;
 		await controller.audioEngine.loadTracks(nextRuntimes);
 
-		controller.waveformEngine.summarizeShownTracks(
+		controller.waveformEngine.prepareShownTracks(
 			nextRuntimes,
 			nextConfig.views,
 		);

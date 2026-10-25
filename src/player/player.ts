@@ -85,6 +85,7 @@ import {
 	resolveGroupTrackIndexes,
 	resolveSoloScopeTrackIndexes,
 } from "./state";
+import { syncLockedZoom } from "./zoom-lock";
 
 interface SeekTimelineContext {
 	duration: number;
@@ -295,6 +296,8 @@ export class TrackSwitchControllerImpl
 			this.isGroupExclusive(groupIndex);
 		this.renderer.isTrackListUnitActive = (groupIndex: number) =>
 			this.isTrackListUnitActive(groupIndex);
+		this.renderer.onTimelineViewportScroll = (seekWrap: HTMLElement) =>
+			syncLockedZoom(this, seekWrap);
 		// The rule an `audible` waveform follows, so a piano roll showing the same
 		// selection can never disagree with the waveform beside it.
 		this.renderer.isTrackAudible = (trackIndex: number) =>

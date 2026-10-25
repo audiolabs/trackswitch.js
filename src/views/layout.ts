@@ -20,6 +20,7 @@ import type {
 	TrackSwitchPianoRollViewConfig,
 	TrackSwitchSeparatorViewConfig,
 	TrackSwitchSheetMusicViewConfig,
+	TrackSwitchSpectrogramViewConfig,
 	TrackSwitchTextViewConfig,
 	TrackSwitchUiState,
 	TrackSwitchViewConfig,
@@ -2212,16 +2213,17 @@ function createImageElement(
 	return imageElement;
 }
 
+/** A spectrogram is wrapped into the same surface as a waveform. */
 function renderWaveform(
 	renderer: ConfiguredViewRenderer,
-	waveform: TrackSwitchWaveformViewConfig,
+	waveform: TrackSwitchWaveformViewConfig | TrackSwitchSpectrogramViewConfig,
 	ctx: ViewNormalizeContext,
 ): void {
 	const sourceIndex = resolveWaveformTracksIndex(waveform.tracks, ctx);
 	const canvas = document.createElement("canvas");
 	canvas.className = "waveform";
 	canvas.width = 1200;
-	canvas.height = resolvedSize(waveform.height, "waveform.height");
+	canvas.height = resolvedSize(waveform.height, `${waveform.type}.height`);
 	renderer.registerConfiguredViewHost(canvas, {
 		view: waveform,
 		waveformSource: sourceIndex,
@@ -2308,7 +2310,7 @@ export function renderConfiguredViews(
 			renderPerTrackImage(renderer, entry, ctx);
 			return;
 		}
-		if (entry.type === "waveform") {
+		if (entry.type === "waveform" || entry.type === "spectrogram") {
 			renderWaveform(renderer, entry, ctx);
 			return;
 		}

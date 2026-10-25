@@ -1,0 +1,72 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"violins": {
+			"type": "audio",
+			"title": "Violins",
+			"src": "../../assets/multitracks/violins.mp3",
+			"solo": true
+		},
+		"synths": {
+			"type": "audio",
+			"title": "Synths",
+			"src": "../../assets/multitracks/synth.mp3",
+			"solo": true
+		},
+		"bass": {
+			"type": "audio",
+			"title": "Bass",
+			"src": "../../assets/multitracks/bass.mp3",
+			"solo": true
+		},
+		"drums": {
+			"type": "audio",
+			"title": "Drums",
+			"src": "../../assets/multitracks/drums.mp3",
+			"solo": true
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "seekBar", "timer"]
+		},
+		{
+			"type": "text",
+			"text": "Bass: log scale, note names",
+			"bold": true,
+			"fontSize": 14
+		},
+		{
+			"type": "spectrogram",
+			"tracks": ["bass"],
+			"height": 180,
+			"frequencyScale": "log",
+			"axisLabels": "midi",
+			"frequencyRange": ["C1", "C6"],
+			"fftSize": 8192
+		},
+		{
+			"type": "text",
+			"text": "Drums: mel scale, decibels",
+			"bold": true,
+			"fontSize": 14
+		},
+		{
+			"type": "spectrogram",
+			"tracks": ["drums"],
+			"height": 180,
+			"frequencyScale": "mel",
+			"frequencyRange": [0, 16000],
+			"amplitude": "db",
+			"dynamicRange": 60,
+			"fftSize": 1024,
+			"hopSize": 128
+		},
+		{
+			"type": "trackList",
+			"tracks": ["violins", "synths", "bass", "drums"],
+			"trackVolumeControls": true
+		}
+	]
+}

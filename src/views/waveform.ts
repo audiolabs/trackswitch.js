@@ -2,6 +2,7 @@ import type {
 	TrackTimelineProjector,
 	WaveformEngine,
 	WaveformLane,
+	WaveformMixReader,
 	WaveformRange,
 	WaveformSignal,
 } from "../media/waveform-engine";
@@ -14,6 +15,7 @@ import { applyCssOverrides } from "../shared/dom";
 import { clamp, sanitizeDuration } from "../shared/math";
 import type {
 	TrackRuntime,
+	TrackSwitchSpectrogramViewConfig,
 	TrackSwitchUiState,
 	TrackSwitchWaveformViewConfig,
 	WaveformPlaybackFollowMode,
@@ -21,6 +23,16 @@ import type {
 	WaveformTimeAxis,
 } from "../types";
 import type { ViewRenderer, WaveformTimelineContext } from "./renderer";
+import {
+	createSpectrogramSurfaceState,
+	drawSpectrogram,
+	getSpectrogramDeadline,
+	getSpectrogramSettingsKey,
+	renderSpectrogramPlaceholder,
+	resolveSpectrogramColors,
+	type SpectrogramSurfaceState,
+	updateSpectrogramAxis,
+} from "./spectrogram";
 import type { SeekSurfaceRangeRenderer } from "./surface";
 import {
 	applyTimelineFollowScrollLeft,
@@ -109,6 +121,11 @@ export interface WaveformSeekSurfaceMetadata {
 	 */
 	hooks: WaveformHooks;
 	hooksDrawKey: string | null;
+	/**
+	 * Set on a spectrogram, which shares everything about the surface with a
+	 * waveform but what is drawn on it.
+	 */
+	spectrogram: SpectrogramSurfaceState | null;
 }
 
 /** Lines that run from a reference position at the edges to a local one inside. */
@@ -134,6 +151,11 @@ const TRACE_LINE_WIDEST = 2;
 const TRACE_LINE_WIDEST_SPACING = 2.5;
 /** CSS pixels one sample may span at most; zooming further only spreads them. */
 const MAX_PIXELS_PER_SAMPLE = 32;
+/**
+ * The same for a spectrogram, whose frames span thousands of samples: past a
+ * column per eight samples, neighbouring columns analyse nearly the same frame.
+ */
+const SPECTROGRAM_MAX_PIXELS_PER_SAMPLE = 1 / 8;
 /** Share of the half height the loudest sample reaches. */
 const WAVEFORM_PEAK_EXTENT = 0.95;
 
@@ -716,7 +738,11 @@ function getWaveformMaximumZoom(
 		MIN_WAVEFORM_ZOOM,
 		Math.min(
 			maximum,
-			(durationSeconds * surfaceMetadata.sampleRate * MAX_PIXELS_PER_SAMPLE) /
+			(durationSeconds *
+				surfaceMetadata.sampleRate *
+				(surfaceMetadata.spectrogram
+					? SPECTROGRAM_MAX_PIXELS_PER_SAMPLE
+					: MAX_PIXELS_PER_SAMPLE)) /
 				surfaceMetadata.baseWidth,
 		),
 	);
@@ -749,8 +775,15 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 		}
 
 		const definition = ctx.getConfiguredViewHost(canvasElement);
-		if (definition.view.type !== "waveform") return;
-		const config = definition.view as TrackSwitchWaveformViewConfig;
+		if (
+			definition.view.type !== "waveform" &&
+			definition.view.type !== "spectrogram"
+		) {
+			return;
+		}
+		const config = definition.view as
+			| TrackSwitchWaveformViewConfig
+			| TrackSwitchSpectrogramViewConfig;
 		const waveformSource = definition.waveformSource ?? "audible";
 		const maxZoomSeconds = config.maxZoom ?? 0;
 		const playbackFollowMode = config.playbackFollowMode ?? "center";
@@ -764,9 +797,14 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 		const originalHeight = canvasElement.height;
 
 		const wrapper = document.createElement("div");
-		wrapper.className = config.stereo
-			? "waveform-wrap waveform-stereo ts-stack-section"
-			: "waveform-wrap ts-stack-section";
+		wrapper.className = [
+			"waveform-wrap",
+			config.type === "spectrogram" ? "spectrogram-wrap" : "",
+			config.stereo ? "waveform-stereo" : "",
+			"ts-stack-section",
+		]
+			.filter(Boolean)
+			.join(" ");
 		applyCssOverrides(wrapper, config.css);
 		const scrollContainer = document.createElement("div");
 		scrollContainer.className = "waveform-scroll";
@@ -823,6 +861,10 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 					overlay.appendChild(label);
 				});
 			}
+			const spectrogram =
+				config.type === "spectrogram"
+					? createSpectrogramSurfaceState(config, lanes.length, overlay)
+					: null;
 			const refHooksCanvas = seekWrap.querySelector(".seekhead-ref-hooks");
 			const zoomNode = createTimelineZoomNode(overlay, "waveform", {
 				canvasClass: "waveform",
@@ -892,6 +934,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 				showAlignmentPoints: showAlignmentPoints,
 				hooks: { version: 0, playhead: [], alignmentPoints: [] },
 				hooksDrawKey: null,
+				spectrogram: spectrogram,
 			});
 
 			scrollContainer.addEventListener(
@@ -902,6 +945,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 						updateTimelineMinimapViewport(currentSurface);
 					}
 					ctx.scheduleVisibleWaveformTileRefresh();
+					ctx.onTimelineViewportScroll(seekWrap);
 				},
 				{ passive: true },
 			);
@@ -1200,6 +1244,15 @@ export function drawDummyWaveforms(ctx: ViewRenderer): void {
 	for (let i = 0; i < ctx.waveformSeekSurfaces.length; i += 1) {
 		const surfaceMetadata = ctx.waveformSeekSurfaces[i];
 		ctx.forEachVisibleWaveformTile(surfaceMetadata, (tile) => {
+			if (surfaceMetadata.spectrogram) {
+				renderSpectrogramPlaceholder(
+					tile.canvas,
+					tile.tileCssWidth,
+					tile.tileCssHeight,
+					resolveSpectrogramColors(tile.canvas),
+				);
+				return;
+			}
 			renderPlaceholderCanvas(
 				tile.canvas,
 				tile.tileCssWidth,
@@ -1209,7 +1262,9 @@ export function drawDummyWaveforms(ctx: ViewRenderer): void {
 				surfaceMetadata.lanes.length,
 			);
 		});
-		renderWaveformMinimap(surfaceMetadata, null, "placeholder", 0, 1);
+		if (!surfaceMetadata.spectrogram) {
+			renderWaveformMinimap(surfaceMetadata, null, "placeholder", 0, 1);
+		}
 	}
 	updateTimelineZoomIndicators(ctx.waveformSeekSurfaces);
 }
@@ -1307,6 +1362,285 @@ function resolveWaveformLanes(
 	return lanes.every((layers) => layers.length > 0) ? lanes : null;
 }
 
+/** Opens the surface at `defaultZoom`, and keeps its zoom within bounds. */
+function applyWaveformZoom(
+	ctx: ViewRenderer,
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	fullDuration: number,
+): void {
+	resolveWaveformZoomUnits(ctx, surfaceMetadata);
+	const maximumZoom = getWaveformMaximumZoom(surfaceMetadata, fullDuration);
+	// `defaultZoom` only ever opens the surface: once it has, a reflow or a
+	// hot reload leaves whatever zoom the listener is on.
+	let targetZoom = surfaceMetadata.zoom;
+	if (!surfaceMetadata.defaultZoomApplied && fullDuration > 0) {
+		surfaceMetadata.defaultZoomApplied = true;
+		targetZoom = resolveTimelineDefaultZoom(
+			fullDuration,
+			surfaceMetadata.defaultZoomSeconds,
+			maximumZoom,
+		);
+	}
+	setWaveformZoomForSurface(surfaceMetadata, targetZoom, maximumZoom);
+}
+
+/**
+ * What each of a spectrogram's lanes analyses: the mix of its sources on the
+ * surface's timeline. Null where alignment warps that timeline — each source
+ * would then lie on its own warped stretch, and spectrograms overlaid on one
+ * another show nothing readable.
+ */
+function resolveSpectrogramReaders(
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	waveformEngine: WaveformEngine,
+	sourceRuntimes: TrackRuntime[],
+	fullDuration: number,
+	waveformProjector: TrackTimelineProjector | undefined,
+): WaveformMixReader[] | null {
+	if (waveformProjector) {
+		return null;
+	}
+
+	const readers: WaveformMixReader[] = [];
+	for (const lane of surfaceMetadata.lanes) {
+		const reader = waveformEngine.getMixReader(
+			sourceRuntimes,
+			fullDuration,
+			lane,
+		);
+		if (!reader) {
+			return null;
+		}
+		readers.push(reader);
+	}
+	return readers;
+}
+
+/**
+ * Draws a spectrogram's tile and minimap. Columns still unanalysed when a
+ * redraw's budget runs out leave their canvas marked undrawn, and another
+ * redraw is scheduled to carry on.
+ */
+function renderSpectrogramSurface(
+	ctx: ViewRenderer,
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	state: SpectrogramSurfaceState,
+	waveformEngine: WaveformEngine,
+	sourceRuntimes: TrackRuntime[],
+	fullDuration: number,
+	waveformProjector: TrackTimelineProjector | undefined,
+	waveformEndRatio: number,
+	forceRedrawVisibleTiles: boolean,
+): void {
+	const readers = resolveSpectrogramReaders(
+		surfaceMetadata,
+		waveformEngine,
+		sourceRuntimes,
+		fullDuration,
+		waveformProjector,
+	);
+	if (readers) {
+		surfaceMetadata.sampleRate = readers[0].sampleRate;
+	}
+	applyWaveformZoom(ctx, surfaceMetadata, fullDuration);
+	updateSpectrogramAxis(
+		state,
+		surfaceMetadata.originalHeight,
+		surfaceMetadata.sampleRate,
+	);
+	const readersKey = readers
+		? readers.map((reader) => reader.key).join("/")
+		: "placeholder";
+	const settingsKey = getSpectrogramSettingsKey(state);
+	const deadline = getSpectrogramDeadline();
+	let pending = false;
+
+	surfaceMetadata.drawRange = (
+		canvas,
+		cssWidth,
+		cssHeight,
+		startRatio,
+		widthRatio,
+	) => {
+		const colors = resolveSpectrogramColors(surfaceMetadata.tileLayer);
+		if (!readers || fullDuration <= 0) {
+			renderSpectrogramPlaceholder(canvas, cssWidth, cssHeight, colors);
+			return;
+		}
+		const secondsPerColumn = (fullDuration * widthRatio) / cssWidth;
+		drawSpectrogram(
+			canvas,
+			cssWidth,
+			cssHeight,
+			readers,
+			{
+				firstColumn: Math.round((fullDuration * startRatio) / secondsPerColumn),
+				secondsPerColumn,
+				drawColumns:
+					cssWidth * clamp((waveformEndRatio - startRatio) / widthRatio, 0, 1),
+				priorityStart: 0,
+				priorityEnd: cssWidth,
+			},
+			state,
+			[],
+			colors,
+			Number.POSITIVE_INFINITY,
+		);
+	};
+
+	ctx.forEachVisibleWaveformTile(surfaceMetadata, (tile) => {
+		const colors = resolveSpectrogramColors(tile.canvas);
+		const tileDrawKey = [
+			readersKey,
+			settingsKey,
+			fullDuration,
+			waveformEndRatio,
+			tile.timeWidth,
+			Math.round(tile.tileStartPx),
+			Math.round(tile.tileCssWidth),
+			Math.round(tile.tileCssHeight),
+			colors.background,
+			colors.color,
+			colors.divider,
+			Math.max(1, window.devicePixelRatio || 1),
+		].join("#");
+		if (
+			!forceRedrawVisibleTiles &&
+			!tile.isNew &&
+			tile.record.lastDrawKey === tileDrawKey
+		) {
+			return;
+		}
+		tile.record.lastDrawKey = tileDrawKey;
+
+		if (!readers || fullDuration <= 0) {
+			renderSpectrogramPlaceholder(
+				tile.canvas,
+				tile.tileCssWidth,
+				tile.tileCssHeight,
+				colors,
+			);
+			return;
+		}
+
+		const viewportStart =
+			surfaceMetadata.scrollContainer.scrollLeft - tile.tileStartPx;
+		const complete = drawSpectrogram(
+			tile.canvas,
+			tile.tileCssWidth,
+			tile.tileCssHeight,
+			readers,
+			{
+				firstColumn: Math.round(tile.tileStartPx),
+				secondsPerColumn: fullDuration / tile.timeWidth,
+				drawColumns: clamp(
+					waveformEndRatio * tile.timeWidth - tile.tileStartPx,
+					0,
+					tile.tileCssWidth,
+				),
+				priorityStart: viewportStart,
+				priorityEnd:
+					viewportStart + surfaceMetadata.scrollContainer.clientWidth,
+			},
+			state,
+			state.tileCaches,
+			colors,
+			deadline,
+		);
+		if (!complete) {
+			tile.record.lastDrawKey = null;
+			pending = true;
+		}
+	});
+
+	if (
+		surfaceMetadata.zoom > MIN_WAVEFORM_ZOOM + 0.000001 &&
+		!renderSpectrogramMinimap(
+			surfaceMetadata,
+			state,
+			readers,
+			`${readersKey}#${settingsKey}`,
+			fullDuration,
+			waveformEndRatio,
+			deadline,
+		)
+	) {
+		pending = true;
+	}
+	drawWaveformAlignmentOverlay(surfaceMetadata);
+	if (pending) {
+		ctx.scheduleVisibleWaveformTileRefresh();
+	}
+}
+
+/** The minimap of a spectrogram; false while some of it is still unanalysed. */
+function renderSpectrogramMinimap(
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	state: SpectrogramSurfaceState,
+	readers: WaveformMixReader[] | null,
+	readersKey: string,
+	fullDuration: number,
+	waveformEndRatio: number,
+	deadline: number,
+): boolean {
+	const colors = resolveSpectrogramColors(surfaceMetadata.zoomCanvas);
+	const cssWidth = Math.max(
+		1,
+		Math.round(surfaceMetadata.zoomMinimapNode.clientWidth),
+	);
+	const cssHeight = Math.max(
+		1,
+		Math.round(surfaceMetadata.zoomMinimapNode.clientHeight),
+	);
+	const drawKey = [
+		readersKey,
+		fullDuration,
+		waveformEndRatio,
+		cssWidth,
+		cssHeight,
+		colors.background,
+		colors.color,
+		colors.divider,
+		Math.max(1, window.devicePixelRatio || 1),
+	].join("#");
+	if (surfaceMetadata.zoomCanvasLastDrawKey === drawKey) {
+		return true;
+	}
+	surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
+
+	if (!readers || fullDuration <= 0) {
+		renderSpectrogramPlaceholder(
+			surfaceMetadata.zoomCanvas,
+			cssWidth,
+			cssHeight,
+			colors,
+		);
+		return true;
+	}
+
+	const complete = drawSpectrogram(
+		surfaceMetadata.zoomCanvas,
+		cssWidth,
+		cssHeight,
+		readers,
+		{
+			firstColumn: 0,
+			secondsPerColumn: fullDuration / cssWidth,
+			drawColumns: cssWidth * waveformEndRatio,
+			priorityStart: 0,
+			priorityEnd: cssWidth,
+		},
+		state,
+		state.minimapCaches,
+		colors,
+		deadline,
+	);
+	if (!complete) {
+		surfaceMetadata.zoomCanvasLastDrawKey = null;
+	}
+	return complete;
+}
+
 export function renderWaveformsInternal(
 	ctx: ViewRenderer,
 	waveformEngine: WaveformEngine,
@@ -1387,6 +1721,25 @@ export function renderWaveformsInternal(
 			fullDuration,
 			useFixedTrackAxis && !useIndividualAxis,
 		);
+		const waveformEndRatio =
+			useFixedTrackAxis && !useIndividualAxis && fullDuration > 0
+				? clamp(localTrackDuration / fullDuration, 0, 1)
+				: 1;
+
+		if (surfaceMetadata.spectrogram) {
+			renderSpectrogramSurface(
+				ctx,
+				surfaceMetadata,
+				surfaceMetadata.spectrogram,
+				waveformEngine,
+				sourceRuntimes,
+				fullDuration,
+				waveformProjector,
+				waveformEndRatio,
+				forceRedrawVisibleTiles,
+			);
+			continue;
+		}
 
 		const lanes = resolveWaveformLanes(
 			ctx,
@@ -1404,25 +1757,8 @@ export function renderWaveformsInternal(
 					.map((layers) => layers.map((layer) => layer.signal.id).join(","))
 					.join("/")}${waveformProjector ? "@warped" : ""}`
 			: "placeholder";
-		const waveformEndRatio =
-			useFixedTrackAxis && !useIndividualAxis && fullDuration > 0
-				? clamp(localTrackDuration / fullDuration, 0, 1)
-				: 1;
 
-		resolveWaveformZoomUnits(ctx, surfaceMetadata);
-		const maximumZoom = getWaveformMaximumZoom(surfaceMetadata, fullDuration);
-		// `defaultZoom` only ever opens the surface: once it has, a reflow or a
-		// hot reload leaves whatever zoom the listener is on.
-		let targetZoom = surfaceMetadata.zoom;
-		if (!surfaceMetadata.defaultZoomApplied && fullDuration > 0) {
-			surfaceMetadata.defaultZoomApplied = true;
-			targetZoom = resolveTimelineDefaultZoom(
-				fullDuration,
-				surfaceMetadata.defaultZoomSeconds,
-				maximumZoom,
-			);
-		}
-		setWaveformZoomForSurface(surfaceMetadata, targetZoom, maximumZoom);
+		applyWaveformZoom(ctx, surfaceMetadata, fullDuration);
 
 		surfaceMetadata.drawRange = (
 			canvas,
@@ -1525,7 +1861,11 @@ export function renderWaveformsInternal(
 export function findStereoWaveformChannelMismatch(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
-): { runtime: TrackRuntime; channels: number } | null {
+): {
+	runtime: TrackRuntime;
+	channels: number;
+	view: "waveform" | "spectrogram";
+} | null {
 	for (const surface of ctx.waveformSeekSurfaces) {
 		if (surface.lanes.length < 2) {
 			continue;
@@ -1538,7 +1878,11 @@ export function findStereoWaveformChannelMismatch(
 			for (const source of [runtime.baseSource, runtime.syncedSource]) {
 				const channels = source?.buffer?.numberOfChannels;
 				if (channels !== undefined && channels !== 2) {
-					return { runtime, channels };
+					return {
+						runtime,
+						channels,
+						view: surface.spectrogram ? "spectrogram" : "waveform",
+					};
 				}
 			}
 		}

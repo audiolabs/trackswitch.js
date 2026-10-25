@@ -46,6 +46,10 @@
 				"autoload": {
 					"type": "boolean",
 					"description": "Decodes and renders the waveforms as soon as the player is constructed, instead of waiting for the first click or keypress. This does not start playback, so it doesn't need a user gesture — browsers only gate actually producing sound, not decoding audio buffers."
+				},
+				"lockZoom": {
+					"type": "boolean",
+					"description": "Locks the zoom and the scroll position of every zoomable view — `waveform`, `spectrogram`, and `pianoRoll` — together: zooming or scrolling one shows the same passage in all of them."
 				}
 			},
 			"additionalProperties": false
@@ -1624,6 +1628,9 @@
 					"$ref": "#/definitions/TrackSwitchWaveformViewConfig"
 				},
 				{
+					"$ref": "#/definitions/TrackSwitchSpectrogramViewConfig"
+				},
+				{
 					"$ref": "#/definitions/TrackSwitchPianoRollViewConfig"
 				},
 				{
@@ -1825,6 +1832,152 @@
 				"individual"
 			],
 			"description": "Whether a fixed-track waveform uses the shared duration or its own duration."
+		},
+		"TrackSwitchSpectrogramViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "spectrogram"
+				},
+				"tracks": {
+					"anyOf": [
+						{
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/TrackId"
+							}
+						},
+						{
+							"type": "string",
+							"const": "audible"
+						}
+					]
+				},
+				"height": {
+					"type": "number"
+				},
+				"stereo": {
+					"type": "boolean",
+					"description": "Shows the left and the right channel of the mix in two lanes, after each track's pan, instead of one lane of their average. Every track it shows must have two-channel audio."
+				},
+				"frequencyScale": {
+					"$ref": "#/definitions/SpectrogramFrequencyScale",
+					"description": "Defaults to `\"linear\"`."
+				},
+				"axisLabels": {
+					"$ref": "#/definitions/SpectrogramAxisLabels",
+					"description": "Labels the frequency axis in Hz or in note names. Defaults to `\"hz\"`."
+				},
+				"frequencyRange": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/SpectrogramFrequencyRef"
+					},
+					"minItems": 2,
+					"maxItems": 2,
+					"description": "The lowest and the highest frequency shown. Defaults to C1 (32.7 Hz) on a log scale and 0 Hz otherwise, up to 11025 Hz; the top is capped at half the sample rate."
+				},
+				"amplitude": {
+					"$ref": "#/definitions/SpectrogramAmplitude",
+					"description": "Defaults to `\"log1p\"`."
+				},
+				"dynamicRange": {
+					"type": "number",
+					"description": "Decibels below full scale the colour range spans, for `\"db\"`, at most 120. Defaults to 80."
+				},
+				"gamma": {
+					"type": "number",
+					"description": "The compression factor of `\"log1p\"`. Magnitudes are relative to a full-scale sine, so this is large. Defaults to 10000."
+				},
+				"fftSize": {
+					"type": "number",
+					"description": "Samples per analysis frame, a power of two from 256 to 16384. Defaults to 4096."
+				},
+				"window": {
+					"$ref": "#/definitions/SpectrogramWindow",
+					"description": "Defaults to `\"hann\"`."
+				},
+				"hopSize": {
+					"type": "number",
+					"description": "Samples from one analysis frame to the next. The window and the hop must satisfy the constant-overlap-add (COLA) condition, so `fftSize / hopSize` must be a whole number of at least 1 for `\"rectangular\"`, 2 for `\"hann\"` and `\"hamming\"`, 3 for `\"blackman\"`, and an even one for `\"bartlett\"`. Defaults to the largest hop the window allows: half of `fftSize` for `\"hann\"`, so neighbouring frames overlap by 50%."
+				},
+				"maxZoom": {
+					"type": "number"
+				},
+				"defaultZoom": {
+					"type": "number"
+				},
+				"playbackFollowMode": {
+					"$ref": "#/definitions/WaveformPlaybackFollowMode"
+				},
+				"timeAxis": {
+					"$ref": "#/definitions/WaveformTimeAxis"
+				},
+				"timer": {
+					"type": "boolean"
+				},
+				"alignedPlayhead": {
+					"type": "boolean"
+				},
+				"markerLayers": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/MarkerLayerConfig"
+					}
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				}
+			},
+			"required": [
+				"type"
+			],
+			"additionalProperties": false
+		},
+		"SpectrogramFrequencyScale": {
+			"type": "string",
+			"enum": [
+				"linear",
+				"log",
+				"mel",
+				"bark"
+			],
+			"description": "How a spectrogram spaces frequencies from its bottom edge to its top."
+		},
+		"SpectrogramAxisLabels": {
+			"type": "string",
+			"enum": [
+				"hz",
+				"midi"
+			],
+			"description": "What a spectrogram's frequency axis is labelled in."
+		},
+		"SpectrogramFrequencyRef": {
+			"type": [
+				"number",
+				"string"
+			],
+			"description": "A frequency as configuration writes it: a number of Hz, or a note name in scientific pitch notation such as `\"C1\"` or `\"A4\"`."
+		},
+		"SpectrogramAmplitude": {
+			"type": "string",
+			"enum": [
+				"db",
+				"log1p"
+			],
+			"description": "How a spectrogram compresses magnitudes: decibels below full scale, or `log(1 + gamma * x)`."
+		},
+		"SpectrogramWindow": {
+			"type": "string",
+			"enum": [
+				"rectangular",
+				"hann",
+				"hamming",
+				"blackman",
+				"bartlett"
+			],
+			"description": "The window each analysis frame is weighted with. Each is the periodic form, whose shifted copies add up to a constant at the hop sizes it allows."
 		},
 		"TrackSwitchPianoRollViewConfig": {
 			"type": "object",

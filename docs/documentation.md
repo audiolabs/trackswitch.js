@@ -21,6 +21,7 @@ toc_script: true
   - [`image`](#image)
   - [`perTrackImage`](#pertrackimage)
   - [`waveform`](#waveform)
+  - [`spectrogram`](#spectrogram)
   - [`pianoRoll`](#pianoroll)
   - [`sheetMusic`](#sheetmusic)
   - [`warpingMatrix`](#warpingmatrix)
@@ -879,9 +880,9 @@ tracks it names within one non-exclusive list.
 
 The player shows views in declaration order. Each view has a `type`. Most views accept an optional `css` block of [theming tokens](#theming).
 
-The `image`, `perTrackImage`, `waveform`, and `pianoRoll` views can provide seekable surfaces. They accept `markerLayers`.
+The `image`, `perTrackImage`, `waveform`, `spectrogram`, and `pianoRoll` views can provide seekable surfaces. They accept `markerLayers`.
 
-The two image views also accept `seekMarginLeft` and `seekMarginRight`, because a supplied picture can carry axes or whitespace around its plot area. The player draws waveforms and piano rolls itself, so those surfaces always span their full width.
+The two image views also accept `seekMarginLeft` and `seekMarginRight`, because a supplied picture can carry axes or whitespace around its plot area. The player draws waveforms, spectrograms, and piano rolls itself, so those surfaces always span their full width.
 
 ### `image`
 
@@ -1005,6 +1006,70 @@ Only the start and end of the work always align. Neither mode warps waveform pea
 Both modes show the natural recorded waveform of each track. In `shared` mode, shading covers the region after a shorter track ends.
 
 The waveform and the zoom overview both show this shading.
+
+### `spectrogram`
+
+A `spectrogram` view shows the magnitude spectrogram of the same audio a `waveform` view can show. Time runs left to right and frequency runs bottom to top. Louder parts appear in a darker grey on a white background.
+
+The view selects tracks the same way as `waveform`. With several tracks, it analyses their exact mix. Track volume, pan, mute, and solo changes redraw the view immediately. Like the waveform, the view is scaled to the loudest track it shows, so the overall level does not change the picture, but the balance between tracks does. With `stereo`, the view shows the left and the right channel of the mix in two lanes and follows each track's pan. Every track a stereo spectrogram shows must have two-channel audio.
+
+Zoom, playback follow, seeking, timers, `alignedPlayhead`, `timeAxis`, and `markerLayers` work as on a `waveform` view. Analysis frames lie on a fixed grid, one every `hopSize` samples, and each frame is analysed once, when it first comes into view. Zooming only regroups frames already analysed: zoomed out, each pixel column averages the frames within its time span, and zoomed in past one frame per column, each frame spans several columns. The player analyses a track only while some spectrogram shows it.
+
+Labels on the left edge of each lane show the frequency axis, in Hz and kHz or as note names.
+
+```json
+{
+  "type": "spectrogram",
+  "tracks": "audible",
+  "height": 200,
+  "stereo": false,
+  "frequencyScale": "log",
+  "axisLabels": "midi",
+  "frequencyRange": ["C1", "C8"],
+  "amplitude": "db",
+  "dynamicRange": 80,
+  "fftSize": 4096,
+  "window": "hann",
+  "hopSize": 2048
+}
+```
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tracks?` | `"audible" \| string[]` | `"audible"` | Selects the audio tracks for the spectrogram. |
+| `height?` | `number` | `200` | Specifies the spectrogram height in pixels. |
+| `stereo?` | `boolean` | `false` | Shows the left and right channels in two lanes instead of one lane of their average. Requires two-channel audio. |
+| `frequencyScale?` | `"linear" \| "log" \| "mel" \| "bark"` | `"linear"` | Spaces frequencies linearly, logarithmically, or on the mel or Bark scale. |
+| `axisLabels?` | `"hz" \| "midi"` | `"hz"` | Labels the frequency axis in Hz or with the note name of every C. |
+| `frequencyRange?` | `[number \| string, number \| string]` | `["C1", 11025]` on `"log"`, `[0, 11025]` otherwise | Sets the lowest and highest frequency shown, in Hz or as note names such as `"A4"`. The top is limited to half the sample rate. A `"log"` range must start above 0 Hz. |
+| `amplitude?` | `"log1p" \| "db"` | `"log1p"` | Compresses magnitudes to `log(1 + gamma · x)`, or to decibels below full scale. |
+| `dynamicRange?` | `number` | `80` | Specifies how many decibels below full scale the colour range spans, for `"db"`, at most 120. |
+| `gamma?` | `number` | `10000` | Specifies the compression factor of `"log1p"`. Magnitudes are relative to a full-scale sine, so useful values are large. A larger value brings out quieter parts. |
+| `fftSize?` | `number` | `4096` | Specifies the samples per analysis frame, a power of two from 256 to 16384. A larger frame resolves frequency more finely and time more coarsely. |
+| `window?` | `"hann" \| "hamming" \| "blackman" \| "bartlett" \| "rectangular"` | `"hann"` | Selects the window each analysis frame is weighted with. |
+| `hopSize?` | `number` | the largest the window allows: `fftSize / 2` for `"hann"` | Specifies the samples from one analysis frame to the next. See below for the hop sizes each window allows. A smaller hop places frames more densely in time, at the cost of analysing more of them. |
+| `maxZoom?` | `number` | `0` | Specifies the smallest visible interval. `0` zooms in until one pixel spans eight samples. |
+| `defaultZoom?` | `number` | none | Specifies the visible interval the view opens on. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |
+| `timeAxis?` | `"shared" \| "individual"` | as for `waveform` | See [`waveform`](#waveform). |
+| `timer?` | `boolean` | `false` (`true` under `alignment`) | Shows a local timer in the spectrogram. |
+| `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead. |
+| `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the spectrogram. |
+| `css?` | `object` | none | Overrides [theming tokens](#theming) for this view. |
+
+The window and the hop size must satisfy the constant-overlap-add (COLA) condition: shifted by `hopSize` again and again, the copies of the window add up to a constant, so every sample counts equally in the frames over it. Each window is used in its periodic form, which satisfies the condition when `fftSize / hopSize` is a whole number of at least:
+
+| `window` | `fftSize / hopSize` | Default overlap |
+| --- | --- | --- |
+| `"rectangular"` | 1 or more | none |
+| `"hann"` | 2 or more | 50% |
+| `"hamming"` | 2 or more | 50% |
+| `"bartlett"` | 2 or more, and even | 50% |
+| `"blackman"` | 3 or more | 75% |
+
+`fftSize` is a power of two, so the allowed hop sizes are `fftSize` divided by a power of two. With an `fftSize` of 4096, a Hann window allows hop sizes of 2048, 1024, 512, and smaller. The player reports any other combination as a configuration error.
+
+Under `alignment`, `tracks` follows the same rules as on a `waveform` view. A spectrogram then always shows one track on its own timeline. While an `"audible"` spectrogram has no audible track, it stays empty.
 
 ### `pianoRoll`
 
@@ -1400,7 +1465,8 @@ An omitted feature uses the default value in the table.
     "tabView": false,
     "keyboard": true,
     "normalizeLoudness": false,
-    "autoload": false
+    "autoload": false,
+    "lockZoom": false
   }
 }
 ```
@@ -1413,6 +1479,7 @@ An omitted feature uses the default value in the table.
 | `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
 | `normalizeLoudness?` | `boolean` | `false` | Normalizes each track to -14 LUFS integrated loudness at load time, clamped so it never clips. |
 | `autoload?` | `boolean` | `false` | Decodes the audio and renders the waveforms as soon as the player is created, instead of waiting for the first click or keypress. This doesn't start playback — browsers only gate producing sound behind a user gesture, not decoding — so it needs no interaction, but it does spend bandwidth and CPU on every visitor whether or not they press play. |
+| `lockZoom?` | `boolean` | `false` | Locks the zoom and scroll position of all `waveform`, `spectrogram`, and `pianoRoll` views together. Zooming, scrolling, or dragging the zoom overview of one view shows the same passage in all of them. In an aligned player the passage is matched through the reference timeline, so views of performances at different tempos stay on the same music. A view that cannot zoom as far as another, because of its `maxZoom`, shows as close a stretch as it can. On load, every view takes the zoom of the first one on the page. |
 
 The player rejects unknown feature keys.
 

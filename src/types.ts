@@ -224,6 +224,84 @@ export interface TrackSwitchWaveformViewConfig {
 	css?: TrackSwitchCssOverrides;
 }
 
+/** How a spectrogram spaces frequencies from its bottom edge to its top. */
+export type SpectrogramFrequencyScale = "linear" | "log" | "mel" | "bark";
+
+/** What a spectrogram's frequency axis is labelled in. */
+export type SpectrogramAxisLabels = "hz" | "midi";
+
+/**
+ * How a spectrogram compresses magnitudes: decibels below full scale, or
+ * `log(1 + gamma * x)`.
+ */
+export type SpectrogramAmplitude = "db" | "log1p";
+
+/**
+ * The window each analysis frame is weighted with. Each is the periodic form,
+ * whose shifted copies add up to a constant at the hop sizes it allows.
+ */
+export type SpectrogramWindow =
+	| "rectangular"
+	| "hann"
+	| "hamming"
+	| "blackman"
+	| "bartlett";
+
+/**
+ * A frequency as configuration writes it: a number of Hz, or a note name in
+ * scientific pitch notation such as `"C1"` or `"A4"`.
+ */
+export type SpectrogramFrequencyRef = number | string;
+
+export interface TrackSwitchSpectrogramViewConfig {
+	type: "spectrogram";
+	tracks?: TrackId[] | "audible";
+	height?: number;
+	/**
+	 * Shows the left and the right channel of the mix in two lanes, after
+	 * each track's pan, instead of one lane of their average. Every track it
+	 * shows must have two-channel audio.
+	 */
+	stereo?: boolean;
+	/** Defaults to `"linear"`. */
+	frequencyScale?: SpectrogramFrequencyScale;
+	/** Labels the frequency axis in Hz or in note names. Defaults to `"hz"`. */
+	axisLabels?: SpectrogramAxisLabels;
+	/**
+	 * The lowest and the highest frequency shown. Defaults to C1 (32.7 Hz) on a
+	 * log scale and 0 Hz otherwise, up to 11025 Hz; the top is capped at half
+	 * the sample rate.
+	 */
+	frequencyRange?: [SpectrogramFrequencyRef, SpectrogramFrequencyRef];
+	/** Defaults to `"log1p"`. */
+	amplitude?: SpectrogramAmplitude;
+	/** Decibels below full scale the colour range spans, for `"db"`, at most 120. Defaults to 80. */
+	dynamicRange?: number;
+	/** The compression factor of `"log1p"`. Magnitudes are relative to a full-scale sine, so this is large. Defaults to 10000. */
+	gamma?: number;
+	/** Samples per analysis frame, a power of two from 256 to 16384. Defaults to 4096. */
+	fftSize?: number;
+	/** Defaults to `"hann"`. */
+	window?: SpectrogramWindow;
+	/**
+	 * Samples from one analysis frame to the next. The window and the hop must
+	 * satisfy the constant-overlap-add (COLA) condition, so `fftSize / hopSize`
+	 * must be a whole number of at least 1 for `"rectangular"`, 2 for `"hann"`
+	 * and `"hamming"`, 3 for `"blackman"`, and an even one for `"bartlett"`.
+	 * Defaults to the largest hop the window allows: half of `fftSize` for
+	 * `"hann"`, so neighbouring frames overlap by 50%.
+	 */
+	hopSize?: number;
+	maxZoom?: number;
+	defaultZoom?: number;
+	playbackFollowMode?: WaveformPlaybackFollowMode;
+	timeAxis?: WaveformTimeAxis;
+	timer?: boolean;
+	alignedPlayhead?: boolean;
+	markerLayers?: MarkerLayerConfig[];
+	css?: TrackSwitchCssOverrides;
+}
+
 /**
  * A pitch as configuration writes it: a MIDI note number, or a name in
  * scientific pitch notation such as `"C4"`, `"F#3"` or `"Bb-1"`, where middle C
@@ -420,6 +498,7 @@ export type TrackSwitchViewConfig =
 	| TrackSwitchImageViewConfig
 	| TrackSwitchPerTrackImageViewConfig
 	| TrackSwitchWaveformViewConfig
+	| TrackSwitchSpectrogramViewConfig
 	| TrackSwitchPianoRollViewConfig
 	| TrackSwitchSheetMusicViewConfig
 	| TrackSwitchWarpingMatrixViewConfig
@@ -442,6 +521,12 @@ export interface TrackSwitchFeatures {
 	 * producing sound, not decoding audio buffers.
 	 */
 	autoload: boolean;
+	/**
+	 * Locks the zoom and the scroll position of every zoomable view —
+	 * `waveform`, `spectrogram`, and `pianoRoll` — together: zooming or
+	 * scrolling one shows the same passage in all of them.
+	 */
+	lockZoom: boolean;
 }
 
 export interface TrackSwitchInit {

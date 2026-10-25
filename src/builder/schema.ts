@@ -27,6 +27,7 @@ export const BUILDER_VIEW_TYPES = [
 	"image",
 	"perTrackImage",
 	"waveform",
+	"spectrogram",
 	"pianoRoll",
 	"sheetMusic",
 	"warpingMatrix",

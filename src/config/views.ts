@@ -7,6 +7,8 @@ import type {
 	MarkerLayerConfig,
 	MediaConfig,
 	MidiNoteRange,
+	SpectrogramFrequencyRef,
+	SpectrogramWindow,
 	TrackId,
 	TrackPanAlgorithm,
 	TrackPanControl,
@@ -17,6 +19,7 @@ import type {
 	TrackSwitchPianoRollViewConfig,
 	TrackSwitchSeparatorViewConfig,
 	TrackSwitchSheetMusicViewConfig,
+	TrackSwitchSpectrogramViewConfig,
 	TrackSwitchTextViewConfig,
 	TrackSwitchTrackListViewConfig,
 	TrackSwitchViewConfig,
@@ -65,6 +68,29 @@ const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 	"tracks",
 	"height",
 	"stereo",
+	"maxZoom",
+	"defaultZoom",
+	"playbackFollowMode",
+	"timeAxis",
+	"timer",
+	"alignedPlayhead",
+	"markerLayers",
+	"css",
+] as const);
+const uiSpectrogramAllowedKeys = keysOf<TrackSwitchSpectrogramViewConfig>()([
+	"type",
+	"tracks",
+	"height",
+	"stereo",
+	"frequencyScale",
+	"axisLabels",
+	"frequencyRange",
+	"amplitude",
+	"dynamicRange",
+	"gamma",
+	"fftSize",
+	"window",
+	"hopSize",
 	"maxZoom",
 	"defaultZoom",
 	"playbackFollowMode",
@@ -149,6 +175,7 @@ const uiAllowedKeysByType: Record<string, readonly string[]> = {
 	image: uiImageAllowedKeys,
 	perTrackImage: uiPerTrackImageAllowedKeys,
 	waveform: uiWaveformAllowedKeys,
+	spectrogram: uiSpectrogramAllowedKeys,
 	pianoRoll: uiPianoRollAllowedKeys,
 	trackList: uiTrackListAllowedKeys,
 	navigationBar: uiNavigationBarAllowedKeys,
@@ -243,12 +270,13 @@ function normalizePlaybackFollowMode(
 
 function normalizeWaveformTimeAxis(
 	value: unknown,
+	label: string,
 	defaultsToIndividual: boolean,
 ): WaveformTimeAxis {
 	return normalizeEnum(
 		value,
 		["shared", "individual"] as const,
-		"waveform.timeAxis",
+		`${label}.timeAxis`,
 		defaultsToIndividual ? "individual" : "shared",
 	);
 }
@@ -482,15 +510,17 @@ function normalizePerTrackImageConfig(
 	);
 }
 
-function normalizeWaveformConfig(
-	waveform: TrackSwitchWaveformViewConfig,
-	ctx: ViewNormalizeContext,
-): TrackSwitchWaveformViewConfig {
-	const waveformSource = resolveWaveformTracksIndex(
-		waveform.tracks,
-		ctx,
-		"waveform",
-	);
+/**
+ * The fields a waveform and a spectrogram share: both draw the audio of their
+ * tracks on a zoomable timeline.
+ */
+function normalizeAudioTimelineConfig<
+	TView extends
+		| TrackSwitchWaveformViewConfig
+		| TrackSwitchSpectrogramViewConfig,
+>(view: TView, ctx: ViewNormalizeContext, defaultHeight: number): TView {
+	const label = view.type;
+	const waveformSource = resolveWaveformTracksIndex(view.tracks, ctx, label);
 	// An "audible" source under alignment always resolves to exactly one
 	// currently-soloed track (alignment forces exclusive solo) and renders it
 	// like a fixed single-track waveform — so it defaults to the same
@@ -498,43 +528,266 @@ function normalizeWaveformConfig(
 	const defaultsToIndividualTimeAxis =
 		ctx.hasAlignment && waveformSource === "audible";
 
-	const normalized: TrackSwitchWaveformViewConfig = {
-		...waveform,
-		height: toCanvasSize(waveform.height, 150, "waveform.height"),
-		stereo: normalizeOptionalBoolean(waveform.stereo, "waveform.stereo"),
+	const normalized: TView = {
+		...view,
+		height: toCanvasSize(view.height, defaultHeight, `${label}.height`),
+		stereo: normalizeOptionalBoolean(view.stereo, `${label}.stereo`),
 		// A waveform zooms down to its samples unless told otherwise.
-		maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom, "waveform", 0),
-		defaultZoom: normalizeDefaultZoom(waveform.defaultZoom, "waveform"),
+		maxZoom: normalizeWaveformMaxZoom(view.maxZoom, label, 0),
+		defaultZoom: normalizeDefaultZoom(view.defaultZoom, label),
 		playbackFollowMode: normalizePlaybackFollowMode(
-			waveform.playbackFollowMode,
-			"waveform",
+			view.playbackFollowMode,
+			label,
 		),
 		timeAxis: normalizeWaveformTimeAxis(
-			waveform.timeAxis,
+			view.timeAxis,
+			label,
 			defaultsToIndividualTimeAxis,
 		),
-		timer: normalizeOptionalBoolean(waveform.timer, "waveform.timer"),
+		timer: normalizeOptionalBoolean(view.timer, `${label}.timer`),
 		alignedPlayhead: normalizeOptionalBoolean(
-			waveform.alignedPlayhead,
-			"waveform.alignedPlayhead",
+			view.alignedPlayhead,
+			`${label}.alignedPlayhead`,
 		),
-		markerLayers: normalizeMarkerLayers(waveform.markerLayers, "waveform", ctx),
-		css: normalizeCssOverrides(waveform.css, "waveform"),
+		markerLayers: normalizeMarkerLayers(view.markerLayers, label, ctx),
+		css: normalizeCssOverrides(view.css, label),
 	};
 
 	if (normalized.timeAxis === "individual") {
 		if (!ctx.hasAlignment) {
 			throw new Error(
-				"Invalid waveform configuration: timeAxis 'individual' requires an alignment block.",
+				`Invalid ${label} configuration: timeAxis 'individual' requires an alignment block.`,
 			);
 		}
 		if (typeof waveformSource !== "number" && waveformSource !== "audible") {
 			throw new Error(
-				"Invalid waveform configuration: timeAxis 'individual' requires exactly one source track.",
+				`Invalid ${label} configuration: timeAxis 'individual' requires exactly one source track.`,
 			);
 		}
 	}
 	return normalized;
+}
+
+function normalizeWaveformConfig(
+	waveform: TrackSwitchWaveformViewConfig,
+	ctx: ViewNormalizeContext,
+): TrackSwitchWaveformViewConfig {
+	return normalizeAudioTimelineConfig(waveform, ctx, 150);
+}
+
+const MIN_SPECTROGRAM_FFT_SIZE = 256;
+const MAX_SPECTROGRAM_FFT_SIZE = 16384;
+/** C1, where a log axis starts unless told otherwise. */
+const DEFAULT_LOG_MIN_FREQUENCY = 32.703;
+const DEFAULT_MAX_FREQUENCY = 11025;
+
+/** A frequency in Hz, or a note name resolved to its equal-tempered frequency. */
+function parseSpectrogramFrequency(value: SpectrogramFrequencyRef): number {
+	if (typeof value === "number") {
+		if (!Number.isFinite(value) || value < 0) {
+			throw new Error(
+				"Invalid spectrogram configuration: frequencyRange entries must be " +
+					"frequencies of 0 Hz or more.",
+			);
+		}
+		return value;
+	}
+
+	const midi = typeof value === "string" ? parseMidiNoteRef(value) : null;
+	if (midi === null) {
+		throw new Error(
+			`Invalid spectrogram configuration: frequencyRange entry ${JSON.stringify(value)} ` +
+				'is neither a frequency in Hz nor a note name such as "C1".',
+		);
+	}
+	return 440 * 2 ** ((midi - 69) / 12);
+}
+
+function normalizeSpectrogramFrequencyRange(
+	value: unknown,
+	scale: TrackSwitchSpectrogramViewConfig["frequencyScale"],
+): [number, number] {
+	if (value === undefined) {
+		return [
+			scale === "log" ? DEFAULT_LOG_MIN_FREQUENCY : 0,
+			DEFAULT_MAX_FREQUENCY,
+		];
+	}
+
+	if (!Array.isArray(value) || value.length !== 2) {
+		throw new Error(
+			"Invalid spectrogram configuration: frequencyRange must be a pair of " +
+				'frequencies, e.g. [50, 8000] or ["C1", "C8"].',
+		);
+	}
+
+	const [low, high] = value.map((entry) =>
+		parseSpectrogramFrequency(entry as SpectrogramFrequencyRef),
+	);
+	if (!(high > low)) {
+		throw new Error(
+			"Invalid spectrogram configuration: frequencyRange must run from a lower " +
+				"to a higher frequency.",
+		);
+	}
+	if (scale === "log" && low <= 0) {
+		throw new Error(
+			"Invalid spectrogram configuration: a log frequencyScale needs a " +
+				"frequencyRange starting above 0 Hz.",
+		);
+	}
+	return [low, high];
+}
+
+function normalizeSpectrogramFftSize(value: unknown): number {
+	if (value === undefined) {
+		return 4096;
+	}
+
+	if (
+		typeof value !== "number" ||
+		!Number.isInteger(value) ||
+		value < MIN_SPECTROGRAM_FFT_SIZE ||
+		value > MAX_SPECTROGRAM_FFT_SIZE ||
+		(value & (value - 1)) !== 0
+	) {
+		throw new Error(
+			`Invalid spectrogram configuration: fftSize must be a power of two from ` +
+				`${MIN_SPECTROGRAM_FFT_SIZE} to ${MAX_SPECTROGRAM_FFT_SIZE}.`,
+		);
+	}
+	return value;
+}
+
+/**
+ * What each window needs of `fftSize / hopSize` for its shifted copies to add
+ * up to a constant: a cosine window with harmonics up to the k-th needs a
+ * ratio above k, and a triangle an even one.
+ */
+const SPECTROGRAM_WINDOW_COLA: Record<
+	SpectrogramWindow,
+	{ minimumRatio: number; evenRatio: boolean }
+> = {
+	rectangular: { minimumRatio: 1, evenRatio: false },
+	hann: { minimumRatio: 2, evenRatio: false },
+	hamming: { minimumRatio: 2, evenRatio: false },
+	blackman: { minimumRatio: 3, evenRatio: false },
+	bartlett: { minimumRatio: 2, evenRatio: true },
+};
+
+function satisfiesCola(
+	window: SpectrogramWindow,
+	fftSize: number,
+	hopSize: number,
+): boolean {
+	const { minimumRatio, evenRatio } = SPECTROGRAM_WINDOW_COLA[window];
+	const ratio = fftSize / hopSize;
+	return (
+		Number.isInteger(ratio) &&
+		ratio >= minimumRatio &&
+		(!evenRatio || ratio % 2 === 0)
+	);
+}
+
+/** The hop sizes from `fftSize` down that satisfy COLA with `window`, largest first. */
+function listColaHopSizes(
+	window: SpectrogramWindow,
+	fftSize: number,
+): number[] {
+	const hops: number[] = [];
+	for (let hop = fftSize; hop >= 1 && hops.length < 4; hop /= 2) {
+		if (satisfiesCola(window, fftSize, hop)) {
+			hops.push(hop);
+		}
+	}
+	return hops;
+}
+
+function normalizeSpectrogramHopSize(
+	value: unknown,
+	window: SpectrogramWindow,
+	fftSize: number,
+): number {
+	const allowed = listColaHopSizes(window, fftSize);
+	if (value === undefined) {
+		return allowed[0];
+	}
+
+	if (
+		typeof value !== "number" ||
+		!Number.isInteger(value) ||
+		value < 1 ||
+		!satisfiesCola(window, fftSize, value)
+	) {
+		throw new Error(
+			`Invalid spectrogram configuration: hopSize ${String(value)} does not satisfy ` +
+				`the constant-overlap-add condition for a ${window} window of ${fftSize} ` +
+				`samples. Use ${allowed.join(", ")}, …`,
+		);
+	}
+	return value;
+}
+
+/** Levels below this many decibels under full scale are not kept; see `levelPowers`. */
+const MAX_SPECTROGRAM_DYNAMIC_RANGE = 120;
+
+function normalizeSpectrogramDynamicRange(value: number | undefined): number {
+	const dynamicRange =
+		normalizePositiveFiniteNumber(value, "spectrogram.dynamicRange") ?? 80;
+	if (dynamicRange > MAX_SPECTROGRAM_DYNAMIC_RANGE) {
+		throw new Error(
+			`Invalid spectrogram configuration: dynamicRange must be at most ` +
+				`${MAX_SPECTROGRAM_DYNAMIC_RANGE} dB.`,
+		);
+	}
+	return dynamicRange;
+}
+
+function normalizeSpectrogramConfig(
+	spectrogram: TrackSwitchSpectrogramViewConfig,
+	ctx: ViewNormalizeContext,
+): TrackSwitchSpectrogramViewConfig {
+	const frequencyScale = normalizeEnum(
+		spectrogram.frequencyScale,
+		["linear", "log", "mel", "bark"] as const,
+		"spectrogram.frequencyScale",
+		"linear",
+	);
+	const fftSize = normalizeSpectrogramFftSize(spectrogram.fftSize);
+	const window = normalizeEnum(
+		spectrogram.window,
+		["rectangular", "hann", "hamming", "blackman", "bartlett"] as const,
+		"spectrogram.window",
+		"hann",
+	);
+
+	return {
+		...normalizeAudioTimelineConfig(spectrogram, ctx, 200),
+		frequencyScale,
+		axisLabels: normalizeEnum(
+			spectrogram.axisLabels,
+			["hz", "midi"] as const,
+			"spectrogram.axisLabels",
+			"hz",
+		),
+		frequencyRange: normalizeSpectrogramFrequencyRange(
+			spectrogram.frequencyRange,
+			frequencyScale,
+		),
+		amplitude: normalizeEnum(
+			spectrogram.amplitude,
+			["db", "log1p"] as const,
+			"spectrogram.amplitude",
+			"log1p",
+		),
+		dynamicRange: normalizeSpectrogramDynamicRange(spectrogram.dynamicRange),
+		gamma:
+			normalizePositiveFiniteNumber(spectrogram.gamma, "spectrogram.gamma") ??
+			10000,
+		fftSize,
+		window,
+		hopSize: normalizeSpectrogramHopSize(spectrogram.hopSize, window, fftSize),
+	};
 }
 
 /** The 16 channels of the MIDI specification, numbered as the files number them. */
@@ -1061,6 +1314,8 @@ export function normalizeViewConfig(
 	switch (view.type) {
 		case "waveform":
 			return normalizeWaveformConfig(view, ctx);
+		case "spectrogram":
+			return normalizeSpectrogramConfig(view, ctx);
 		case "pianoRoll":
 			return normalizePianoRollConfig(view, ctx);
 		case "sheetMusic":

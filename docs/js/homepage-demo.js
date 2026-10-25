@@ -35,6 +35,7 @@
 			customizablePanelOrder: false,
 			tabView: false,
 			keyboard: true,
+			lockZoom: false,
 		},
 		// Nothing for `alignment`: outsideCoverage and duplicateAnchors both
 		// default to "error", so the values the showcase sets are load-bearing.
@@ -53,6 +54,21 @@
 				alignedPlayhead: false,
 				// No `timer`: a waveform reads `config.timer ?? isAlignmentMode()`, so
 				// omitting it is not the same as setting it false once aligned.
+			},
+			spectrogram: {
+				height: 200,
+				maxZoom: 0,
+				playbackFollowMode: "center",
+				timeAxis: "shared",
+				alignedPlayhead: false,
+				frequencyScale: "linear",
+				axisLabels: "hz",
+				amplitude: "log1p",
+				dynamicRange: 80,
+				gamma: 10000,
+				fftSize: 4096,
+				window: "hann",
+				hopSize: 2048,
 			},
 			pianoRoll: {
 				height: 180,
@@ -152,6 +168,17 @@
 			views.push(
 				withMarkerLayers(
 					{ type: "waveform", playbackFollowMode: controls.playbackFollowMode },
+					controls.markers ? [markerLayer("sections")] : [],
+				),
+			);
+		}
+		if (controls.spectrogram) {
+			views.push(
+				withMarkerLayers(
+					{
+						type: "spectrogram",
+						playbackFollowMode: controls.playbackFollowMode,
+					},
 					controls.markers ? [markerLayer("sections")] : [],
 				),
 			);
@@ -312,6 +339,27 @@
 				);
 			});
 		}
+		if (controls.spectrogram) {
+			[
+				{ track: "hu33", layers: markerLayersA },
+				{ track: "sc06", layers: markerLayersB },
+			].forEach(function (performance) {
+				views.push(
+					withMarkerLayers(
+						{
+							type: "spectrogram",
+							tracks: [performance.track],
+							height: 120,
+							axisLabels: "midi",
+							playbackFollowMode: controls.playbackFollowMode,
+							timeAxis: controls.waveformTimeAxis,
+							alignedPlayhead: controls.alignedPlayhead,
+						},
+						performance.layers,
+					),
+				);
+			});
+		}
 		if (controls.warpingMatrix) {
 			views.push({ type: "warpingMatrix", x: "hu33", y: "sc06", height: 200 });
 		}
@@ -378,6 +426,7 @@
 			customizablePanelOrder: controls.customizablePanelOrder,
 			tabView: controls.tabView,
 			keyboard: controls.keyboard,
+			lockZoom: controls.lockZoom,
 		};
 	}
 
@@ -469,9 +518,9 @@
 			var names = [
 				"looping", "globalVolume", "trackVolumeControls",
 				"customizablePanelOrder", "presets", "seekBar", "timer", "keyboard",
-				"waveform", "pianoRoll", "text", "alignedPlayhead", "showAlignmentPoints",
+				"waveform", "spectrogram", "pianoRoll", "text", "alignedPlayhead", "showAlignmentPoints",
 				"markers", "sheetNotePreview", "warpingMatrix", "customImage",
-				"trackImageBySolo", "exclusiveSolo", "tabView",
+				"trackImageBySolo", "exclusiveSolo", "tabView", "lockZoom",
 				"muteOtherPlayerInstances", "repeatEnabled"
 			];
 			// Controls the showcase does not expose keep the player's own default,
@@ -531,7 +580,9 @@
 				'select[name="waveformTimeAxis"]',
 			);
 			if (!control) return;
-			var waveformEnabled = readControl(controlsRoot, "waveform", false);
+			var waveformEnabled =
+				readControl(controlsRoot, "waveform", false) ||
+				readControl(controlsRoot, "spectrogram", false);
 			var disabled = mode !== MODE_SYNC || !waveformEnabled;
 			control.disabled = disabled;
 			var row = control.closest(".ts-control-row");
