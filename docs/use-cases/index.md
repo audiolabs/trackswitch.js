@@ -22,6 +22,14 @@ Each page contains a working player and explains the important parts of its JSON
   </li>
 
   <li class="ts-usecase-card">
+    <h2><a href="{{ '/use-cases/waveform-views/' | relative_url }}">Waveform Views</a></h2>
+    <p>
+      Show waveforms of the audible mix or of chosen tracks, zoom down to the samples, follow
+      playback while zoomed, and split the mix into left and right channels.
+    </p>
+  </li>
+
+  <li class="ts-usecase-card">
     <h2><a href="{{ '/use-cases/images/' | relative_url }}">Seekable Images</a></h2>
     <p>
       Display a seekable plot for all tracks, or show a different plot for each active track.

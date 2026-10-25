@@ -208,7 +208,12 @@ export interface TrackSwitchWaveformViewConfig {
 	type: "waveform";
 	tracks?: TrackId[] | "audible";
 	height?: number;
-	waveformBarWidth?: number;
+	/**
+	 * Shows the left and the right channel of the mix in two lanes, after
+	 * each track's pan, instead of one lane of their average. Every track it
+	 * shows must have two-channel audio.
+	 */
+	stereo?: boolean;
 	maxZoom?: number;
 	defaultZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
@@ -531,17 +536,17 @@ export interface TrackState {
 
 export type TrackSourceVariant = "base" | "synced";
 
-export interface WaveformSummaryLevel {
-	samplesPerEntry: number;
-	mins: Float32Array;
-	maxes: Float32Array;
-}
-
+/**
+ * Min/max pyramid of a mono signal. Each level holds interleaved min/max
+ * pairs: the finest one per 16 samples, every next one per 4 entries of the
+ * level below, up to a single entry spanning the whole signal.
+ */
 export interface WaveformSummary {
-	duration: number;
 	sampleRate: number;
 	sampleCount: number;
-	levels: WaveformSummaryLevel[];
+	levels: Float32Array[];
+	/** The largest absolute sample value. */
+	peak: number;
 }
 
 export interface TrackLoadedSource {

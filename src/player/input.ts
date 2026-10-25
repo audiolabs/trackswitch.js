@@ -2203,6 +2203,20 @@ export class InputBinder {
 		this.addListener(getOwnerWindow(this.root), "keydown", (event) => {
 			this.controller.onKeyboard(eventToPointerEvent(event));
 		});
+		// Buttons activate on Space keyup; suppress it so a focused control
+		// (e.g. the marker edit toggle) is not clicked when Space toggles playback.
+		this.addListener(getOwnerWindow(this.root), "keyup", (event) => {
+			const keyboardEvent = event as KeyboardEvent;
+			const target = eventTargetAsElement(keyboardEvent.target ?? null);
+			if (
+				(keyboardEvent.key === " " || keyboardEvent.code === "Space") &&
+				target &&
+				this.root.contains(target) &&
+				target.closest("button, [role='button']")
+			) {
+				keyboardEvent.preventDefault();
+			}
+		});
 	}
 
 	private bindWaveformControls(): void {

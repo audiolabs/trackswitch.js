@@ -49,6 +49,7 @@ import type {
 	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchSnapshot,
 	TrackSwitchUiState,
+	TrackSwitchViewConfig,
 	TrackSwitchWarpingMatrixViewConfig,
 } from "../types";
 import type { PianoRollSeekSurfaceMetadata } from "../views/piano-roll";
@@ -140,6 +141,8 @@ export class TrackSwitchControllerImpl
 	public alignmentConfig: AlignmentConfig | undefined;
 	public markersConfig: MarkersConfig;
 	public media: MediaConfig;
+	/** The configured views, which decide whose audio gets a waveform summary. */
+	public views: TrackSwitchViewConfig[];
 	public presets: PresetsConfig;
 	public navigationBar: TrackSwitchNavigationBarViewConfig | null;
 	public warpingMatrixView: TrackSwitchWarpingMatrixViewConfig | null;
@@ -233,6 +236,7 @@ export class TrackSwitchControllerImpl
 		this.root = rootElement;
 		this.alignmentConfig = config.alignment;
 		this.media = config.media;
+		this.views = config.views;
 		this.markersConfig = config.markers;
 		this.presets = config.presets;
 		this.navigationBar =
@@ -324,7 +328,7 @@ export class TrackSwitchControllerImpl
 		this.eventNamespace = `.trackswitch.${this.instanceId}`;
 
 		this.renderer.initialize(this.runtimes);
-		this.renderer.drawDummyWaveforms(this.waveformEngine);
+		this.renderer.drawDummyWaveforms();
 
 		this.inputBinder = new InputBinder(this.root, this.features, this);
 		this.inputBinder.bind();

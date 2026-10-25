@@ -94,8 +94,9 @@
 		"build:esm": "vite build --mode esm",
 		"tokens:build": "node scripts/generate-css-tokens.mjs",
 		"schema:build": "node scripts/generate-schema.mjs",
+		"kernel:build": "node scripts/generate-waveform-kernel.mjs",
 		"test": "tsx --test tests/*.test.ts",
-		"generate": "npm run tokens:build && npm run schema:build",
+		"generate": "npm run tokens:build && npm run schema:build && npm run kernel:build",
 		"generate:check": "npm run generate && git diff --exit-code -- src/generated docs/schema docs/_includes/css-tokens.md",
 		"docs:assets": "node scripts/sync-docs-assets.mjs",
 		"docs:watch": "node scripts/docs-watch.mjs",
@@ -122,6 +123,7 @@
 		"ts-json-schema-generator": "^2.9.0",
 		"tsx": "^4.23.15",
 		"typescript": "^7.0.2",
-		"vite": "^8.3.3"
+		"vite": "^8.3.3",
+		"wabt": "^1.0.39"
 	}
 }

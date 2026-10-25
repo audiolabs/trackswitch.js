@@ -118,27 +118,7 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 			return;
 		}
 
-		ctx.runtimes.forEach((runtime: TrackRuntime) => {
-			if (runtime.baseSource.buffer) {
-				runtime.baseSource.waveformSummary = ctx.waveformEngine.createSummary(
-					runtime.baseSource.buffer,
-				);
-			}
-
-			if (runtime.syncedSource?.buffer) {
-				runtime.syncedSource.waveformSummary = ctx.waveformEngine.createSummary(
-					runtime.syncedSource.buffer,
-				);
-			}
-
-			const activeSource =
-				runtime.activeVariant === "synced"
-					? runtime.syncedSource
-					: runtime.baseSource;
-			runtime.waveformSummary = activeSource
-				? activeSource.waveformSummary
-				: null;
-		});
+		ctx.waveformEngine.summarizeShownTracks(ctx.runtimes, ctx.views);
 
 		ctx.isLoading = false;
 		ctx.renderer.setOverlayLoading(false);
@@ -149,6 +129,19 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 
 		if (erroredTracks.length > 0) {
 			ctx.handleError("One or more audio files failed to load.");
+			return;
+		}
+
+		const stereoMismatch = ctx.renderer.findStereoWaveformChannelMismatch(
+			ctx.runtimes,
+		);
+		if (stereoMismatch) {
+			const { runtime, channels } = stereoMismatch;
+			ctx.handleError(
+				`A stereo waveform needs two-channel audio, but "${
+					runtime.definition.title ?? runtime.definition.id
+				}" has ${channels} channel${channels === 1 ? "" : "s"}.`,
+			);
 			return;
 		}
 

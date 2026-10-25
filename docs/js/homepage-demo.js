@@ -47,8 +47,7 @@
 			},
 			waveform: {
 				height: 150,
-				waveformBarWidth: 1,
-				maxZoom: 5,
+				maxZoom: 0,
 				playbackFollowMode: "center",
 				timeAxis: "shared",
 				alignedPlayhead: false,

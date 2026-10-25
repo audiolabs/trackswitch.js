@@ -176,16 +176,34 @@ export function resolveTimelineBaseWidth(
 	return 1;
 }
 
+/**
+ * The widest a timeline surface grows. Browsers stop laying out elements not
+ * far past this, around 17.9 million CSS pixels in Firefox.
+ */
+const MAX_TIMELINE_SURFACE_PX = 16_000_000;
+
+/**
+ * How far a surface zooms: until `maxZoomSeconds` fill the viewport — any
+ * amount when it is `0` — and never wider than the browser can lay out.
+ */
 export function getTimelineMaximumZoom(
 	durationSeconds: number,
 	maxZoomSeconds: number,
+	baseWidth: number,
 ): number {
 	const safeDuration = sanitizeDuration(durationSeconds);
-	if (safeDuration <= 0 || maxZoomSeconds <= 0) {
+	if (safeDuration <= 0) {
 		return MIN_TIMELINE_ZOOM;
 	}
 
-	return Math.max(MIN_TIMELINE_ZOOM, safeDuration / maxZoomSeconds);
+	const spanLimit =
+		maxZoomSeconds > 0
+			? safeDuration / maxZoomSeconds
+			: Number.POSITIVE_INFINITY;
+	return Math.max(
+		MIN_TIMELINE_ZOOM,
+		Math.min(spanLimit, MAX_TIMELINE_SURFACE_PX / Math.max(1, baseWidth)),
+	);
 }
 
 /**

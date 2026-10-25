@@ -64,7 +64,7 @@ const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 	"type",
 	"tracks",
 	"height",
-	"waveformBarWidth",
+	"stereo",
 	"maxZoom",
 	"defaultZoom",
 	"playbackFollowMode",
@@ -186,24 +186,14 @@ function toCanvasSize(
 	return Math.round(value);
 }
 
-function normalizeWaveformBarWidth(value: number | undefined): number {
-	if (value === undefined) {
-		return 1;
-	}
-
-	if (typeof value !== "number" || !Number.isFinite(value) || value < 1) {
-		throw new Error(
-			"Invalid waveform configuration: waveformBarWidth must be a finite number of at least 1.",
-		);
-	}
-
-	return Math.floor(value);
-}
-
 /** `0` lifts the zoom limit entirely; anything negative is a mistake. */
-function normalizeWaveformMaxZoom(value: unknown, label: string): number {
+function normalizeWaveformMaxZoom(
+	value: unknown,
+	label: string,
+	defaultValue: number,
+): number {
 	if (value === undefined) {
-		return 5;
+		return defaultValue;
 	}
 
 	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
@@ -511,8 +501,9 @@ function normalizeWaveformConfig(
 	const normalized: TrackSwitchWaveformViewConfig = {
 		...waveform,
 		height: toCanvasSize(waveform.height, 150, "waveform.height"),
-		waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
-		maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom, "waveform"),
+		stereo: normalizeOptionalBoolean(waveform.stereo, "waveform.stereo"),
+		// A waveform zooms down to its samples unless told otherwise.
+		maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom, "waveform", 0),
 		defaultZoom: normalizeDefaultZoom(waveform.defaultZoom, "waveform"),
 		playbackFollowMode: normalizePlaybackFollowMode(
 			waveform.playbackFollowMode,
@@ -713,7 +704,7 @@ function normalizePianoRollConfig(
 	return {
 		...pianoRoll,
 		height: toCanvasSize(pianoRoll.height, 180, "pianoRoll.height"),
-		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll"),
+		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll", 5),
 		defaultZoom: normalizeDefaultZoom(pianoRoll.defaultZoom, "pianoRoll"),
 		// A keyboard forces its own pinned-left follow instead — see
 		// PianoRollSeekSurfaceMetadata.playbackFollowMode.

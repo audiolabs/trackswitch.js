@@ -242,7 +242,11 @@ function getPianoRollMaximumZoom(
 	surface: PianoRollSeekSurfaceMetadata,
 	durationSeconds: number,
 ): number {
-	return getTimelineMaximumZoom(durationSeconds, surface.maxZoomSeconds);
+	return getTimelineMaximumZoom(
+		durationSeconds,
+		surface.maxZoomSeconds,
+		surface.baseWidth,
+	);
 }
 
 function getPianoRollViewportState(surface: PianoRollSeekSurfaceMetadata): {

@@ -1,777 +1,1051 @@
+import { waveformKernelBase64 } from "../generated/waveform-kernel";
+import { clampPan } from "../shared/math";
 import type {
+	TrackId,
+	TrackLoadedSource,
 	TrackRuntime,
+	TrackSwitchViewConfig,
 	TrackTiming,
 	WaveformSourceIndex,
 	WaveformSummary,
-	WaveformSummaryLevel,
 } from "../types";
+import { computeBalanceGains } from "./audio-engine";
 
 export type TrackTimelineProjector = (
 	runtime: TrackRuntime,
 	trackTimelineTimeSeconds: number,
 ) => number;
 
-const SUMMARY_WINDOW_SAMPLES = 256;
+/**
+ * What a waveform lane shows: every track's channels averaged, or the left or
+ * the right output of the mix, after each track's pan.
+ */
+export type WaveformLane = "mono" | "left" | "right";
 
-export interface WaveformPeakBuckets {
-	mins: Float32Array;
-	maxes: Float32Array;
+/** Samples one entry of a summary's finest level spans. */
+const SUMMARY_BASE_SAMPLES = 16;
+/** Entries of a level that one entry of the next coarser level spans. */
+const SUMMARY_LEVEL_FACTOR = 4;
+/**
+ * Samples the kernel mixes at once — a multiple of `SUMMARY_BASE_SAMPLES`, and
+ * the most a single kernel call ever handles. A compact channel is scaled
+ * chunk by chunk of this size.
+ */
+const SUMMARY_CHUNK_SAMPLES = 65536;
+/**
+ * Main-thread time a mix build takes right away, when it is asked for. A
+ * build of a few tracks is done within it, so the view shows the exact mix
+ * in the same frame.
+ */
+const MIX_BUILD_SYNC_MS = 16;
+/** Main-thread time a mix build may take before it yields to the event loop. */
+const MIX_BUILD_SLICE_MS = 8;
+/** Built mixes kept around, so switching back to a recent selection is instant. */
+const MIX_CACHE_LIMIT = 6;
+
+export interface WaveformRange {
+	min: number;
+	max: number;
+}
+
+/** The compiled waveform-kernel.wat, over views of its memory regions. */
+interface WaveformKernel {
+	clear(count: number): void;
+	accumulate(offset: number, count: number, gain: number): void;
+	accumulate16(offset: number, count: number, gain: number): void;
+	reduce(count: number): void;
+	compact(count: number): number;
+	coarsen(count: number, source: number, target: number): void;
+	/** Where a chunk is mixed. */
+	accumulator: Float32Array;
+	/** Where a channel is copied before it is added to the accumulator. */
+	input: Float32Array;
+	/** The min/max pairs `reduce` writes. */
+	pairs: Float32Array;
+	pairsByte: number;
+	/** The 16-bit samples `accumulate16` reads and `compact` writes. */
+	input16: Int16Array;
+	/**
+	 * A chunk's coarser levels, each one where `coarsen` writes it from the
+	 * one before: as many as it takes to reach a single entry.
+	 */
+	chunkLevels: Float32Array[];
+	chunkLevelBytes: number[];
+}
+
+let kernel: WaveformKernel | null = null;
+
+/**
+ * The kernel, compiled on first use. It is a few hundred bytes, well within
+ * what browsers compile synchronously on the main thread. Every caller mixes,
+ * reduces and copies out a chunk without yielding in between, so all of them
+ * share one instance.
+ */
+function getKernel(): WaveformKernel {
+	if (kernel) {
+		return kernel;
+	}
+
+	const bytes = Uint8Array.from(atob(waveformKernelBase64), (character) =>
+		character.charCodeAt(0),
+	);
+	const exports = new WebAssembly.Instance(new WebAssembly.Module(bytes))
+		.exports as unknown as {
+		memory: WebAssembly.Memory;
+		setup(chunk: number): void;
+		clear(count: number): void;
+		accumulate(offset: number, count: number, gain: number): void;
+		accumulate16(offset: number, count: number, gain: number): void;
+		reduce(count: number): void;
+		compact(count: number): number;
+		coarsen(count: number, source: number, target: number): void;
+	};
+	const chunk = SUMMARY_CHUNK_SAMPLES;
+	const pairsByte = chunk * 8;
+	const entryCount = chunk / SUMMARY_BASE_SAMPLES;
+	const input16Byte = pairsByte + entryCount * 8;
+	const chunkLevelBytes: number[] = [];
+	const chunkLevelEntries: number[] = [];
+	let levelByte = input16Byte + chunk * 2;
+	for (
+		let entries = entryCount / SUMMARY_LEVEL_FACTOR;
+		entries >= 1;
+		entries /= SUMMARY_LEVEL_FACTOR
+	) {
+		chunkLevelBytes.push(levelByte);
+		chunkLevelEntries.push(entries);
+		levelByte += entries * 8;
+	}
+	const pageBytes = 65536;
+	exports.memory.grow(
+		Math.ceil(levelByte / pageBytes) -
+			exports.memory.buffer.byteLength / pageBytes,
+	);
+	exports.setup(chunk);
+	const memory = exports.memory.buffer;
+	kernel = {
+		clear: exports.clear,
+		accumulate: exports.accumulate,
+		accumulate16: exports.accumulate16,
+		reduce: exports.reduce,
+		compact: exports.compact,
+		coarsen: exports.coarsen,
+		accumulator: new Float32Array(memory, 0, chunk),
+		input: new Float32Array(memory, chunk * 4, chunk),
+		pairs: new Float32Array(memory, pairsByte, entryCount * 2),
+		pairsByte,
+		input16: new Int16Array(memory, input16Byte, chunk),
+		chunkLevels: chunkLevelBytes.map(
+			(byte, index) =>
+				new Float32Array(memory, byte, chunkLevelEntries[index] * 2),
+		),
+		chunkLevelBytes,
+	};
+	return kernel;
+}
+
+/** Where a contribution's samples come from. */
+interface WaveformSource {
+	/**
+	 * Adds `gain` times `count` samples from sample `start` on to the kernel's
+	 * accumulator from sample `offset` on.
+	 */
+	addTo(
+		waveformKernel: WaveformKernel,
+		start: number,
+		offset: number,
+		count: number,
+		gain: number,
+	): void;
+}
+
+/**
+ * One channel of a decoded buffer, fetched on every read: starting playback
+ * acquires a buffer's contents, which detaches the arrays `getChannelData`
+ * handed out before.
+ */
+class BufferChannelSource implements WaveformSource {
+	constructor(
+		private readonly buffer: AudioBuffer,
+		private readonly channel: number,
+	) {}
+
+	addTo(
+		waveformKernel: WaveformKernel,
+		start: number,
+		offset: number,
+		count: number,
+		gain: number,
+	): void {
+		const channel = this.buffer.getChannelData(this.channel);
+		waveformKernel.input.set(channel.subarray(start, start + count));
+		waveformKernel.accumulate(offset, count, gain);
+	}
+}
+
+/**
+ * A channel kept at 16 bits — half the samples' size, which is what mixes
+ * read, so rebuilding one reads half as much. Each chunk of
+ * `SUMMARY_CHUNK_SAMPLES` is scaled to its own loudest sample, which keeps
+ * quiet passages as precise as loud ones.
+ */
+interface CompactChannel {
+	data: Int16Array;
+	/** The factor that takes a chunk's 16-bit samples back to their values. */
+	scales: Float32Array;
+}
+
+class CompactSource implements WaveformSource {
+	constructor(private readonly channel: CompactChannel) {}
+
+	addTo(
+		waveformKernel: WaveformKernel,
+		start: number,
+		offset: number,
+		count: number,
+		gain: number,
+	): void {
+		for (let done = 0; done < count; ) {
+			const sample = start + done;
+			const chunk = Math.floor(sample / SUMMARY_CHUNK_SAMPLES);
+			const length = Math.min(
+				count - done,
+				(chunk + 1) * SUMMARY_CHUNK_SAMPLES - sample,
+			);
+			waveformKernel.input16.set(
+				this.channel.data.subarray(sample, sample + length),
+			);
+			waveformKernel.accumulate16(
+				offset + done,
+				length,
+				gain * this.channel.scales[chunk],
+			);
+			done += length;
+		}
+	}
+}
+
+/**
+ * One source's share of a signal: signal sample `i` receives
+ * `gain * source[i + offset]` wherever `i + offset` lies within
+ * [`start`, `end`), and nothing elsewhere.
+ */
+interface WaveformContribution {
+	source: WaveformSource;
+	gain: number;
+	offset: number;
+	start: number;
+	end: number;
+}
+
+/**
+ * Mixes `count` samples of the signal from sample `start` on — at most
+ * `SUMMARY_CHUNK_SAMPLES` — into the kernel's accumulator.
+ */
+function mixChunk(
+	waveformKernel: WaveformKernel,
+	contributions: WaveformContribution[],
+	start: number,
+	count: number,
+): void {
+	waveformKernel.clear(count);
+	for (const contribution of contributions) {
+		const base = start + contribution.offset;
+		const from = Math.max(0, contribution.start - base);
+		const to = Math.min(count, contribution.end - base);
+		if (to > from) {
+			contribution.source.addTo(
+				waveformKernel,
+				base + from,
+				from,
+				to - from,
+				contribution.gain,
+			);
+		}
+	}
+}
+
+/** Fills `out[0, count)` with the signal from sample `start` on. */
+function readContributions(
+	contributions: WaveformContribution[],
+	start: number,
+	out: Float32Array,
+	count: number,
+): void {
+	const waveformKernel = getKernel();
+	for (let done = 0; done < count; done += SUMMARY_CHUNK_SAMPLES) {
+		const chunk = Math.min(SUMMARY_CHUNK_SAMPLES, count - done);
+		mixChunk(waveformKernel, contributions, start + done, chunk);
+		out.set(waveformKernel.accumulator.subarray(0, chunk), done);
+	}
+}
+
+function createCompactChannel(length: number): CompactChannel {
+	return {
+		data: new Int16Array(length),
+		scales: new Float32Array(Math.ceil(length / SUMMARY_CHUNK_SAMPLES)),
+	};
+}
+
+/** Stores the accumulator's first `count` samples as the chunk at `start`. */
+function storeCompactChunk(
+	waveformKernel: WaveformKernel,
+	compact: CompactChannel,
+	start: number,
+	count: number,
+): void {
+	compact.scales[start / SUMMARY_CHUNK_SAMPLES] =
+		waveformKernel.compact(count) / 32767;
+	compact.data.set(waveformKernel.input16.subarray(0, count), start);
+}
+
+/** A compact copy of one channel of `buffer`. */
+function compactBufferChannel(
+	buffer: AudioBuffer,
+	channel: number,
+): CompactChannel {
+	const waveformKernel = getKernel();
+	const compact = createCompactChannel(buffer.length);
+	const contributions: WaveformContribution[] = [
+		{
+			source: new BufferChannelSource(buffer, channel),
+			gain: 1,
+			offset: 0,
+			start: 0,
+			end: buffer.length,
+		},
+	];
+	for (let start = 0; start < buffer.length; start += SUMMARY_CHUNK_SAMPLES) {
+		const count = Math.min(SUMMARY_CHUNK_SAMPLES, buffer.length - start);
+		mixChunk(waveformKernel, contributions, start, count);
+		storeCompactChunk(waveformKernel, compact, start, count);
+	}
+	return compact;
+}
+
+/** Writes one entry of `coarse` for every `SUMMARY_LEVEL_FACTOR` of `level`. */
+function coarsenSummaryLevel(level: Float32Array, coarse: Float32Array): void {
+	const entryCount = level.length / 2;
+	for (let entry = 0; entry < entryCount; entry += SUMMARY_LEVEL_FACTOR) {
+		const end = Math.min(entryCount, entry + SUMMARY_LEVEL_FACTOR);
+		let min = level[entry * 2];
+		let max = level[entry * 2 + 1];
+		for (let child = entry + 1; child < end; child += 1) {
+			if (level[child * 2] < min) {
+				min = level[child * 2];
+			}
+			if (level[child * 2 + 1] > max) {
+				max = level[child * 2 + 1];
+			}
+		}
+		const target = (entry / SUMMARY_LEVEL_FACTOR) * 2;
+		coarse[target] = min;
+		coarse[target + 1] = max;
+	}
+}
+
+/**
+ * Summarizes `sampleCount` samples of a signal, yielding after every chunk so
+ * a caller can spread the work over several turns of the event loop. Given
+ * `compact`, it also keeps the signal there.
+ */
+function* summarize(
+	sampleRate: number,
+	sampleCount: number,
+	contributions: WaveformContribution[],
+	compact?: CompactChannel,
+): Generator<void, WaveformSummary, void> {
+	const levels: Float32Array[] = [];
+	for (
+		let entries = Math.ceil(sampleCount / SUMMARY_BASE_SAMPLES);
+		;
+		entries = Math.ceil(entries / SUMMARY_LEVEL_FACTOR)
+	) {
+		levels.push(new Float32Array(entries * 2));
+		if (entries <= 1) {
+			break;
+		}
+	}
+	const waveformKernel = getKernel();
+	// A chunk spans whole entries of every level the kernel coarsens it to;
+	// only the levels above those are left for the end.
+	const chunkLevelCount = Math.min(
+		levels.length - 1,
+		waveformKernel.chunkLevels.length,
+	);
+	for (let start = 0; start < sampleCount; start += SUMMARY_CHUNK_SAMPLES) {
+		const count = Math.min(SUMMARY_CHUNK_SAMPLES, sampleCount - start);
+		mixChunk(waveformKernel, contributions, start, count);
+		waveformKernel.reduce(count);
+		let entries = Math.ceil(count / SUMMARY_BASE_SAMPLES);
+		let firstEntry = start / SUMMARY_BASE_SAMPLES;
+		levels[0].set(
+			waveformKernel.pairs.subarray(0, entries * 2),
+			firstEntry * 2,
+		);
+		let source = waveformKernel.pairsByte;
+		for (let level = 1; level <= chunkLevelCount; level += 1) {
+			const target = waveformKernel.chunkLevelBytes[level - 1];
+			waveformKernel.coarsen(entries, source, target);
+			entries = Math.ceil(entries / SUMMARY_LEVEL_FACTOR);
+			firstEntry /= SUMMARY_LEVEL_FACTOR;
+			levels[level].set(
+				waveformKernel.chunkLevels[level - 1].subarray(0, entries * 2),
+				firstEntry * 2,
+			);
+			source = target;
+		}
+		if (compact) {
+			storeCompactChunk(waveformKernel, compact, start, count);
+		}
+		yield;
+	}
+
+	for (let level = chunkLevelCount + 1; level < levels.length; level += 1) {
+		coarsenSummaryLevel(levels[level - 1], levels[level]);
+	}
+	const top = levels[levels.length - 1];
+	return {
+		sampleRate,
+		sampleCount,
+		levels,
+		peak: top.length > 0 ? Math.max(-top[0], top[1]) : 0,
+	};
+}
+
+/**
+ * Writes the envelope of samples [`start`, `end`) to `out`, exact up to the
+ * finest level's entry at either edge. False when the range holds no sample.
+ */
+function querySummary(
+	summary: WaveformSummary,
+	start: number,
+	end: number,
+	out: WaveformRange,
+): boolean {
+	let low = Math.max(0, Math.floor(start / SUMMARY_BASE_SAMPLES));
+	let high = Math.min(
+		summary.levels[0].length / 2,
+		Math.ceil(end / SUMMARY_BASE_SAMPLES),
+	);
+	if (high <= low) {
+		return false;
+	}
+
+	let min = Number.POSITIVE_INFINITY;
+	let max = Number.NEGATIVE_INFINITY;
+	const take = (level: Float32Array, entry: number): void => {
+		if (level[entry * 2] < min) {
+			min = level[entry * 2];
+		}
+		if (level[entry * 2 + 1] > max) {
+			max = level[entry * 2 + 1];
+		}
+	};
+	// Entries that do not fill a whole entry of the next level are read here;
+	// the aligned rest is handed up a level, where it costs a quarter as much.
+	for (let levelIndex = 0; low < high; levelIndex += 1) {
+		const level = summary.levels[levelIndex];
+		if (levelIndex === summary.levels.length - 1) {
+			for (let entry = low; entry < high; entry += 1) {
+				take(level, entry);
+			}
+			break;
+		}
+		while (low < high && low % SUMMARY_LEVEL_FACTOR !== 0) {
+			take(level, low);
+			low += 1;
+		}
+		while (high > low && high % SUMMARY_LEVEL_FACTOR !== 0) {
+			high -= 1;
+			take(level, high);
+		}
+		low /= SUMMARY_LEVEL_FACTOR;
+		high /= SUMMARY_LEVEL_FACTOR;
+	}
+
+	out.min = min;
+	out.max = max;
+	return true;
+}
+
+/** A mono signal on a timeline, sampled at `sampleRate`. */
+export interface WaveformSignal {
+	/** Tells signals apart in a view's redraw bookkeeping. */
+	readonly id: number;
+	readonly sampleRate: number;
+	/** The largest absolute sample value. */
+	readonly peak: number;
+	/**
+	 * Writes the range samples [`start`, `end`) cover to `out`. False when none
+	 * of them holds audio.
+	 */
+	envelope(start: number, end: number, out: WaveformRange): boolean;
+	/** Fills `out[0, count)` with the samples from `start` on. */
+	read(start: number, out: Float32Array, count: number): void;
+}
+
+let nextSignalId = 0;
+
+/**
+ * A signal with its summary: one track's channels averaged, or a mix of
+ * several tracks' channels at their gains. A view reads its envelope from the
+ * summary when one screen pixel spans many samples, and the samples
+ * themselves when it spans few.
+ */
+class SummarySignal implements WaveformSignal {
+	readonly id = nextSignalId++;
+
+	constructor(
+		readonly key: string,
+		readonly sampleRate: number,
+		/** The signal samples that hold audio; everything outside is silent. */
+		readonly start: number,
+		readonly end: number,
+		readonly peak: number,
+		private readonly summary: WaveformSummary,
+		/** The summary sample signal sample 0 corresponds to. */
+		private readonly summaryOffset: number,
+		private readonly contributions: WaveformContribution[],
+	) {}
+
+	/** See `querySummary`; samples outside the audio are left out. */
+	envelope(start: number, end: number, out: WaveformRange): boolean {
+		const from = Math.max(start, this.start);
+		const to = Math.min(end, this.end);
+		return (
+			to > from &&
+			querySummary(
+				this.summary,
+				from + this.summaryOffset,
+				to + this.summaryOffset,
+				out,
+			)
+		);
+	}
+
+	read(start: number, out: Float32Array, count: number): void {
+		readContributions(this.contributions, start, out, count);
+	}
+}
+
+interface MixJob {
+	key: string;
+	build: Generator<void, WaveformSummary, void>;
+	finish(summary: WaveformSummary): WaveformSignal;
+	/** Whether any of the mix has been summarized yet. */
+	started: boolean;
+	/** The requesters this mix is handed to once built. */
+	subscribers: Set<object>;
+}
+
+/** What one requester waits for. */
+interface MixRequest {
+	/** The mix it asked for last. */
+	wanted: MixJob | null;
+	/**
+	 * A mix it asked for before, kept building once begun. It stands in until
+	 * `wanted` is built, so a stream of changes too quick for the builds — a
+	 * dragged volume slider over many long tracks — still shows its steps
+	 * instead of restarting the build on every one.
+	 */
+	standIn: MixJob | null;
+	onReady: () => void;
+}
+
+/** Tells summaries apart in mix keys. */
+const summaryIds = new WeakMap<WaveformSummary, number>();
+let nextSummaryId = 0;
+
+function getSummaryId(summary: WaveformSummary): number {
+	let id = summaryIds.get(summary);
+	if (id === undefined) {
+		id = nextSummaryId;
+		nextSummaryId += 1;
+		summaryIds.set(summary, id);
+	}
+	return id;
+}
+
+/**
+ * Where a track's audio lies, in samples: `offset` takes a sample of the
+ * track's timeline to its buffer, and [`start`, `end`) is the part of the
+ * buffer the timing plays.
+ */
+function resolveTrackSampleSpan(
+	buffer: AudioBuffer,
+	timing: TrackTiming,
+): { offset: number; start: number; end: number } {
+	const rate = buffer.sampleRate;
+	const start = Math.max(0, Math.round(timing.trimStart * rate));
+	return {
+		offset: Math.round((timing.trimStart - timing.padStart) * rate),
+		start,
+		end: Math.min(
+			buffer.length,
+			Math.round((timing.trimStart + timing.audioDuration) * rate),
+		),
+	};
+}
+
+/**
+ * How much of each of a stereo track's two channels reaches the left and the
+ * right output, the way its panning graph routes them; see
+ * `AudioEngine.configurePanningGraph`. A stereo waveform only ever shows
+ * two-channel audio.
+ */
+function resolvePanMatrix(runtime: TrackRuntime): {
+	left: number[];
+	right: number[];
+} {
+	const pan = clampPan(runtime.state.pan);
+	if (runtime.panAlgorithm === "balance") {
+		const { gainL, gainR } = computeBalanceGains(pan);
+		return { left: [gainL, 0], right: [0, gainR] };
+	}
+
+	// StereoPannerNode's equal-power law.
+	if (pan <= 0) {
+		const angle = (pan + 1) * (Math.PI / 2);
+		return { left: [1, Math.cos(angle)], right: [0, Math.sin(angle)] };
+	}
+	const angle = pan * (Math.PI / 2);
+	return { left: [Math.cos(angle), 0], right: [Math.sin(angle), 1] };
+}
+
+/** A mix a lane shows, described before it is built. */
+interface MixDescription {
+	key: string;
+	sampleRate: number;
+	sampleCount: number;
+	contributions: WaveformContribution[];
 }
 
 export class WaveformEngine {
-	createSummary(buffer: AudioBuffer): WaveformSummary {
-		const sampleRate = WaveformEngine.resolveSampleRate(buffer);
-		const sampleCount = buffer.length;
-		const duration =
-			Number.isFinite(buffer.duration) && buffer.duration > 0
-				? buffer.duration
-				: sampleCount / sampleRate;
-		const levels: WaveformSummaryLevel[] = [];
+	private readonly trackSignals = new WeakMap<WaveformSummary, SummarySignal>();
+	/** The average of each buffer's channels, compacted. */
+	private readonly compactAverages = new WeakMap<AudioBuffer, CompactChannel>();
+	/** Each buffer's channels, compacted once a stereo lane needs them. */
+	private readonly compactChannels = new WeakMap<
+		AudioBuffer,
+		CompactChannel[]
+	>();
+	/** Built mixes by key, least recently used first. */
+	private readonly mixes = new Map<string, WaveformSignal>();
+	/** Mixes being built, oldest first, which is the order they are built in. */
+	private readonly mixJobs = new Map<string, MixJob>();
+	private readonly mixRequests = new WeakMap<object, MixRequest>();
+	/** The signal each requester was last handed. */
+	private readonly deliveredSignals = new WeakMap<object, WaveformSignal>();
+	/** Yields between build slices without the delay nested timeouts get. */
+	private readonly mixJobChannel = new MessageChannel();
+	private mixJobScheduled = false;
 
-		if (sampleCount <= 0) {
-			return {
-				duration: Math.max(0, duration),
-				sampleRate,
-				sampleCount: 0,
-				levels: [
-					{
-						samplesPerEntry: SUMMARY_WINDOW_SAMPLES,
-						mins: new Float32Array(0),
-						maxes: new Float32Array(0),
-					},
-				],
-			};
-		}
-
-		levels.push(this.createBaseSummaryLevel(buffer));
-		while (levels[levels.length - 1].mins.length > 1) {
-			levels.push(this.createCoarserSummaryLevel(levels[levels.length - 1]));
-		}
-
-		return {
-			duration,
-			sampleRate,
-			sampleCount,
-			levels,
+	constructor() {
+		this.mixJobChannel.port1.onmessage = () => {
+			this.mixJobScheduled = false;
+			this.runMixJobs(MIX_BUILD_SLICE_MS);
 		};
-	}
-
-	getTrackPeaks(
-		runtime: TrackRuntime,
-		peakCount: number,
-		startSeconds = 0,
-		durationSeconds?: number,
-	): Float32Array | null {
-		if (!runtime.waveformSummary) {
-			return null;
-		}
-
-		const buckets = this.querySummary(
-			runtime.waveformSummary,
-			peakCount,
-			startSeconds,
-			durationSeconds,
-		);
-		const peaks = new Float32Array(buckets.maxes.length);
-		for (let index = 0; index < peaks.length; index += 1) {
-			peaks[index] = Math.max(
-				Math.abs(buckets.mins[index]),
-				Math.abs(buckets.maxes[index]),
-			);
-		}
-
-		return peaks;
-	}
-
-	calculateMixedWaveform(
-		runtimes: TrackRuntime[],
-		peakCount: number,
-		_barWidth: number,
-		timelineDuration?: number,
-		trackTimelineProjector?: TrackTimelineProjector,
-		startSeconds = 0,
-		durationSeconds?: number,
-	): WaveformPeakBuckets | null {
-		if (!runtimes.length || peakCount <= 0) {
-			return null;
-		}
-
-		const count = Math.max(1, Math.floor(peakCount));
-		const audible = runtimes.filter((runtime) => runtime.state.volume > 0);
-
-		if (!audible.length) {
-			return null;
-		}
-
-		const safeTimelineDuration =
-			Number.isFinite(timelineDuration) && (timelineDuration as number) > 0
-				? (timelineDuration as number)
-				: runtimes.reduce(
-						(longest, runtime) =>
-							Math.max(longest, WaveformEngine.getRuntimeDuration(runtime)),
-						0,
-					);
-
-		if (safeTimelineDuration <= 0) {
-			return null;
-		}
-
-		const safeStartSeconds =
-			Number.isFinite(startSeconds) && startSeconds > 0 ? startSeconds : 0;
-		const safeDurationSeconds =
-			durationSeconds !== undefined && Number.isFinite(durationSeconds)
-				? Math.max(
-						0,
-						Math.min(
-							durationSeconds,
-							Math.max(0, safeTimelineDuration - safeStartSeconds),
-						),
-					)
-				: Math.max(0, safeTimelineDuration - safeStartSeconds);
-
-		if (safeDurationSeconds <= 0) {
-			return {
-				mins: new Float32Array(count),
-				maxes: new Float32Array(count),
-			};
-		}
-
-		const mappedBuckets = audible
-			.map((runtime) => {
-				const buckets = this.getTrackTimelineBuckets(
-					runtime,
-					count,
-					safeTimelineDuration,
-					trackTimelineProjector,
-					safeStartSeconds,
-					safeDurationSeconds,
-				);
-				if (!buckets) {
-					return null;
-				}
-
-				const weight = Math.max(0, Math.min(1, runtime.state.volume));
-				if (weight >= 0.999999) {
-					return buckets;
-				}
-
-				const scaled: WaveformPeakBuckets = {
-					mins: new Float32Array(buckets.mins.length),
-					maxes: new Float32Array(buckets.maxes.length),
-				};
-				for (let index = 0; index < buckets.maxes.length; index += 1) {
-					scaled.mins[index] = buckets.mins[index] * weight;
-					scaled.maxes[index] = buckets.maxes[index] * weight;
-				}
-				return scaled;
-			})
-			.filter((buckets): buckets is WaveformPeakBuckets => !!buckets);
-
-		if (!mappedBuckets.length) {
-			return null;
-		}
-
-		if (mappedBuckets.length === 1) {
-			return mappedBuckets[0];
-		}
-
-		const mixed: WaveformPeakBuckets = {
-			mins: new Float32Array(count),
-			maxes: new Float32Array(count),
-		};
-		const divisor = Math.sqrt(mappedBuckets.length);
-		for (let x = 0; x < count; x += 1) {
-			let minSum = 0;
-			let maxSum = 0;
-			for (let i = 0; i < mappedBuckets.length; i += 1) {
-				minSum += mappedBuckets[i].mins[x];
-				maxSum += mappedBuckets[i].maxes[x];
-			}
-			mixed.mins[x] = minSum / divisor;
-			mixed.maxes[x] = maxSum / divisor;
-		}
-
-		return mixed;
 	}
 
 	/**
-	 * The mixed waveform of a window read straight from the decoded samples,
-	 * rather than from the summary the overview is drawn with: a summary entry
-	 * spans hundreds of samples and turns into blocks once a view magnifies past
-	 * it. Each peak holds the true range its samples cover, so a window narrow
-	 * enough to resolve single samples traces the signal itself.
-	 *
-	 * `startSeconds` is a position on the tracks' own, unwarped timeline.
+	 * Summarizes the average of a buffer's channels, and keeps it compacted for
+	 * the mixes it will be part of.
 	 */
-	calculateSampleWaveform(
+	createSummary(buffer: AudioBuffer): WaveformSummary {
+		const compact = createCompactChannel(buffer.length);
+		const gain = 1 / buffer.numberOfChannels;
+		const build = summarize(
+			buffer.sampleRate,
+			buffer.length,
+			Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
+				source: new BufferChannelSource(buffer, channel),
+				gain,
+				offset: 0,
+				start: 0,
+				end: buffer.length,
+			})),
+			compact,
+		);
+		for (;;) {
+			const step = build.next();
+			if (step.done) {
+				this.compactAverages.set(buffer, compact);
+				return step.value;
+			}
+		}
+	}
+
+	/**
+	 * Summarizes the audio of every track some waveform among `views` can
+	 * show, and drops what was kept for the rest: a summary and the compact
+	 * copy beside it take a fair share of the decoded audio's memory again.
+	 */
+	summarizeShownTracks(
 		runtimes: TrackRuntime[],
-		peakCount: number,
-		startSeconds: number,
-		durationSeconds: number,
-	): WaveformPeakBuckets | null {
-		const count = Math.floor(peakCount);
-		const audible = runtimes.filter(
-			(runtime) => runtime.state.volume > 0 && runtime.buffer,
-		);
-		if (!audible.length || count <= 0 || durationSeconds <= 0) {
-			return null;
-		}
-
-		const mixed: WaveformPeakBuckets = {
-			mins: new Float32Array(count),
-			maxes: new Float32Array(count),
-		};
-		const divisor = Math.sqrt(audible.length);
-
-		audible.forEach((runtime) => {
-			const buffer = runtime.buffer as AudioBuffer;
-			const timing = WaveformEngine.normalizeTiming(runtime);
-			const trimStart = timing ? timing.trimStart : 0;
-			const padStart = timing ? timing.padStart : 0;
-			const audioDuration = timing ? timing.audioDuration : buffer.duration;
-			const rate = buffer.sampleRate;
-			const firstSample = Math.max(0, Math.floor(trimStart * rate));
-			const endSample = Math.min(
-				buffer.length,
-				Math.ceil((trimStart + audioDuration) * rate),
-			);
-			const channels: Float32Array[] = [];
-			for (let index = 0; index < buffer.numberOfChannels; index += 1) {
-				channels.push(buffer.getChannelData(index));
-			}
-
-			const weight = Math.min(1, runtime.state.volume) / divisor;
-			const originSample = (startSeconds - padStart + trimStart) * rate;
-			const samplesPerPeak = (durationSeconds * rate) / count;
-			for (let peakIndex = 0; peakIndex < count; peakIndex += 1) {
-				// Reaching one sample back into the previous peak keeps neighbouring
-				// peaks touching, so the trace has no gaps where the signal is steep.
-				const from = Math.floor(originSample + peakIndex * samplesPerPeak) - 1;
-				const to = Math.max(
-					from + 2,
-					Math.floor(originSample + (peakIndex + 1) * samplesPerPeak),
-				);
-				let min = Number.POSITIVE_INFINITY;
-				let max = Number.NEGATIVE_INFINITY;
-				for (
-					let sample = Math.max(from, firstSample);
-					sample < Math.min(to, endSample);
-					sample += 1
-				) {
-					for (const channel of channels) {
-						const value = channel[sample];
-						if (value < min) {
-							min = value;
-						}
-						if (value > max) {
-							max = value;
-						}
-					}
-				}
-				// Outside the track's audio the peak stays on the zero line.
-				if (min <= max) {
-					mixed.mins[peakIndex] += min * weight;
-					mixed.maxes[peakIndex] += max * weight;
-				}
-			}
-		});
-
-		return mixed;
-	}
-
-	private createBaseSummaryLevel(buffer: AudioBuffer): WaveformSummaryLevel {
-		const sampleCount = buffer.length;
-		const entryCount = Math.max(
-			1,
-			Math.ceil(sampleCount / SUMMARY_WINDOW_SAMPLES),
-		);
-		const mins = new Float32Array(entryCount);
-		const maxes = new Float32Array(entryCount);
-		const channelCount = Math.max(1, buffer.numberOfChannels);
-		const channels: Float32Array[] = [];
-
-		for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
-			channels.push(buffer.getChannelData(channelIndex));
-		}
-
-		for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
-			const start = entryIndex * SUMMARY_WINDOW_SAMPLES;
-			const end = Math.min(sampleCount, start + SUMMARY_WINDOW_SAMPLES);
-			let min = 0;
-			let max = 0;
-
-			for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
-				for (
-					let channelIndex = 0;
-					channelIndex < channels.length;
-					channelIndex += 1
-				) {
-					const sample = channels[channelIndex][sampleIndex];
-					if (sample < min) {
-						min = sample;
-					}
-					if (sample > max) {
-						max = sample;
-					}
-				}
-			}
-
-			mins[entryIndex] = min;
-			maxes[entryIndex] = max;
-		}
-
-		return {
-			samplesPerEntry: SUMMARY_WINDOW_SAMPLES,
-			mins,
-			maxes,
-		};
-	}
-
-	private createCoarserSummaryLevel(
-		previous: WaveformSummaryLevel,
-	): WaveformSummaryLevel {
-		const entryCount = Math.max(1, Math.ceil(previous.mins.length / 2));
-		const mins = new Float32Array(entryCount);
-		const maxes = new Float32Array(entryCount);
-
-		for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
-			const sourceIndex = entryIndex * 2;
-			const minA = previous.mins[sourceIndex] || 0;
-			const maxA = previous.maxes[sourceIndex] || 0;
-			const hasB = sourceIndex + 1 < previous.mins.length;
-			const minB = hasB ? previous.mins[sourceIndex + 1] : minA;
-			const maxB = hasB ? previous.maxes[sourceIndex + 1] : maxA;
-
-			mins[entryIndex] = Math.min(minA, minB);
-			maxes[entryIndex] = Math.max(maxA, maxB);
-		}
-
-		return {
-			samplesPerEntry: previous.samplesPerEntry * 2,
-			mins,
-			maxes,
-		};
-	}
-
-	private querySummary(
-		summary: WaveformSummary,
-		peakCount: number,
-		startSeconds = 0,
-		durationSeconds?: number,
-	): WaveformPeakBuckets {
-		const count = Math.max(1, Math.floor(peakCount));
-		const buckets: WaveformPeakBuckets = {
-			mins: new Float32Array(count),
-			maxes: new Float32Array(count),
-		};
-		if (!summary.levels.length || summary.sampleCount <= 0) {
-			return buckets;
-		}
-
-		const safeStartSeconds =
-			Number.isFinite(startSeconds) && startSeconds > 0 ? startSeconds : 0;
-		const maxDurationSeconds = Math.max(0, summary.duration - safeStartSeconds);
-		const safeDurationSeconds =
-			durationSeconds !== undefined && Number.isFinite(durationSeconds)
-				? Math.max(0, Math.min(durationSeconds, maxDurationSeconds))
-				: maxDurationSeconds;
-
-		if (safeDurationSeconds <= 0) {
-			return buckets;
-		}
-
-		const startSample = Math.min(
-			summary.sampleCount,
-			Math.floor(safeStartSeconds * summary.sampleRate),
-		);
-		const endSample = Math.min(
-			summary.sampleCount,
-			Math.max(
-				startSample,
-				Math.ceil(
-					(safeStartSeconds + safeDurationSeconds) * summary.sampleRate,
-				),
-			),
-		);
-		const samplesPerPeak = Math.max(1, (endSample - startSample) / count);
-
-		for (let peakIndex = 0; peakIndex < count; peakIndex += 1) {
-			const rangeStartSample =
-				startSample + Math.floor(peakIndex * samplesPerPeak);
-			const rangeEndSample =
-				peakIndex === count - 1
-					? endSample
-					: startSample + Math.ceil((peakIndex + 1) * samplesPerPeak);
-			const range = this.querySummarySampleRange(
-				summary,
-				rangeStartSample,
-				rangeEndSample,
-			);
-			buckets.mins[peakIndex] = range.min;
-			buckets.maxes[peakIndex] = range.max;
-		}
-
-		return buckets;
-	}
-
-	private querySummarySampleRange(
-		summary: WaveformSummary,
-		startSample: number,
-		endSample: number,
-	): { min: number; max: number } {
-		const safeStart = Math.max(
-			0,
-			Math.min(summary.sampleCount, Math.floor(startSample)),
-		);
-		const safeEnd = Math.max(
-			safeStart,
-			Math.min(summary.sampleCount, Math.ceil(endSample)),
-		);
-		if (safeEnd <= safeStart || !summary.levels.length) {
-			return { min: 0, max: 0 };
-		}
-
-		let cursor = safeStart;
-		let min = 0;
-		let max = 0;
-		while (cursor < safeEnd) {
-			let selected = summary.levels[0];
-			for (
-				let levelIndex = summary.levels.length - 1;
-				levelIndex >= 0;
-				levelIndex -= 1
-			) {
-				const candidate = summary.levels[levelIndex];
-				const aligned = cursor % candidate.samplesPerEntry === 0;
-				if (aligned && cursor + candidate.samplesPerEntry <= safeEnd) {
-					selected = candidate;
-					break;
-				}
-			}
-
-			const entryIndex = Math.min(
-				selected.mins.length - 1,
-				Math.max(0, Math.floor(cursor / selected.samplesPerEntry)),
-			);
-			const entryMin = selected.mins[entryIndex] || 0;
-			const entryMax = selected.maxes[entryIndex] || 0;
-			if (entryMin < min) {
-				min = entryMin;
-			}
-			if (entryMax > max) {
-				max = entryMax;
-			}
-
-			const entryEndSample = Math.min(
-				safeEnd,
-				(entryIndex + 1) * selected.samplesPerEntry,
-			);
-			cursor = entryEndSample > cursor ? entryEndSample : cursor + 1;
-		}
-
-		return { min, max };
-	}
-
-	private getTrackTimelineBuckets(
-		runtime: TrackRuntime,
-		peakCount: number,
-		timelineDuration: number,
-		trackTimelineProjector?: TrackTimelineProjector,
-		startSeconds = 0,
-		durationSeconds?: number,
-	): WaveformPeakBuckets | null {
-		if (!runtime.waveformSummary) {
-			return null;
-		}
-
-		const safePeakCount = Math.max(1, Math.floor(peakCount));
-		const timelineBuckets: WaveformPeakBuckets = {
-			mins: new Float32Array(safePeakCount),
-			maxes: new Float32Array(safePeakCount),
-		};
-
-		const timing = WaveformEngine.normalizeTiming(runtime);
-		const trimStart = timing ? timing.trimStart : 0;
-		const padStart = timing ? timing.padStart : 0;
-		const audioDuration = timing
-			? timing.audioDuration
-			: WaveformEngine.getRuntimeDuration(runtime);
-
-		const safeStartSeconds =
-			Number.isFinite(startSeconds) && startSeconds > 0 ? startSeconds : 0;
-		const safeDurationSeconds =
-			durationSeconds !== undefined && Number.isFinite(durationSeconds)
-				? Math.max(0, durationSeconds)
-				: Math.max(0, timelineDuration - safeStartSeconds);
-
-		if (
-			audioDuration <= 0 ||
-			timelineDuration <= 0 ||
-			safeDurationSeconds <= 0
-		) {
-			return timelineBuckets;
-		}
-
-		if (!trackTimelineProjector) {
-			const windowEnd = safeStartSeconds + safeDurationSeconds;
-			const trackStart = padStart;
-			const trackEnd = padStart + audioDuration;
-			const overlapStart = Math.max(safeStartSeconds, trackStart);
-			const overlapEnd = Math.min(windowEnd, trackEnd);
-
-			if (overlapEnd <= overlapStart) {
-				return timelineBuckets;
-			}
-
-			const secondsPerPeak = safeDurationSeconds / safePeakCount;
-			for (let peakIndex = 0; peakIndex < safePeakCount; peakIndex += 1) {
-				const bucketStart = safeStartSeconds + peakIndex * secondsPerPeak;
-				const bucketEnd =
-					peakIndex === safePeakCount - 1
-						? windowEnd
-						: safeStartSeconds + (peakIndex + 1) * secondsPerPeak;
-				const bucketOverlapStart = Math.max(bucketStart, overlapStart);
-				const bucketOverlapEnd = Math.min(bucketEnd, overlapEnd);
-				if (bucketOverlapEnd <= bucketOverlapStart) {
-					continue;
-				}
-
-				const audioStart = trimStart + (bucketOverlapStart - padStart);
-				const audioDurationSeconds = bucketOverlapEnd - bucketOverlapStart;
-				const buckets = this.querySummary(
-					runtime.waveformSummary,
-					1,
-					audioStart,
-					audioDurationSeconds,
-				);
-				timelineBuckets.mins[peakIndex] = buckets.mins[0];
-				timelineBuckets.maxes[peakIndex] = buckets.maxes[0];
-			}
-
-			return timelineBuckets;
-		}
-
-		let previousTargetIndex: number | null = null;
-		let previousMin = 0;
-		let previousMax = 0;
-		const summary = runtime.waveformSummary;
-		const level = summary.levels[0];
-
-		for (
-			let sourceIndex = 0;
-			sourceIndex < level.mins.length;
-			sourceIndex += 1
-		) {
-			const min = level.mins[sourceIndex];
-			const max = level.maxes[sourceIndex];
-			if (min === 0 && max === 0) {
-				previousTargetIndex = null;
-				previousMin = 0;
-				previousMax = 0;
-				continue;
-			}
-
-			const audioStart =
-				(sourceIndex * level.samplesPerEntry) / summary.sampleRate;
-			if (audioStart < trimStart || audioStart > trimStart + audioDuration) {
-				previousTargetIndex = null;
-				continue;
-			}
-
-			const trackTimelineTime = padStart + (audioStart - trimStart);
-			const mappedTimelineTime = trackTimelineProjector(
-				runtime,
-				trackTimelineTime,
-			);
-
-			if (
-				!Number.isFinite(mappedTimelineTime) ||
-				mappedTimelineTime < safeStartSeconds ||
-				mappedTimelineTime > safeStartSeconds + safeDurationSeconds
-			) {
-				previousTargetIndex = null;
-				continue;
-			}
-
-			const targetIndex = Math.min(
-				safePeakCount - 1,
-				Math.max(
-					0,
-					Math.floor(
-						((mappedTimelineTime - safeStartSeconds) / safeDurationSeconds) *
-							safePeakCount,
-					),
-				),
-			);
-			this.mergeTimelineBucket(timelineBuckets, targetIndex, min, max);
-
-			if (previousTargetIndex !== null && previousTargetIndex !== targetIndex) {
-				const distance = targetIndex - previousTargetIndex;
-				const step = distance > 0 ? 1 : -1;
-				for (
-					let cursor: number = previousTargetIndex + step;
-					cursor !== targetIndex;
-					cursor += step
-				) {
-					const t = Math.abs((cursor - previousTargetIndex) / distance);
-					const interpolatedMin = previousMin + (min - previousMin) * t;
-					const interpolatedMax = previousMax + (max - previousMax) * t;
-					this.mergeTimelineBucket(
-						timelineBuckets,
-						cursor,
-						interpolatedMin,
-						interpolatedMax,
-					);
-				}
-			}
-
-			previousTargetIndex = targetIndex;
-			previousMin = min;
-			previousMax = max;
-		}
-
-		return timelineBuckets;
-	}
-
-	private mergeTimelineBucket(
-		target: WaveformPeakBuckets,
-		index: number,
-		min: number,
-		max: number,
+		views: TrackSwitchViewConfig[],
 	): void {
-		if (
-			index < 0 ||
-			index >= target.mins.length ||
-			!Number.isFinite(min) ||
-			!Number.isFinite(max)
-		) {
-			return;
-		}
-		if (min < target.mins[index]) {
-			target.mins[index] = min;
-		}
-		if (max > target.maxes[index]) {
-			target.maxes[index] = max;
-		}
-	}
-
-	private static normalizeTiming(runtime: TrackRuntime): TrackTiming | null {
-		if (!runtime.waveformSummary && !runtime.buffer) {
-			return null;
-		}
-
-		const rawTiming = runtime.timing;
-		if (!rawTiming) {
-			const summaryDuration = runtime.waveformSummary
-				? runtime.waveformSummary.duration
-				: 0;
-			const bufferDuration = runtime.buffer
-				? Number(runtime.buffer.duration)
-				: 0;
-			const safeDuration =
-				Number.isFinite(summaryDuration) && summaryDuration > 0
-					? summaryDuration
-					: Number.isFinite(bufferDuration) && bufferDuration > 0
-						? bufferDuration
-						: 1;
-			return {
-				trimStart: 0,
-				padStart: 0,
-				audioDuration: safeDuration,
-				effectiveDuration: safeDuration,
-			};
-		}
-
-		const trimStart =
-			Number.isFinite(rawTiming.trimStart) && rawTiming.trimStart > 0
-				? rawTiming.trimStart
-				: 0;
-		const padStart =
-			Number.isFinite(rawTiming.padStart) && rawTiming.padStart > 0
-				? rawTiming.padStart
-				: 0;
-		const audioDuration =
-			Number.isFinite(rawTiming.audioDuration) && rawTiming.audioDuration > 0
-				? rawTiming.audioDuration
-				: 0;
-		const effectiveDuration =
-			Number.isFinite(rawTiming.effectiveDuration) &&
-			rawTiming.effectiveDuration > 0
-				? rawTiming.effectiveDuration
-				: padStart + audioDuration;
-
-		return {
-			trimStart: trimStart,
-			padStart: padStart,
-			audioDuration: audioDuration,
-			effectiveDuration: effectiveDuration,
-		};
-	}
-
-	private static getRuntimeDuration(runtime: TrackRuntime): number {
-		const timing = WaveformEngine.normalizeTiming(runtime);
-		if (timing && timing.effectiveDuration > 0) {
-			return timing.effectiveDuration;
-		}
-		return 1;
-	}
-
-	private static resolveSampleRate(buffer: AudioBuffer): number {
-		const rawSampleRate = Number(buffer.sampleRate);
-		if (Number.isFinite(rawSampleRate) && rawSampleRate > 0) {
-			return rawSampleRate;
-		}
-
-		const rawDuration = Number(buffer.duration);
-		return rawDuration > 0
-			? Math.max(1, buffer.length / rawDuration)
-			: Math.max(1, buffer.length);
-	}
-}
-
-function normalizeTrackIndex(value: unknown): number | null {
-	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-		return null;
-	}
-
-	return Math.floor(value);
-}
-
-function normalizeWaveformSource(
-	value: WaveformSourceIndex | undefined,
-): WaveformSourceIndex {
-	if (value === "audible" || value === undefined) {
-		return "audible";
-	}
-
-	if (Array.isArray(value)) {
-		const normalized: number[] = [];
-		const seen = new Set<number>();
-
-		value.forEach((entry) => {
-			const normalizedEntry = normalizeTrackIndex(entry);
-			if (normalizedEntry === null || seen.has(normalizedEntry)) {
+		const shownIds = new Set<TrackId>();
+		let showsAll = false;
+		views.forEach((view) => {
+			if (view.type !== "waveform") {
 				return;
 			}
-
-			seen.add(normalizedEntry);
-			normalized.push(normalizedEntry);
+			if (view.tracks === undefined || view.tracks === "audible") {
+				showsAll = true;
+			} else {
+				view.tracks.forEach((id) => {
+					shownIds.add(id);
+				});
+			}
 		});
 
-		return normalized;
+		runtimes.forEach((runtime) => {
+			const shown = showsAll || shownIds.has(runtime.definition.id);
+			const sources: Array<TrackLoadedSource | null> = [
+				runtime.baseSource,
+				runtime.syncedSource,
+			];
+			sources.forEach((source) => {
+				if (!source?.buffer) {
+					return;
+				}
+				if (shown) {
+					if (!source.waveformSummary) {
+						source.waveformSummary = this.createSummary(source.buffer);
+					}
+				} else {
+					source.waveformSummary = null;
+					this.compactAverages.delete(source.buffer);
+					this.compactChannels.delete(source.buffer);
+				}
+			});
+			const activeSource =
+				runtime.activeVariant === "synced"
+					? runtime.syncedSource
+					: runtime.baseSource;
+			runtime.waveformSummary = activeSource?.waveformSummary ?? null;
+		});
 	}
 
-	const normalized = normalizeTrackIndex(value);
-	return normalized === null ? "audible" : normalized;
-}
+	/**
+	 * One track's channels averaged, on its own timeline, which starts
+	 * `padStart` before the audio does.
+	 */
+	getTrackSignal(runtime: TrackRuntime): WaveformSignal | null {
+		const { buffer, timing, waveformSummary: summary } = runtime;
+		if (!buffer || !timing || !summary) {
+			return null;
+		}
 
-export function serializeWaveformSource(
-	value: WaveformSourceIndex | undefined,
-): string {
-	const normalized = normalizeWaveformSource(value);
-	return Array.isArray(normalized)
-		? JSON.stringify(normalized)
-		: String(normalized);
+		const span = resolveTrackSampleSpan(buffer, timing);
+		const key = [getSummaryId(summary), span.offset, span.start, span.end].join(
+			":",
+		);
+		const cached = this.trackSignals.get(summary);
+		if (cached?.key === key) {
+			return cached;
+		}
+
+		const range: WaveformRange = { min: 0, max: 0 };
+		const peak = querySummary(summary, span.start, span.end, range)
+			? Math.max(-range.min, range.max)
+			: 0;
+		const gain = 1 / buffer.numberOfChannels;
+		const signal = new SummarySignal(
+			key,
+			buffer.sampleRate,
+			span.start - span.offset,
+			span.end - span.offset,
+			peak,
+			summary,
+			span.offset,
+			Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
+				source: new BufferChannelSource(buffer, channel),
+				gain,
+				offset: span.offset,
+				start: span.start,
+				end: span.end,
+			})),
+		);
+		this.trackSignals.set(summary, signal);
+		return signal;
+	}
+
+	/**
+	 * What `runtimes` sound like together in `lane`, on a shared timeline of
+	 * `duration` seconds: one track's own channels averaged, or the exact mix
+	 * of several, or of a track's panned channels, at their volumes — null with
+	 * nothing to show. A mix is built right away as far as `MIX_BUILD_SYNC_MS`
+	 * allows and in the background after that; until it is built, the
+	 * requester keeps the signal it was last handed, and `onReady` fires
+	 * whenever it is handed a newer one — see `MixRequest`. A mix nobody waits
+	 * for any more is abandoned.
+	 */
+	getSignal(
+		requester: object,
+		runtimes: TrackRuntime[],
+		duration: number,
+		lane: WaveformLane,
+		onReady: () => void,
+	): WaveformSignal | null {
+		const signal = this.resolveSignal(
+			requester,
+			runtimes,
+			duration,
+			lane,
+			onReady,
+		);
+		if (signal) {
+			this.deliveredSignals.set(requester, signal);
+			return signal;
+		}
+		return this.mixRequests.get(requester)?.wanted
+			? (this.deliveredSignals.get(requester) ?? null)
+			: null;
+	}
+
+	private resolveSignal(
+		requester: object,
+		runtimes: TrackRuntime[],
+		duration: number,
+		lane: WaveformLane,
+		onReady: () => void,
+	): WaveformSignal | null {
+		const sources = runtimes.filter(
+			(runtime) => runtime.buffer && runtime.timing && runtime.waveformSummary,
+		);
+		if (sources.length === 0 || (lane === "mono" && sources.length === 1)) {
+			this.cancelMixRequest(requester);
+			return sources.length === 1 ? this.getTrackSignal(sources[0]) : null;
+		}
+
+		const mix = this.describeMix(sources, duration, lane);
+		const cached = this.mixes.get(mix.key);
+		if (cached) {
+			this.cancelMixRequest(requester);
+			this.mixes.delete(mix.key);
+			this.mixes.set(mix.key, cached);
+			return cached;
+		}
+
+		let request = this.mixRequests.get(requester);
+		if (!request) {
+			request = { wanted: null, standIn: null, onReady };
+			this.mixRequests.set(requester, request);
+		}
+		request.onReady = onReady;
+		if (request.wanted?.key !== mix.key) {
+			if (request.wanted?.started) {
+				this.leaveMixJob(request.standIn, requester);
+				request.standIn = request.wanted;
+			} else {
+				this.leaveMixJob(request.wanted, requester);
+			}
+
+			let job = this.mixJobs.get(mix.key);
+			if (!job) {
+				job = {
+					key: mix.key,
+					build: summarize(mix.sampleRate, mix.sampleCount, mix.contributions),
+					finish: (summary) =>
+						new SummarySignal(
+							mix.key,
+							mix.sampleRate,
+							0,
+							mix.sampleCount,
+							summary.peak,
+							summary,
+							0,
+							mix.contributions,
+						),
+					started: false,
+					subscribers: new Set(),
+				};
+				this.mixJobs.set(mix.key, job);
+			}
+			if (request.standIn === job) {
+				request.standIn = null;
+			}
+			job.subscribers.add(requester);
+			request.wanted = job;
+		}
+
+		this.runMixJobs(MIX_BUILD_SYNC_MS);
+		return this.mixes.get(mix.key) ?? null;
+	}
+
+	/**
+	 * The contributions of every track's channels to `lane`. Every buffer is
+	 * decoded at the AudioContext's rate, so a sample of the shared timeline
+	 * is a sample of each track. A lane is scaled to its own peak, so only the
+	 * gains relative to the loudest matter, and they are rounded so a mix is
+	 * rebuilt only for a change that shows.
+	 */
+	private describeMix(
+		sources: TrackRuntime[],
+		duration: number,
+		lane: WaveformLane,
+	): MixDescription {
+		const sampleRate = (sources[0].buffer as AudioBuffer).sampleRate;
+		const sampleCount = Math.ceil(duration * sampleRate);
+		const parts = sources.map((runtime) => {
+			const buffer = runtime.buffer as AudioBuffer;
+			const volume = runtime.state.volume * runtime.loudnessGain;
+			let channels: Array<{ compact: CompactChannel; gain: number }>;
+			if (lane === "mono") {
+				channels = [{ compact: this.getCompactAverage(buffer), gain: volume }];
+			} else {
+				const compacts = this.getCompactChannels(buffer);
+				const matrix = resolvePanMatrix(runtime);
+				const row = lane === "left" ? matrix.left : matrix.right;
+				channels = row.map((coefficient, channel) => ({
+					compact: compacts[channel],
+					gain: volume * coefficient,
+				}));
+			}
+			return {
+				summaryId: getSummaryId(runtime.waveformSummary as WaveformSummary),
+				span: resolveTrackSampleSpan(buffer, runtime.timing as TrackTiming),
+				channels,
+			};
+		});
+
+		let loudest = 0;
+		parts.forEach((part) => {
+			part.channels.forEach((channel) => {
+				loudest = Math.max(loudest, Math.abs(channel.gain));
+			});
+		});
+		const contributions: WaveformContribution[] = [];
+		const keys: string[] = [lane, String(sampleCount)];
+		parts.forEach((part) => {
+			const gains = part.channels.map(
+				(channel) =>
+					Math.round((channel.gain / (loudest > 0 ? loudest : 1)) * 1000) /
+					1000,
+			);
+			keys.push(
+				[
+					part.summaryId,
+					part.span.offset,
+					part.span.start,
+					part.span.end,
+					...gains,
+				].join(":"),
+			);
+			part.channels.forEach((channel, index) => {
+				if (gains[index] !== 0) {
+					contributions.push({
+						source: new CompactSource(channel.compact),
+						gain: gains[index],
+						offset: part.span.offset,
+						start: part.span.start,
+						end: part.span.end,
+					});
+				}
+			});
+		});
+		return {
+			key: keys.join("|"),
+			sampleRate,
+			sampleCount,
+			contributions,
+		};
+	}
+
+	private getCompactAverage(buffer: AudioBuffer): CompactChannel {
+		let compact = this.compactAverages.get(buffer);
+		if (!compact) {
+			// Summarizing a buffer compacts its average along the way.
+			this.createSummary(buffer);
+			compact = this.compactAverages.get(buffer) as CompactChannel;
+		}
+		return compact;
+	}
+
+	/** A two-channel buffer's channels, compacted. */
+	private getCompactChannels(buffer: AudioBuffer): CompactChannel[] {
+		let compacts = this.compactChannels.get(buffer);
+		if (!compacts) {
+			compacts = [0, 1].map((channel) => compactBufferChannel(buffer, channel));
+			this.compactChannels.set(buffer, compacts);
+		}
+		return compacts;
+	}
+
+	private leaveMixJob(job: MixJob | null, requester: object): void {
+		if (!job) {
+			return;
+		}
+
+		job.subscribers.delete(requester);
+		if (job.subscribers.size === 0) {
+			this.mixJobs.delete(job.key);
+		}
+	}
+
+	private cancelMixRequest(requester: object): void {
+		const request = this.mixRequests.get(requester);
+		if (!request) {
+			return;
+		}
+
+		this.mixRequests.delete(requester);
+		this.leaveMixJob(request.wanted, requester);
+		this.leaveMixJob(request.standIn, requester);
+	}
+
+	private scheduleMixJobs(): void {
+		if (this.mixJobScheduled || this.mixJobs.size === 0) {
+			return;
+		}
+
+		this.mixJobScheduled = true;
+		this.mixJobChannel.port2.postMessage(null);
+	}
+
+	/** Builds mixes, oldest first, for up to `budgetMs`. */
+	private runMixJobs(budgetMs: number): void {
+		const sliceEnd = performance.now() + budgetMs;
+		for (const job of this.mixJobs.values()) {
+			job.started = true;
+			let step = job.build.next();
+			while (!step.done && performance.now() < sliceEnd) {
+				step = job.build.next();
+			}
+			if (!step.done) {
+				break;
+			}
+
+			this.mixJobs.delete(job.key);
+			const signal = job.finish(step.value);
+			this.mixes.set(job.key, signal);
+			while (this.mixes.size > MIX_CACHE_LIMIT) {
+				this.mixes.delete(this.mixes.keys().next().value as string);
+			}
+			job.subscribers.forEach((requester) => {
+				const request = this.mixRequests.get(requester);
+				if (!request) {
+					return;
+				}
+				if (request.wanted === job) {
+					// What a stand-in would show is older still.
+					this.leaveMixJob(request.standIn, requester);
+					this.mixRequests.delete(requester);
+				} else {
+					request.standIn = null;
+				}
+				this.deliveredSignals.set(requester, signal);
+				request.onReady();
+			});
+			if (performance.now() >= sliceEnd) {
+				break;
+			}
+		}
+
+		this.scheduleMixJobs();
+	}
 }
 
 function resolveFixedWaveformTrackIndex(

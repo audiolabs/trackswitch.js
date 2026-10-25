@@ -1772,8 +1772,9 @@
 				"height": {
 					"type": "number"
 				},
-				"waveformBarWidth": {
-					"type": "number"
+				"stereo": {
+					"type": "boolean",
+					"description": "Shows the left and the right channel of the mix in two lanes, after each track's pan, instead of one lane of their average. Every track it shows must have two-channel audio."
 				},
 				"maxZoom": {
 					"type": "number"

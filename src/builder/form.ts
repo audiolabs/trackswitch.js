@@ -109,6 +109,7 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	seekMarginRight: 0,
 	solo: false,
 	startOffsetMs: 0,
+	stereo: false,
 	tabView: false,
 	tempoSmoothingSeconds: 5,
 	thickness: 2,
@@ -119,7 +120,6 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	velocityOpacity: false,
 	volume: 1,
 	volumeControl: false,
-	waveformBarWidth: 1,
 };
 
 function titleFor(key: string): string {
@@ -166,15 +166,16 @@ function defaultFieldValue(
 ): unknown {
 	const node = resolved(context, schema);
 	if (
-		key === "height" &&
+		(key === "height" || key === "maxZoom") &&
 		(context.target.kind === "view" || context.target.kind === "view-draft")
 	) {
 		const viewType =
 			context.target.viewType ??
 			context.project.views.find((entry) => entry.id === context.target.id)
 				?.config.type;
-		if (viewType === "pianoRoll") return 180;
-		if (viewType === "warpingMatrix") return "";
+		if (key === "maxZoom" && viewType === "waveform") return 0;
+		if (key === "height" && viewType === "pianoRoll") return 180;
+		if (key === "height" && viewType === "warpingMatrix") return "";
 	}
 	const describedDefault = node.description?.match(/^Default: (.+)$/)?.[1];
 	if (describedDefault !== undefined && schemaType(context, node) === "string")

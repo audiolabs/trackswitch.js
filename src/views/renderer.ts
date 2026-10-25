@@ -23,9 +23,7 @@ import type {
 	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchUiState,
 	TrackSwitchViewConfig,
-	WaveformPlaybackFollowMode,
 	WaveformSourceIndex,
-	WaveformTimeAxis,
 } from "../types";
 import * as viewRendererCore from "./layout";
 import { renderConfiguredViews } from "./layout";
@@ -39,6 +37,10 @@ import type {
 } from "./piano-roll";
 import * as viewRendererPianoRoll from "./piano-roll";
 import * as viewRendererSeek from "./surface";
+import type {
+	WaveformSeekSurfaceMetadata,
+	WaveformVisibleTile,
+} from "./waveform";
 import * as viewRendererWaveform from "./waveform";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
@@ -139,67 +141,6 @@ export interface WarpingMatrixRenderContext {
 	currentScoreBpm: number | null;
 	columnOrder: string[];
 	trackSeries: WarpingMatrixTrackSeries[];
-}
-
-interface WaveformSeekSurfaceMetadata {
-	wrapper: HTMLElement;
-	scrollContainer: HTMLElement;
-	overlay: HTMLElement;
-	surface: HTMLElement;
-	tileLayer: HTMLElement;
-	endedRegion: HTMLElement;
-	seekWrap: HTMLElement;
-	waveformSource: WaveformSourceIndex;
-	playbackFollowMode: WaveformPlaybackFollowMode;
-	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
-	trailingPadPx?: number;
-	timeAxis: WaveformTimeAxis;
-	drawRange: viewRendererSeek.SeekSurfaceRangeRenderer | null;
-	originalHeight: number;
-	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
-	configuredHeight: number;
-	barWidth: number;
-	/** `maxZoom` and `defaultZoom` as configured, in the reference timeline's unit. */
-	maxZoomValue: number;
-	defaultZoomValue: number | null;
-	/** The same two in seconds, resolved once the timeline readouts are known. */
-	maxZoomSeconds: number;
-	defaultZoomSeconds: number | null;
-	zoomUnitsResolved: boolean;
-	/** Whether `defaultZoom` has opened this surface; a user zoom is never stomped. */
-	defaultZoomApplied: boolean;
-	baseWidth: number;
-	zoom: number;
-	timingNode: HTMLElement | null;
-	zoomNode: HTMLElement;
-	zoomMinimapNode: HTMLElement;
-	zoomCanvas: HTMLCanvasElement;
-	zoomEndedRegion: HTMLElement;
-	zoomViewportNode: HTMLElement;
-	zoomCanvasLastDrawKey: string | null;
-	waveformColor: string | null;
-	tiles: Map<
-		number,
-		{
-			canvas: HTMLCanvasElement;
-			lastDrawKey: string | null;
-		}
-	>;
-	normalizationPeak: number;
-	normalizationCacheKey: string | null;
-	tilePeakCache: Map<
-		string,
-		{
-			mins: Float32Array;
-			maxes: Float32Array;
-		}
-	>;
-	tilePeakCacheOrder: string[];
-	alignedPlayhead: boolean;
-	refHooksCanvas: HTMLCanvasElement | null;
-	showAlignmentPoints: boolean;
-	alignmentPointsLastW: number;
-	alignmentPointsLastH: number;
 }
 
 interface LatestWaveformRenderInput {
@@ -954,6 +895,15 @@ export class ViewRenderer {
 		viewRendererMarkers.trapMarkerNavigationDialogFocus(this.root, shiftKey);
 	}
 
+	public findStereoWaveformChannelMismatch(
+		runtimes: TrackRuntime[],
+	): { runtime: TrackRuntime; channels: number } | null {
+		return viewRendererWaveform.findStereoWaveformChannelMismatch(
+			this,
+			runtimes,
+		);
+	}
+
 	public wrapWaveformCanvases(): void {
 		viewRendererWaveform.wrapWaveformCanvases(this);
 	}
@@ -1222,21 +1172,7 @@ export class ViewRenderer {
 
 	public forEachVisibleWaveformTile(
 		surfaceMetadata: WaveformSeekSurfaceMetadata,
-		callback: (tile: {
-			tileIndex: number;
-			tileStartPx: number;
-			tileCssWidth: number;
-			tileCssHeight: number;
-			surfaceWidth: number;
-			timeWidth: number;
-			canvas: HTMLCanvasElement;
-			renderBarWidth: number;
-			isNew: boolean;
-			record: {
-				canvas: HTMLCanvasElement;
-				lastDrawKey: string | null;
-			};
-		}) => void,
+		callback: (tile: WaveformVisibleTile) => void,
 	): void {
 		viewRendererWaveform.forEachVisibleWaveformTile(surfaceMetadata, callback);
 	}
@@ -1247,44 +1183,6 @@ export class ViewRenderer {
 
 	public refreshVisibleWaveformTilesFromLatestInput(): void {
 		viewRendererWaveform.refreshVisibleWaveformTilesFromLatestInput(this);
-	}
-
-	public computeNormalizationPeak(
-		waveformEngine: WaveformEngine,
-		sourceRuntimes: TrackRuntime[],
-		renderBarWidth: number,
-		duration: number,
-		baseProjector: TrackTimelineProjector | undefined,
-		baseWidth: number,
-	): number {
-		return viewRendererWaveform.computeNormalizationPeak(
-			waveformEngine,
-			sourceRuntimes,
-			renderBarWidth,
-			duration,
-			baseProjector,
-			baseWidth,
-		);
-	}
-
-	public buildWaveformNormalizationCacheKey(
-		surfaceMetadata: WaveformSeekSurfaceMetadata,
-		runtimes: TrackRuntime[],
-		sourceRuntimes: TrackRuntime[],
-		fullDuration: number,
-		renderBarWidth: number,
-		useLocalAxis: boolean,
-		hasTimelineProjector: boolean,
-	): string {
-		return viewRendererWaveform.buildWaveformNormalizationCacheKey(
-			surfaceMetadata,
-			runtimes,
-			sourceRuntimes,
-			fullDuration,
-			renderBarWidth,
-			useLocalAxis,
-			hasTimelineProjector,
-		);
 	}
 
 	public findWaveformSurface(
@@ -1401,8 +1299,8 @@ export class ViewRenderer {
 		);
 	}
 
-	drawDummyWaveforms(waveformEngine: WaveformEngine): void {
-		viewRendererWaveform.drawDummyWaveforms(this, waveformEngine);
+	drawDummyWaveforms(): void {
+		viewRendererWaveform.drawDummyWaveforms(this);
 	}
 
 	renderWaveforms(

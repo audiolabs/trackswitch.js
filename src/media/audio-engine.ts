@@ -80,7 +80,10 @@ const RESUME_WAIT_TIMEOUT_MS = 250;
  * hard-left position silences the right channel instead of summing it into
  * the left one (which is what StereoPannerNode does for stereo sources).
  */
-function computeBalanceGains(pan: number): { gainL: number; gainR: number } {
+export function computeBalanceGains(pan: number): {
+	gainL: number;
+	gainR: number;
+} {
 	const x = clampPan(pan);
 	return {
 		gainL: x <= 0 ? 1 : 1 - x,

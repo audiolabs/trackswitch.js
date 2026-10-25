@@ -261,6 +261,11 @@ async function applyAudioPreservingConfig(
 		controller.navigationBar?.globalPanControl ?? "balance",
 	);
 	controller.media = config.media;
+	controller.views = config.views;
+	controller.waveformEngine.summarizeShownTracks(
+		controller.runtimes,
+		config.views,
+	);
 	controller.markersConfig = config.markers;
 	const trackGroups = buildTrackGroups(config.views);
 	controller.trackGroups = trackGroups;
@@ -359,25 +364,10 @@ async function updateConfigNow(
 		stagedRuntimes = nextRuntimes;
 		await controller.audioEngine.loadTracks(nextRuntimes);
 
-		nextRuntimes.forEach((runtime: TrackRuntime) => {
-			if (runtime.baseSource.buffer) {
-				runtime.baseSource.waveformSummary =
-					controller.waveformEngine.createSummary(runtime.baseSource.buffer);
-			}
-
-			if (runtime.syncedSource?.buffer) {
-				runtime.syncedSource.waveformSummary =
-					controller.waveformEngine.createSummary(runtime.syncedSource.buffer);
-			}
-
-			const activeSource =
-				runtime.activeVariant === "synced"
-					? runtime.syncedSource
-					: runtime.baseSource;
-			runtime.waveformSummary = activeSource
-				? activeSource.waveformSummary
-				: null;
-		});
+		controller.waveformEngine.summarizeShownTracks(
+			nextRuntimes,
+			nextConfig.views,
+		);
 
 		const erroredTracks = nextRuntimes.filter((runtime) => runtime.errored);
 		if (erroredTracks.length > 0) {
@@ -460,6 +450,7 @@ async function updateConfigNow(
 
 		controller.runtimes = nextRuntimes;
 		controller.media = nextConfig.media;
+		controller.views = nextConfig.views;
 		controller.presets = nextConfig.presets;
 		controller.navigationBar =
 			nextConfig.views.find((view) => view.type === "navigationBar") ?? null;
