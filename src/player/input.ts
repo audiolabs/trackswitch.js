@@ -424,7 +424,12 @@ export function onMarkerNavigationInput(
 	event: ControllerPointerEvent,
 ): void {
 	const target = eventTargetAsElement(event.target ?? null);
-	ctx.renderer.handleMarkerNavigationInteraction(event.type, target);
+	if (ctx.renderer.handleMarkerNavigationInteraction(event.type, target)) {
+		submitMarkerNavigationDialog(
+			ctx,
+			ctx.renderer.readMarkerNavigationDialogValues(),
+		);
+	}
 }
 
 export function onMarkerNavigationSubmit(
@@ -452,6 +457,10 @@ export function onMarkerNavigationKeydown(
 	) {
 		event.preventDefault();
 		event.stopPropagation();
+		const values = ctx.renderer.readMarkerNavigationDialogValues();
+		if (event.key === "Enter" && values.jumpMarker) {
+			submitMarkerNavigationDialog(ctx, values);
+		}
 		return;
 	}
 	if (event.key === "Escape") {
@@ -1910,13 +1919,9 @@ export class InputBinder {
 		this.addDelegatedListener("click", ".marker-navigation-input", (event) => {
 			this.controller.onMarkerNavigationInput(event);
 		});
-		this.addDelegatedListener(
-			"click",
-			".marker-navigation-option, .marker-navigation-options-more",
-			(event) => {
-				this.controller.onMarkerNavigationInput(event);
-			},
-		);
+		this.addDelegatedListener("click", ".marker-navigation-option", (event) => {
+			this.controller.onMarkerNavigationInput(event);
+		});
 		this.addDelegatedListener(
 			"submit",
 			".marker-navigation-dialog",

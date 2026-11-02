@@ -25,7 +25,7 @@
 /* On mobile the margin that sets the fullscreen overlay off the screen
    edges just wastes space the device can't use for anything else — fill
    the viewport completely instead. */
-@media (max-width: 700px) {
+@media (max-width: 600px) {
 	.trackswitch.trackswitch.ts-fullscreen {
 		inset: 0;
 	}

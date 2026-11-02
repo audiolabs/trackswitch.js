@@ -884,11 +884,16 @@ export async function buildAlignment(
 	);
 
 	const referenceProfile = profiles.get(referenceTimeline);
+	// Only a score's extent is widened: its last printed measure undershoots the
+	// anchors. A trimmed audio file ends where its trim does, however far the
+	// alignment keeps going.
 	const referenceExtent = referenceProfile
-		? widenExtentToAnchors(
-				referenceProfile.extent,
-				anchorExtent(anchorsForProjection, referenceTimeline),
-			)
+		? referenceProfile.nativeUnit === "measures"
+			? widenExtentToAnchors(
+					referenceProfile.extent,
+					anchorExtent(anchorsForProjection, referenceTimeline),
+				)
+			: referenceProfile.extent
 		: anchorExtent(anchorsForProjection, referenceTimeline);
 	if (!referenceExtent) {
 		throw new Error(

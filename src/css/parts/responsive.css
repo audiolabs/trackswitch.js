@@ -1,9 +1,9 @@
 /* Main-control layout adapts to container width; touch sizing adapts to viewport width. */
 
-/* Below 700px the seek bar always claims its own full-width row, whatever
+/* Below 600px the seek bar always claims its own full-width row, whatever
    controls are configured around it - the buttons/timer still wrap normally
    via the base flex layout. */
-@container ts-main-control (max-width: 700px) {
+@container ts-main-control (max-width: 600px) {
 	.trackswitch .main-control .seekwrap {
 		flex: 0 0 100%;
 		min-width: 0;
@@ -16,7 +16,7 @@
    at most two groups - the first pinned left, the second pinned right. A group
    that ends up alone on its row (last of its kind, or followed by the timer or
    seek bar, which own a full row) is centered instead. */
-@container ts-main-control (max-width: 700px) {
+@container ts-main-control (max-width: 600px) {
 	.trackswitch
 		.main-control
 		ul.control
@@ -109,7 +109,7 @@
 	}
 }
 
-@container ts-main-control (max-width: 700px) {
+@container ts-main-control (max-width: 600px) {
 	.trackswitch
 		.main-control
 		.control
@@ -140,7 +140,7 @@
 	}
 }
 
-@media (max-width: 700px) {
+@media (max-width: 600px) {
 	.trackswitch.trackswitch {
 		--ts-main-control-icon-size: 18px;
 		--ts-main-control-playback-gap: 16px;
@@ -287,19 +287,19 @@
 	}
 }
 
-@media (max-width: 500px) {
+@media (max-width: 600px) {
 	.trackswitch.trackswitch {
 		--ts-main-control-playback-gap: 20px;
 	}
 }
 
-@media (max-width: 700px) {
+@media (max-width: 600px) {
 	.trackswitch li.track {
 		min-height: 40px;
 	}
 }
 
-@container ts-track-row (max-width: 700px) {
+@container ts-track-row (max-width: 600px) {
 	.trackswitch li.track .track-mix-controls {
 		gap: 10px;
 		padding-left: 10px;
@@ -310,7 +310,7 @@
 	}
 }
 
-@media (max-width: 700px) {
+@media (max-width: 600px) {
 	/* Rows with a configured rowHeight keep their derived sizes: the touch
 	   enlargement would undo the compaction the author asked for. */
 	.trackswitch li.track:not([data-row-height]) .track-volume-icon {
@@ -323,7 +323,7 @@
 	}
 }
 
-@container ts-track-row (max-width: 500px) {
+@container ts-track-row (max-width: 600px) {
 	.trackswitch li.track .track-mix-controls {
 		gap: 8px;
 		padding-left: 8px;
@@ -339,7 +339,7 @@
 	}
 }
 
-@container ts-waveform (max-width: 560px) {
+@container ts-waveform (max-width: 600px) {
 	.trackswitch .waveform-wrap .waveform-timing {
 		right: 6px;
 		padding: 3px 5px;
@@ -366,14 +366,14 @@
 	}
 }
 
-@container ts-seekable (max-width: 560px) {
+@container ts-seekable (max-width: 600px) {
 	.trackswitch .seekable-img-wrap .seekwrap {
 		--ts-seek-marker-hit-width: 14px;
 	}
 }
 
 /* Tablet/mobile adjustments */
-@media (max-width: 700px) {
+@media (max-width: 600px) {
 	.trackswitch .overlay-activation #overlayinfo {
 		font-size: 8pt;
 		top: calc(50% + 42px);
@@ -434,7 +434,7 @@
 	}
 }
 
-@media (max-width: 500px) {
+@media (max-width: 600px) {
 	.trackswitch .warping-plot-host .warping-plot-axis text {
 		font-size: 18px;
 	}

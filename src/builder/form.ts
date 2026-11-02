@@ -31,7 +31,7 @@ function hasOwn(target: object, key: PropertyKey): boolean {
 	return Object.keys(target).includes(String(key));
 }
 
-export function placeNavigationControl<T extends string>(
+function placeNavigationControl<T extends string>(
 	controls: readonly T[],
 	control: T,
 	targetIndex: number,
@@ -42,7 +42,7 @@ export function placeNavigationControl<T extends string>(
 	return next;
 }
 
-export function removeNavigationControl<T extends string>(
+function removeNavigationControl<T extends string>(
 	controls: readonly T[],
 	control: T,
 ): T[] {

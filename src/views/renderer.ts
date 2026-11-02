@@ -863,8 +863,8 @@ export class ViewRenderer {
 	public handleMarkerNavigationInteraction(
 		eventType: string,
 		target: Element | null,
-	): void {
-		viewRendererMarkers.handleMarkerNavigationInteraction(
+	): boolean {
+		return viewRendererMarkers.handleMarkerNavigationInteraction(
 			this.root,
 			eventType,
 			target,

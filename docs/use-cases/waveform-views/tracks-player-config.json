@@ -29,11 +29,7 @@
 	"views": [
 		{
 			"type": "navigationBar",
-			"controls": [
-				"playback",
-				"seekBar",
-				"timer"
-			]
+			"controls": ["playback", "seekBar", "timer"]
 		},
 		{
 			"type": "text",
@@ -56,9 +52,7 @@
 		},
 		{
 			"type": "waveform",
-			"tracks": [
-				"bass"
-			],
+			"tracks": ["bass"],
 			"height": 70
 		},
 		{
@@ -70,19 +64,12 @@
 		},
 		{
 			"type": "waveform",
-			"tracks": [
-				"drums"
-			],
+			"tracks": ["drums"],
 			"height": 70
 		},
 		{
 			"type": "trackList",
-			"tracks": [
-				"violins",
-				"synths",
-				"bass",
-				"drums"
-			],
+			"tracks": ["violins", "synths", "bass", "drums"],
 			"trackVolumeControls": true
 		}
 	]

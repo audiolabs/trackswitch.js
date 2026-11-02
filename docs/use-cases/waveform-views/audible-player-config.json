@@ -29,12 +29,7 @@
 	"views": [
 		{
 			"type": "navigationBar",
-			"controls": [
-				"playback",
-				"globalVolume",
-				"seekBar",
-				"timer"
-			]
+			"controls": ["playback", "globalVolume", "seekBar", "timer"]
 		},
 		{
 			"type": "waveform",
@@ -42,12 +37,7 @@
 		},
 		{
 			"type": "trackList",
-			"tracks": [
-				"violins",
-				"synths",
-				"bass",
-				"drums"
-			],
+			"tracks": ["violins", "synths", "bass", "drums"],
 			"trackVolumeControls": true
 		}
 	]

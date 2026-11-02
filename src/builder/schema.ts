@@ -17,12 +17,7 @@ export interface JsonSchema {
 	definitions?: Record<string, JsonSchema>;
 }
 
-export const BUILDER_MEDIA_TYPES = [
-	"audio",
-	"midi",
-	"musicxml",
-	"image",
-] as const;
+const BUILDER_MEDIA_TYPES = ["audio", "midi", "musicxml", "image"] as const;
 export const BUILDER_VIEW_TYPES = [
 	"image",
 	"perTrackImage",

@@ -444,7 +444,7 @@ function buildMarkerNavigationDialogHtml(): string {
 			escapeHtml(label) +
 			'" aria-autocomplete="list" aria-expanded="false" aria-controls="' +
 			listboxId +
-			'" autocomplete="off" placeholder="Search by marker sequence, ID, or label">' +
+			'" autocomplete="off" placeholder="Search by marker ID or label">' +
 			'<div class="marker-navigation-options" id="' +
 			listboxId +
 			'" role="listbox" popover="manual" aria-label="' +
@@ -466,7 +466,6 @@ function buildMarkerNavigationDialogHtml(): string {
 		) +
 		"</div>" +
 		'<p class="marker-navigation-error" role="alert" aria-live="assertive"></p>' +
-		'<div class="marker-navigation-dialog-actions"><button type="submit" class="marker-navigation-ok">Go!</button></div>' +
 		"</form></div>"
 	);
 }

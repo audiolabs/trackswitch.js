@@ -9,16 +9,11 @@ import type {
 	TrackSwitchViewConfig,
 } from "../types";
 
-export const MAX_PROJECT_BYTES = 500 * 1024 * 1024;
-export const CONFIG_SCHEMA_URL =
+const MAX_PROJECT_BYTES = 500 * 1024 * 1024;
+const CONFIG_SCHEMA_URL =
 	"https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json";
 
-export type BuilderResourceKind =
-	| "audio"
-	| "midi"
-	| "musicxml"
-	| "image"
-	| "csv";
+type BuilderResourceKind = "audio" | "midi" | "musicxml" | "image" | "csv";
 export type ConfigSourceMode = "preview" | "export";
 
 export interface BuilderResource {
@@ -31,7 +26,7 @@ export interface BuilderResource {
 	csvError?: string;
 }
 
-export interface BuilderMedia {
+interface BuilderMedia {
 	resourceId: string;
 	config: MediaEntryConfig;
 	synchronizedResourceId?: string;
@@ -42,12 +37,12 @@ export interface BuilderView {
 	config: TrackSwitchViewConfig;
 }
 
-export interface BuilderAlignment {
+interface BuilderAlignment {
 	resourceId: string;
 	config: Omit<AlignmentConfig, "src">;
 }
 
-export interface BuilderMarker {
+interface BuilderMarker {
 	resourceId: string;
 	config: Omit<MarkerSequenceSourceConfig, "src">;
 }
@@ -96,7 +91,7 @@ const IMAGE_EXTENSIONS = new Set([
 	"webp",
 ]);
 
-export function classifyFileName(name: string): BuilderResourceKind | null {
+function classifyFileName(name: string): BuilderResourceKind | null {
 	const extension = name.toLowerCase().split(".").pop() ?? "";
 	if (AUDIO_EXTENSIONS.has(extension)) return "audio";
 	if (extension === "mid" || extension === "midi") return "midi";

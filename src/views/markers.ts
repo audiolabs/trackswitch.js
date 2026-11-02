@@ -17,7 +17,7 @@ export type {
 	MarkerNavigationSetOption,
 } from "../player/markers";
 
-export interface MarkerPlacement {
+interface MarkerPlacement {
 	playerTime: number;
 	surfaceTime: number;
 	duration: number;
@@ -85,7 +85,7 @@ function resolvePlacement(
 	return { playerTime, surfaceTime, duration: timeline.duration };
 }
 
-export function createMarkerAriaLabel(
+function createMarkerAriaLabel(
 	marker: Marker,
 	placement: MarkerPlacement,
 	formatSurfaceValue: (surfaceTime: number) => string,
@@ -359,8 +359,6 @@ function getDialogInput(
 	return input instanceof HTMLInputElement ? input : null;
 }
 
-const MARKER_NAVIGATION_INITIAL_RESULT_LIMIT = 10;
-const MARKER_NAVIGATION_RESULT_INCREMENT = 10;
 const markerNavigationSetsByRoot = new WeakMap<
 	HTMLElement,
 	MarkerNavigationSetOption[]
@@ -576,9 +574,7 @@ function closeOtherMarkerComboboxes(
 
 function getMarkerComboboxOptions(listbox: HTMLElement): HTMLElement[] {
 	return Array.from(
-		listbox.querySelectorAll<HTMLElement>(
-			".marker-navigation-option, .marker-navigation-options-more",
-		),
+		listbox.querySelectorAll<HTMLElement>(".marker-navigation-option"),
 	);
 }
 
@@ -618,10 +614,7 @@ function renderMarkerComboboxOptions(
 	}
 	closeOtherMarkerComboboxes(root, input);
 	const matchingMarkers = getMatchingMarkers(root, input);
-	const resultLimit = Number(
-		input.dataset.resultLimit ?? MARKER_NAVIGATION_INITIAL_RESULT_LIMIT,
-	);
-	const markers = matchingMarkers.slice(0, resultLimit);
+	const markers = matchingMarkers;
 	listbox.replaceChildren();
 	if (markers.length === 0) {
 		const empty = listbox.ownerDocument.createElement("div");
@@ -657,22 +650,6 @@ function renderMarkerComboboxOptions(
 			option.append(heading, metadata);
 			listbox.appendChild(option);
 		});
-		if (markers.length < matchingMarkers.length) {
-			const remainingCount = matchingMarkers.length - markers.length;
-			const nextCount = Math.min(
-				MARKER_NAVIGATION_RESULT_INCREMENT,
-				remainingCount,
-			);
-			const more = listbox.ownerDocument.createElement("div");
-			more.id = `${listbox.id}-option-${markers.length}`;
-			more.className = "marker-navigation-options-more";
-			more.setAttribute("role", "option");
-			more.setAttribute("aria-selected", "false");
-			more.setAttribute("aria-label", `Show ${nextCount} more markers`);
-			more.dataset.loadMore = "true";
-			more.textContent = "…";
-			listbox.appendChild(more);
-		}
 	}
 	input.setAttribute("aria-expanded", "true");
 	const selectedId = input.dataset.selectedMarkerId;
@@ -686,19 +663,6 @@ function renderMarkerComboboxOptions(
 		input,
 		preferredActiveIndex ?? (selectedIndex >= 0 ? selectedIndex : 0),
 	);
-}
-
-function expandMarkerCombobox(
-	root: HTMLElement,
-	input: HTMLInputElement,
-): void {
-	const previousLimit = Number(
-		input.dataset.resultLimit ?? MARKER_NAVIGATION_INITIAL_RESULT_LIMIT,
-	);
-	input.dataset.resultLimit = String(
-		previousLimit + MARKER_NAVIGATION_RESULT_INCREMENT,
-	);
-	renderMarkerComboboxOptions(root, input, previousLimit);
 }
 
 function selectMarkerOption(
@@ -725,17 +689,7 @@ export function handleMarkerNavigationInteraction(
 	root: HTMLElement,
 	eventType: string,
 	target: Element | null,
-): void {
-	const more = target?.closest(".marker-navigation-options-more");
-	if (more) {
-		const input = more
-			.closest(".marker-navigation-combobox")
-			?.querySelector(".marker-navigation-input");
-		if (input instanceof HTMLInputElement) {
-			expandMarkerCombobox(root, input);
-		}
-		return;
-	}
+): boolean {
 	const option = target?.closest(".marker-navigation-option");
 	if (option) {
 		const input = option
@@ -747,39 +701,35 @@ export function handleMarkerNavigationInteraction(
 			option.dataset.markerSequenceId &&
 			option.dataset.markerId
 		) {
-			selectMarkerOption(
+			return selectMarkerOption(
 				root,
 				input,
 				option.dataset.markerSequenceId,
 				option.dataset.markerId,
 			);
-			if (getDeepActiveElement(root) !== input) {
-				input.dataset.skipNextFocusOpen = "true";
-				input.focus();
-			}
 		}
-		return;
+		return false;
 	}
 	if (!(target instanceof HTMLInputElement)) {
-		return;
+		return false;
 	}
 	if (eventType === "focusin" && target.dataset.skipNextFocusOpen) {
 		delete target.dataset.skipNextFocusOpen;
-		return;
+		return false;
 	}
 	if (
 		eventType === "click" &&
 		target.getAttribute("aria-expanded") === "true"
 	) {
-		return;
+		return false;
 	}
 	if (eventType === "input") {
 		delete target.dataset.selectedMarkerId;
 		delete target.dataset.selectedMarkerSequenceId;
-		target.dataset.resultLimit = String(MARKER_NAVIGATION_INITIAL_RESULT_LIMIT);
 		setMarkerNavigationDialogError(root, "");
 	}
 	renderMarkerComboboxOptions(root, target);
+	return false;
 }
 
 export function handleMarkerNavigationComboboxKeydown(
@@ -824,9 +774,7 @@ export function handleMarkerNavigationComboboxKeydown(
 	if (key === "Enter") {
 		const activeIndex = Number(target.dataset.activeIndex ?? "0");
 		const activeOption = options[activeIndex];
-		if (activeOption?.dataset.loadMore) {
-			expandMarkerCombobox(root, target);
-		} else if (
+		if (
 			activeOption?.dataset.markerSequenceId &&
 			activeOption.dataset.markerId
 		) {
@@ -858,9 +806,6 @@ function resetMarkerNavigationDialogComboboxes(root: HTMLElement): void {
 			input.value = "";
 			delete input.dataset.selectedMarkerId;
 			delete input.dataset.selectedMarkerSequenceId;
-			input.dataset.resultLimit = String(
-				MARKER_NAVIGATION_INITIAL_RESULT_LIMIT,
-			);
 			closeMarkerCombobox(input);
 		});
 }

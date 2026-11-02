@@ -38,7 +38,7 @@ export const levelPowers = Float64Array.from(
 );
 
 /** The level nearest a power. */
-export function powerToLevel(power: number): number {
+function powerToLevel(power: number): number {
 	if (power <= 0) {
 		return 0;
 	}
@@ -64,7 +64,7 @@ export function toFrequencyScale(
 }
 
 /** The frequency at `value` on `scale`; see `toFrequencyScale`. */
-export function fromFrequencyScale(
+function fromFrequencyScale(
 	scale: SpectrogramFrequencyScale,
 	value: number,
 ): number {

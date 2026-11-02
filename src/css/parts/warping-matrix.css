@@ -241,7 +241,7 @@
 	display: flex;
 }
 
-@media (max-width: 500px) {
+@media (max-width: 600px) {
 	.trackswitch .warping-matrix-host {
 		flex-direction: column;
 		gap: 10px;

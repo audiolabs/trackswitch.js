@@ -11,7 +11,6 @@
 	position: relative;
 	container-type: inline-size;
 	container-name: ts-player;
-	margin: 10px;
 	overflow: hidden;
 	color: var(--ts-color-text-primary);
 	font-family: var(--ts-font-ui);

@@ -447,10 +447,17 @@ function drawMarkerLoupe(
 	const contentStart = Math.max(0, windowStart);
 	const contentEnd = Math.min(timeline.duration, windowStart + span);
 	loupe.canvas.style.marginLeft = `${((contentStart - windowStart) / span) * loupe.width}px`;
+	const canvasWidth = Math.max(
+		1,
+		((contentEnd - contentStart) / span) * loupe.width,
+	);
+	// The canvas buffer is scaled by the device pixel ratio; pin its display size.
+	loupe.canvas.style.width = `${Math.round(canvasWidth)}px`;
+	loupe.canvas.style.height = `${loupe.height}px`;
 	controller.renderer.drawSeekSurfaceRange(
 		adjust.seekWrap,
 		loupe.canvas,
-		Math.max(1, ((contentEnd - contentStart) / span) * loupe.width),
+		canvasWidth,
 		loupe.height,
 		contentStart / timeline.duration,
 		(contentEnd - contentStart) / timeline.duration,
