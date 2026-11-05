@@ -454,13 +454,22 @@ function updatePianoRollTooltip(
 	const viewportX = event.clientX - viewport.left;
 	const y = event.clientY - viewport.top;
 	const x = viewportX + surface.scrollContainer.scrollLeft;
-	const note = findPianoRollNoteAt(surface, geometry, x, y);
-	if (!note) {
+	const hits = findPianoRollNotesAt(surface, geometry, x, y);
+	if (hits.length === 0) {
 		hidePianoRollTooltip(surface);
 		return;
 	}
 
-	tooltip.replaceChildren(...buildPianoRollTooltipContent(surface, note));
+	// Notes of different channels can overlap under the cursor; list them all,
+	// topmost first, each as its own block.
+	tooltip.replaceChildren(
+		...hits.map((note) => {
+			const block = document.createElement("div");
+			block.className = "piano-roll-note-tooltip-note";
+			block.append(...buildPianoRollTooltipContent(surface, note));
+			return block;
+		}),
+	);
 	tooltip.style.display = "block";
 	positionPianoRollTooltip(surface, tooltip, viewportX, y);
 }
@@ -468,18 +477,18 @@ function updatePianoRollTooltip(
 /**
  * The note event drawn under a point of the surface, tested against the very
  * rectangle the drawing put there so that the readout can never point at
- * something the eye cannot see. Later notes paint over earlier ones, so the last
- * match is the one on top.
+ * something the eye cannot see. Later notes paint over earlier ones, so the
+ * result is ordered topmost first.
  */
-function findPianoRollNoteAt(
+function findPianoRollNotesAt(
 	surface: PianoRollSeekSurfaceMetadata,
 	geometry: NoteGeometry,
 	x: number,
 	y: number,
-): MidiNoteEvent | null {
+): MidiNoteEvent[] {
 	const time = x / geometry.pixelsPerSecond;
 	const notes = surface.notes;
-	let found: MidiNoteEvent | null = null;
+	const found: MidiNoteEvent[] = [];
 	for (
 		let index = findFirstVisibleNoteIndex(
 			notes,
@@ -508,11 +517,11 @@ function findPianoRollNoteAt(
 			y >= top &&
 			y <= top + geometry.noteHeight
 		) {
-			found = note;
+			found.push(note);
 		}
 	}
 
-	return found;
+	return found.reverse();
 }
 
 function buildPianoRollTooltipContent(
@@ -1916,33 +1925,6 @@ export function updatePianoRollChannelVisibility(
 	});
 
 	ctx.schedulePianoRollNoteRefresh();
-}
-
-/**
- * The colours a track carries in the piano roll, for the views that repeat
- * the channel code outside it — one per channel paired with the track, in
- * ascending channel order. Null when no roll colours a channel paired with
- * this track (no pairing, or `colorPerChannel` is off).
- */
-export function resolvePianoRollTrackChannelColors(
-	ctx: ViewRenderer,
-	trackId: string,
-): string[] | null {
-	for (const surface of ctx.pianoRollSeekSurfaces) {
-		const channels = [...surface.channelTrackIds]
-			.filter(([, pairedTrackIds]) => pairedTrackIds.includes(trackId))
-			.map(([channel]) => channel)
-			.sort((a, b) => a - b)
-			.filter((channel) => surface.channelPaletteIndex.has(channel));
-
-		if (channels.length > 0) {
-			return channels.map(
-				(channel) => resolvePianoRollChannelColors(surface, channel).velocity,
-			);
-		}
-	}
-
-	return null;
 }
 
 export function schedulePianoRollNoteRefresh(ctx: ViewRenderer): void {

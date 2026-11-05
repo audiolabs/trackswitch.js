@@ -55,6 +55,30 @@ interface BuilderAssetUrls {
 	license: string;
 	thirdPartyNotices: string;
 	alignmentWorkerUrl: string;
+	sampleBaseUrl: string;
+}
+
+const SAMPLE_DRAG_TYPE = "application/x-trackswitch-sample";
+const SAMPLE_SYNCHRONIZED_FILE = "Schubert_D911-03_SC06_syncronized.wav";
+const SAMPLE_FILES = {
+	winterreise: [
+		"alignment/Schubert_D911-03_HU33.wav",
+		"alignment/Schubert_D911-03_SC06.wav",
+		`alignment/${SAMPLE_SYNCHRONIZED_FILE}`,
+		"alignment/Schubert_D911-03.xml",
+		"alignment/alignment.csv",
+	],
+	stems: [
+		"multitracks/violins.mp3",
+		"multitracks/synth.mp3",
+		"multitracks/bass.mp3",
+		"multitracks/drums.mp3",
+	],
+} as const;
+type SampleId = keyof typeof SAMPLE_FILES;
+
+function isSampleId(value: string): value is SampleId {
+	return value in SAMPLE_FILES;
 }
 
 interface ComputeProgressElements {
@@ -68,6 +92,9 @@ interface TrackswitchPreviewElement extends HTMLElement {
 	config: TrackSwitchInit | undefined;
 	readonly controller: TrackSwitchController | null;
 }
+
+/** How long a status message stays visible. */
+const STATUS_TIMEOUT_MS = 5000;
 
 /** Views that can draw marker layers. */
 const MARKER_LAYER_VIEW_TYPES = new Set([
@@ -171,7 +198,8 @@ function defaultView(
 
 /** Only drags from the file explorer add files; panel reordering drags carry no files. */
 function isFileDrag(event: DragEvent): boolean {
-	return event.dataTransfer?.types.includes("Files") ?? false;
+	const types = event.dataTransfer?.types ?? [];
+	return types.includes("Files") || types.includes(SAMPLE_DRAG_TYPE);
 }
 
 interface DialogSnapshot {
@@ -212,6 +240,12 @@ export class BuilderApp {
 	private preview: TrackswitchPreviewElement | null = null;
 	private runtimeFailed = false;
 	private draggedViewId: string | null = null;
+	private validationStatus: string | undefined;
+	private currentStatus = "";
+	private previewLoaded = false;
+	private statusTimer = 0;
+	private sampleLoading = false;
+	private cancelCompute: (() => void) | null = null;
 	private csvIntakeTarget: "alignment" | "marker" | null = null;
 	private pendingViewId: string | null = null;
 
@@ -234,14 +268,28 @@ export class BuilderApp {
 					<h1>Build your own player</h1>
 				</header>
 				<div class="ts-builder-workspace">
-					<aside class="ts-builder-sidebar" aria-label="Project settings"><p class="ts-builder-status" role="status" aria-live="polite"></p></aside>
+					<aside class="ts-builder-sidebar" aria-label="Project settings"></aside>
 					<main class="ts-builder-main">
 						<input data-input="media" type="file" multiple accept="audio/*,.mid,.midi,.xml,.musicxml,image/*,.csv" hidden>
 						<input data-input="csv" type="file" accept=".csv,text/csv" hidden>
 						<div class="ts-builder-preview-stage" aria-label="Player builder canvas">
 							<div class="ts-builder-preview-shell">
-								<div class="ts-builder-preview"><button type="button" class="ts-builder-drop-prompt" data-action="empty-choose-files"><strong>Drop files here</strong><span>Audio, MIDI (.mid/.midi), MusicXML (.xml/.musicxml), images, and CSV files are supported.</span></button></div>
+								<div class="ts-builder-preview"><button type="button" class="ts-builder-drop-prompt" data-action="empty-choose-files"><strong>Drop files here or click to add</strong><span class="ts-builder-drop-prompt__formats"><span>Audio (.wav, .mp3, .flac, .ogg, .m4a, …)</span><span>MIDI (.mid/.midi)</span><span>MusicXML (.xml/.musicxml)</span><span>Images (.png, .jpg, .webp, …)</span><span>CSV files</span></span></button></div>
 								<div class="ts-builder-panel-rail" aria-label="Panel order"></div>
+								<div class="ts-builder-samples">
+									<div class="ts-builder-sample" role="button" tabindex="0" draggable="true" data-sample="stems" aria-label="Start with the Default Multitrack preset. Drag it into the drop area or press Enter.">
+										<span class="ts-builder-sample__icon" aria-hidden="true"></span>
+										<span class="ts-builder-sample__kicker">Preset</span>
+										<strong>Default Multitrack</strong>
+										<span class="ts-builder-sample__hint">Drag me in ›</span>
+									</div>
+									<div class="ts-builder-sample" role="button" tabindex="0" draggable="true" data-sample="winterreise" aria-label="Start with the Schubert Winterreise preset. Drag it into the drop area or press Enter.">
+										<span class="ts-builder-sample__icon" aria-hidden="true"></span>
+										<span class="ts-builder-sample__kicker">Preset</span>
+										<strong>Schubert Winterreise</strong>
+										<span class="ts-builder-sample__hint">Drag me in ›</span>
+									</div>
+								</div>
 								<div class="ts-builder-drop-overlay" aria-hidden="true">Drop files to add them</div>
 							</div>
 						</div>
@@ -265,7 +313,13 @@ export class BuilderApp {
 		this.fileInput = this.required('[data-input="media"]');
 		this.csvInput = this.required('[data-input="csv"]');
 		this.sidebar = this.required(".ts-builder-sidebar");
-		this.status = this.required(".ts-builder-status");
+		this.status = document.createElement("p");
+		this.status.className = "ts-builder-status";
+		this.status.setAttribute("role", "status");
+		this.status.setAttribute("aria-live", "polite");
+		const footerLogos = document.querySelector(".site-footer__logos");
+		if (!footerLogos) throw new Error("Missing site footer");
+		footerLogos.prepend(this.status);
 		this.previewHost = this.required(".ts-builder-preview");
 		this.panelRail = this.required(".ts-builder-panel-rail");
 		this.addPanelMenu = this.required(".ts-builder-panel-menu");
@@ -301,6 +355,17 @@ export class BuilderApp {
 		this.required<HTMLButtonElement>(
 			'[data-action="empty-choose-files"]',
 		).addEventListener("click", () => this.fileInput.click());
+		this.root.addEventListener("dragover", (event) => {
+			if (!this.draggedViewId) return;
+			event.preventDefault();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+			this.showViewDropIndicator(this.viewSlotAt(event.clientY));
+		});
+		this.root.addEventListener("drop", (event) => {
+			if (!this.draggedViewId) return;
+			event.preventDefault();
+			this.dropViewAt(this.viewSlotAt(event.clientY));
+		});
 		for (const eventName of ["dragenter", "dragover"] as const) {
 			dropzone.addEventListener(eventName, (event) => {
 				if (!isFileDrag(event)) return;
@@ -320,8 +385,29 @@ export class BuilderApp {
 			if (!isFileDrag(event)) return;
 			event.preventDefault();
 			dropzone.classList.remove("is-dragging");
+			if (event.dataTransfer?.types.includes(SAMPLE_DRAG_TYPE)) {
+				const id = event.dataTransfer.getData(SAMPLE_DRAG_TYPE);
+				if (isSampleId(id)) void this.loadSample(id);
+				return;
+			}
 			void this.addFiles(event.dataTransfer?.files ?? []);
 		});
+		for (const sample of this.root.querySelectorAll<HTMLElement>(
+			"[data-sample]",
+		)) {
+			const id = sample.dataset.sample ?? "";
+			if (!isSampleId(id)) throw new Error(`Unknown preset: ${id}`);
+			sample.addEventListener("dragstart", (event) => {
+				event.dataTransfer?.setData(SAMPLE_DRAG_TYPE, id);
+				if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
+			});
+			sample.addEventListener("click", () => void this.loadSample(id));
+			sample.addEventListener("keydown", (event) => {
+				if (event.key !== "Enter" && event.key !== " ") return;
+				event.preventDefault();
+				void this.loadSample(id);
+			});
+		}
 		this.fileInput.addEventListener("change", () => {
 			void this.addFiles(this.fileInput.files ?? []);
 			this.fileInput.value = "";
@@ -332,6 +418,8 @@ export class BuilderApp {
 		this.dialogCancel.addEventListener("click", () => this.dialog.close());
 		this.dialogOk.addEventListener("click", () => this.confirmDialog());
 		this.dialog.addEventListener("close", () => {
+			// Closing while an alignment is computing (Cancel or Escape) stops it.
+			this.cancelCompute?.();
 			this.finishDialogTransaction();
 			this.activeTarget = null;
 			this.pendingDraft = null;
@@ -394,6 +482,207 @@ export class BuilderApp {
 		).setAttribute("aria-expanded", "false");
 	}
 
+	private async fetchSampleFiles(id: SampleId): Promise<Map<string, File>> {
+		const files = new Map<string, File>();
+		await Promise.all(
+			SAMPLE_FILES[id].map(async (path) => {
+				const response = await fetch(this.assetUrls.sampleBaseUrl + path);
+				if (!response.ok) throw new Error(`${path}: ${response.status}`);
+				const blob = await response.blob();
+				const name = path.slice(path.lastIndexOf("/") + 1);
+				files.set(name, new File([blob], name, { type: blob.type }));
+			}),
+		);
+		return files;
+	}
+
+	private async loadSample(id: SampleId): Promise<void> {
+		// The cards stay visible until the player has loaded, so a second grab
+		// would add the preset's files again.
+		if (this.sampleLoading || Object.keys(this.project.resources).length > 0)
+			return;
+		this.sampleLoading = true;
+		this.setStatus("Loading preset…", false);
+		try {
+			if (id === "stems") await this.loadStemsSample();
+			else await this.loadWinterreiseSample();
+			this.setStatus("Preset loaded.", false);
+		} catch (error) {
+			this.setStatus(describeError(error), true);
+		} finally {
+			this.sampleLoading = false;
+		}
+	}
+
+	/** The homepage's default multitrack player: waveform, four stems, presets. */
+	private async loadStemsSample(): Promise<void> {
+		const files = await this.fetchSampleFiles("stems");
+		const added = await this.addFiles([...files.values()]);
+		const idOf = (name: string): string => {
+			const resource = added.find((entry) => entry.file.name === name);
+			if (!resource) throw new Error(`${name} could not be added.`);
+			return resource.id;
+		};
+		const stems = [
+			["violins", "violins.mp3", "Violins"],
+			["synths", "synth.mp3", "Synths"],
+			["bass", "bass.mp3", "Bass"],
+			["drums", "drums.mp3", "Drums"],
+		] as const;
+		const ids = stems.map(([target, file, title]) => {
+			const id = renameMediaId(this.project, idOf(file), target);
+			const binding = this.project.media[id];
+			if (binding?.config.type === "audio") binding.config.title = title;
+			return id;
+		});
+		this.project.presets = {
+			all: { label: "All Tracks", tracks: ids },
+			strings: { label: "Violins & Synths", tracks: ["violins", "synths"] },
+			rhythm: { label: "Drums & Bass", tracks: ["bass", "drums"] },
+			drumsOnly: { label: "Drums Only", tracks: ["drums"] },
+		};
+		this.project.views = [
+			{
+				id: "navigationBar",
+				config: {
+					type: "navigationBar",
+					controls: [
+						"playback",
+						"globalVolume",
+						"looping",
+						"presets",
+						"timer",
+						"seekBar",
+					],
+				},
+			},
+			{ id: "waveform", config: { type: "waveform", tracks: "audible" } },
+			{
+				id: "trackList",
+				config: {
+					type: "trackList",
+					tracks: ids,
+					trackVolumeControls: true,
+					trackPanControls: "balance",
+				},
+			},
+		];
+		this.render();
+	}
+
+	/** The homepage's aligned player: score, two waveforms, alignment. */
+	private async loadWinterreiseSample(): Promise<void> {
+		{
+			const files = await this.fetchSampleFiles("winterreise");
+			const synced = files.get(SAMPLE_SYNCHRONIZED_FILE);
+			files.delete(SAMPLE_SYNCHRONIZED_FILE);
+			if (!synced) throw new Error("Preset files are incomplete.");
+			const added = await this.addFiles([...files.values()]);
+			const idOf = (name: string): string => {
+				const resource = added.find((entry) => entry.file.name === name);
+				if (!resource) throw new Error(`${name} could not be added.`);
+				return resource.id;
+			};
+			const hu33 = renameMediaId(
+				this.project,
+				idOf("Schubert_D911-03_HU33.wav"),
+				"hu33",
+			);
+			const sc06 = renameMediaId(
+				this.project,
+				idOf("Schubert_D911-03_SC06.wav"),
+				"sc06",
+			);
+			const score = renameMediaId(
+				this.project,
+				idOf("Schubert_D911-03.xml"),
+				"score",
+			);
+			const hu33Binding = this.project.media[hu33];
+			const sc06Binding = this.project.media[sc06];
+			if (
+				hu33Binding?.config.type !== "audio" ||
+				sc06Binding?.config.type !== "audio"
+			)
+				throw new Error("Preset audio is missing.");
+			const syncedResource = addFilesToProject(
+				this.project,
+				[synced],
+				undefined,
+				false,
+			).added[0];
+			if (!syncedResource) throw new Error("Synchronized audio is missing.");
+			hu33Binding.config.title = "Schubert: Winterreise, D. 911: No. 3 - HU33";
+			sc06Binding.config.title = "Schubert: Winterreise, D. 911: No. 3 - SC06";
+			hu33Binding.config.startOffsetMs = 200;
+			hu33Binding.config.endOffsetMs = 5800;
+			sc06Binding.config.startOffsetMs = 600;
+			sc06Binding.config.endOffsetMs = 300;
+			sc06Binding.synchronizedResourceId = syncedResource.id;
+			sc06Binding.config.srcTimeScaled = {
+				src: syncedResource.exportPath,
+				startOffsetMs: 300,
+				endOffsetMs: 5800,
+			};
+			this.project.alignment = {
+				resourceId: idOf("alignment.csv"),
+				config: {
+					referenceTimeline: hu33,
+					timelines: {
+						[score]: "measure_Schubert_D911-03_2",
+						[hu33]: "time_Schubert_D911-03_HU33",
+						[sc06]: "time_Schubert_D911-03_SC06",
+					},
+					outsideCoverage: "hold",
+					duplicateAnchors: "average",
+				},
+			};
+			this.project.views = [
+				{
+					id: "navigationBar",
+					config: {
+						type: "navigationBar",
+						controls: [
+							"playback",
+							"globalVolume",
+							"looping",
+							"timer",
+							"seekBar",
+						],
+					},
+				},
+				{
+					id: "sheetMusic",
+					config: {
+						type: "sheetMusic",
+						mediaID: score,
+						maxHeight: 370,
+						renderScale: 0.65,
+						followPlayback: true,
+					},
+				},
+				{
+					id: "waveform",
+					config: { type: "waveform", tracks: [hu33], height: 100 },
+				},
+				{
+					id: "waveform-2",
+					config: { type: "waveform", tracks: [sc06], height: 100 },
+				},
+				{
+					id: "trackList",
+					config: {
+						type: "trackList",
+						tracks: [hu33, sc06],
+						comparisonGroup: 0,
+						trackVolumeControls: true,
+					},
+				},
+			];
+			this.render();
+		}
+	}
+
 	private async addFiles(
 		files: FileList | readonly File[],
 	): Promise<BuilderResource[]> {
@@ -443,16 +732,45 @@ export class BuilderApp {
 	}
 
 	private render(): void {
+		this.syncEmptyState();
 		this.renderSidebar();
 		const errors = this.validationErrors();
 		this.setExportDisabled(errors.length > 0 || this.runtimeFailed);
-		if (errors.length && Object.keys(this.project.resources).length > 0)
-			this.setStatus(errors.join(" "), true);
-		else if (Object.keys(this.project.resources).length === 0)
+		const validationMessage =
+			errors.length && Object.keys(this.project.resources).length > 0
+				? errors.join(" ")
+				: undefined;
+		if (validationMessage) {
+			this.setStatus(validationMessage, true);
+		} else if (
+			this.validationStatus !== undefined &&
+			this.currentStatus === this.validationStatus
+		) {
 			this.setStatus("");
+		} else if (Object.keys(this.project.resources).length === 0) {
+			this.setStatus("");
+		}
+		this.validationStatus = validationMessage;
 		this.schedulePreview(errors);
 		if (this.activeTarget && this.dialog.open)
 			this.renderInspector(this.activeTarget);
+	}
+
+	/**
+	 * The panels appear together with the loaded player, so the drop area does
+	 * not jump around while the first files are still loading.
+	 */
+	private syncEmptyState(): void {
+		const waitingForPlayer =
+			!this.previewLoaded &&
+			!this.runtimeFailed &&
+			this.validationErrors().length === 0;
+		this.root
+			.querySelector(".ts-builder-app")
+			?.classList.toggle(
+				"is-empty",
+				Object.keys(this.project.resources).length === 0 || waitingForPlayer,
+			);
 	}
 
 	private setExportDisabled(disabled: boolean): void {
@@ -466,7 +784,9 @@ export class BuilderApp {
 
 	private renderSidebar(): void {
 		this.sidebar.replaceChildren();
-		const mediaSection = this.sidebarSection("Media");
+		const addFiles = button("Add media", "ts-builder-sidebar-link");
+		addFiles.addEventListener("click", () => this.fileInput.click());
+		const mediaSection = this.sidebarSection("Media", addFiles);
 		const mediaEntries = Object.entries(this.project.media);
 		for (const [id, media] of mediaEntries) {
 			const resource = this.project.resources[media.resourceId];
@@ -496,12 +816,20 @@ export class BuilderApp {
 				);
 			}
 		}
-		const addFiles = button("Add media");
-		addFiles.addEventListener("click", () => this.fileInput.click());
-		mediaSection.append(addFiles);
 		this.sidebar.append(mediaSection);
 
-		const alignment = this.sidebarSection("Alignment");
+		const alignmentActions: HTMLElement[] = [];
+		if (!this.project.alignment) {
+			const uploadCsv = button("Import from CSV", "ts-builder-sidebar-link");
+			uploadCsv.addEventListener("click", () => this.pickCsvFor("alignment"));
+			const compute = button(
+				"Compute…",
+				"ts-builder-sidebar-link ts-builder-sidebar-link--accent",
+			);
+			compute.addEventListener("click", () => this.openAlignmentCompute());
+			alignmentActions.push(uploadCsv, compute);
+		}
+		const alignment = this.sidebarSection("Alignment", ...alignmentActions);
 		if (this.project.alignment) {
 			alignment.append(
 				this.sidebarItem(
@@ -519,23 +847,17 @@ export class BuilderApp {
 					},
 				),
 			);
-		} else {
-			const actions = document.createElement("div");
-			actions.className =
-				"ts-builder-sidebar-actions ts-builder-sidebar-actions--or";
-			const uploadCsv = button("Upload CSV");
-			uploadCsv.addEventListener("click", () => this.pickCsvFor("alignment"));
-			const or = document.createElement("span");
-			or.className = "ts-builder-sidebar-actions__or";
-			or.textContent = "or";
-			const compute = button("Compute in browser");
-			compute.addEventListener("click", () => this.openAlignmentCompute());
-			actions.append(uploadCsv, or, compute);
-			alignment.append(actions);
 		}
-		this.sidebar.append(alignment);
+		if (mediaEntries.length) this.sidebar.append(alignment);
 
-		const markers = this.sidebarSection("Markers");
+		const uploadMarkers = button("Import from CSV", "ts-builder-sidebar-link");
+		uploadMarkers.addEventListener("click", () => this.pickCsvFor("marker"));
+		const addInBrowser = button("New marker set", "ts-builder-sidebar-link");
+		addInBrowser.addEventListener(
+			"click",
+			() => void this.createEmptyMarkerSequence(),
+		);
+		const markers = this.sidebarSection("Markers", uploadMarkers, addInBrowser);
 		for (const [id, marker] of Object.entries(this.project.markers)) {
 			markers.append(
 				this.sidebarItem(
@@ -551,63 +873,49 @@ export class BuilderApp {
 				),
 			);
 		}
-		const markerActions = document.createElement("div");
-		markerActions.className =
-			"ts-builder-sidebar-actions ts-builder-sidebar-actions--or";
-		const uploadMarkers = button("Upload CSV");
-		uploadMarkers.addEventListener("click", () => this.pickCsvFor("marker"));
-		const markersOr = document.createElement("span");
-		markersOr.className = "ts-builder-sidebar-actions__or";
-		markersOr.textContent = "or";
-		const addInBrowser = button("Add blank marker set");
-		addInBrowser.addEventListener(
-			"click",
-			() => void this.createEmptyMarkerSequence(),
+		if (mediaEntries.length) this.sidebar.append(markers);
+
+		const editPresets = button("Edit presets", "ts-builder-sidebar-link");
+		editPresets.addEventListener("click", () => this.openPresets());
+		const presets = this.sidebarSection("Presets", editPresets);
+		if (mediaEntries.length) this.sidebar.append(presets);
+
+		const settings = button(
+			"Global player settings",
+			"ts-builder-sidebar-link",
 		);
-		markerActions.append(uploadMarkers, markersOr, addInBrowser);
-		markers.append(markerActions);
-		this.sidebar.append(markers);
-
-		const presets = this.sidebarSection("Presets");
-		for (const id of Object.keys(this.project.presets)) {
-			presets.append(
-				this.sidebarItem(
-					id,
-					`${String(this.project.presets[id].tracks.length)} tracks`,
-					() => this.openInspector({ kind: "preset", id }),
-					() => {
-						delete this.project.presets[id];
-						this.render();
-					},
-				),
-			);
-		}
-		const addPreset = button("Add preset");
-		addPreset.addEventListener("click", () => this.addPreset());
-		presets.append(addPreset);
-		this.sidebar.append(presets);
-
-		const global = this.sidebarSection("Player");
-		const features = button("Feature settings");
-		features.addEventListener("click", () =>
+		settings.addEventListener("click", () =>
 			this.openInspector({ kind: "features" }),
 		);
-		global.append(features);
-		this.sidebar.append(global);
+		const settingsSection = document.createElement("section");
+		settingsSection.className = "ts-builder-sidebar__section";
+		settingsSection.append(settings);
+		this.sidebar.append(settingsSection);
 
 		const exportSection = this.sidebarSection("Export");
 		exportSection.append(this.renderDownloadSplitButton());
 		this.sidebar.append(exportSection);
-		this.sidebar.append(this.status);
 	}
 
-	private sidebarSection(label: string): HTMLElement {
+	private sidebarSection(
+		label: string,
+		...headerActions: HTMLElement[]
+	): HTMLElement {
 		const section = document.createElement("section");
 		section.className = "ts-builder-sidebar__section";
 		section.setAttribute("aria-label", label);
+		const header = document.createElement("div");
+		header.className = "ts-builder-sidebar__header";
 		const heading = document.createElement("h3");
 		heading.textContent = label;
-		section.append(heading);
+		header.append(heading);
+		if (headerActions.length) {
+			const actions = document.createElement("div");
+			actions.className = "ts-builder-sidebar__header-actions";
+			actions.append(...headerActions);
+			header.append(actions);
+		}
+		section.append(header);
 		return section;
 	}
 
@@ -716,11 +1024,31 @@ export class BuilderApp {
 		this.render();
 	}
 
-	private showViewDropIndicator(row: HTMLElement, before: boolean): void {
+	private clearViewDropIndicator(): void {
 		for (const item of this.panelRail.children) {
 			item.classList.remove("is-drop-before", "is-drop-after");
 		}
-		row.classList.add(before ? "is-drop-before" : "is-drop-after");
+	}
+
+	/**
+	 * Insertion slot (0..views.length) for a pointer height: the number of panel
+	 * controls whose middle lies above it. Anywhere on the page counts, so
+	 * dragging past the last panel still means "at the end".
+	 */
+	private viewSlotAt(clientY: number): number {
+		let slot = 0;
+		for (const item of this.panelRail.children) {
+			const rect = item.getBoundingClientRect();
+			if (clientY > rect.top + rect.height / 2) slot += 1;
+		}
+		return slot;
+	}
+
+	private showViewDropIndicator(slot: number): void {
+		this.clearViewDropIndicator();
+		const rows = this.panelRail.children;
+		if (slot < rows.length) rows[slot]?.classList.add("is-drop-before");
+		else rows[rows.length - 1]?.classList.add("is-drop-after");
 	}
 
 	/** `slot` is the gap to drop into: 0 is above the first panel. */
@@ -863,6 +1191,7 @@ export class BuilderApp {
 		this.deferredRevocations = [];
 		this.dialogOk.disabled = false;
 		this.dialogCancel.disabled = false;
+		this.dialogCancel.hidden = false;
 		this.dialog.showModal();
 	}
 
@@ -905,6 +1234,8 @@ export class BuilderApp {
 		this.confirmDialog = () => this.acceptDialog();
 		this.renderAlignmentComputeForm();
 		this.showDialog();
+		// With nothing to compute, the dialog is only a note.
+		this.dialogCancel.hidden = this.dialogBody.querySelector("select") === null;
 	}
 
 	private renderAlignmentComputeForm(): void {
@@ -1086,8 +1417,29 @@ export class BuilderApp {
 			progress: ComputeProgressElements;
 		},
 	): Promise<void> {
+		const settings = Array.from(
+			this.dialogBody.querySelectorAll<
+				HTMLInputElement | HTMLSelectElement | HTMLButtonElement
+			>("input, select, button"),
+		);
+		// The run uses the settings it started with, so they stay fixed meanwhile.
+		const setSettingsDisabled = (disabled: boolean) => {
+			for (const element of settings) element.disabled = disabled;
+		};
+		setSettingsDisabled(true);
 		controls.compute.disabled = true;
-		controls.cancel.disabled = true;
+		let aborted = false;
+		const cancelled = new Promise<never>((_, reject) => {
+			this.cancelCompute = () => {
+				aborted = true;
+				this.cancelCompute = null;
+				// A terminated worker never answers, so the run is dropped here.
+				this.alignmentWorkerBridge.destroy();
+				reject(new Error("Alignment cancelled."));
+			};
+		});
+		const guard = <T>(work: Promise<T>): Promise<T> =>
+			Promise.race([work, cancelled]);
 		this.updateComputeProgress(controls.progress, "Preparing files…");
 		this.alignmentWorkerBridge.setProgressCallback((message) => {
 			this.updateComputeProgress(controls.progress, message);
@@ -1097,20 +1449,24 @@ export class BuilderApp {
 			for (const id of mediaIds) {
 				const media = this.project.media[id];
 				const resource = this.project.resources[media.resourceId];
-				const interactiveFile = await processFile(resource.file);
+				const interactiveFile = await guard(processFile(resource.file));
 				files.push({ ...interactiveFile, id });
 			}
 			this.updateComputeProgress(controls.progress, "Initializing Pyodide…");
-			await this.alignmentWorkerBridge.initialize();
+			await guard(this.alignmentWorkerBridge.initialize());
 			this.updateComputeProgress(controls.progress, "Computing alignment…");
-			const result = await this.alignmentWorkerBridge.computeAlignment(
-				files,
-				referenceId,
-				featureSet,
-				algorithm,
-				generateSyncedAudio,
-				pitchShiftEnabled,
+			const result = await guard(
+				this.alignmentWorkerBridge.computeAlignment(
+					files,
+					referenceId,
+					featureSet,
+					algorithm,
+					generateSyncedAudio,
+					pitchShiftEnabled,
+				),
 			);
+			// The result is in; closing the dialog from here on is not a cancel.
+			this.cancelCompute = null;
 			const csvFile = new File([result.csv], "alignment.csv", {
 				type: "text/csv",
 			});
@@ -1125,10 +1481,12 @@ export class BuilderApp {
 				result.syncReferenceTimeColumn,
 			);
 		} catch (error) {
+			if (aborted) return;
 			this.updateComputeProgress(controls.progress, describeError(error), true);
+			setSettingsDisabled(false);
 			controls.compute.disabled = false;
-			controls.cancel.disabled = false;
 		} finally {
+			this.cancelCompute = null;
 			this.alignmentWorkerBridge.setProgressCallback(null);
 		}
 	}
@@ -1258,18 +1616,65 @@ export class BuilderApp {
 		resource.previewUrl = URL.createObjectURL(resource.file);
 	}
 
-	private addPreset(): void {
+	private openPresets(): void {
+		this.dialogError.hidden = true;
+		this.dialogError.textContent = "";
+		this.renderPresetList();
+		this.showDialog();
+	}
+
+	private renderPresetList(): void {
+		this.activeTarget = null;
+		this.pendingDraft = null;
+		this.confirmDialog = () => this.acceptDialog();
+		this.dialogTitle.textContent = "Presets";
+		const list = document.createElement("div");
+		list.className = "ts-builder-form";
+		for (const [id, preset] of Object.entries(this.project.presets)) {
+			const row = document.createElement("div");
+			row.className = "ts-builder-preset-row";
+			const label = document.createElement("span");
+			label.textContent = `${id} · ${String(preset.tracks.length)} tracks`;
+			const edit = button("Edit", "ts-builder-secondary-button");
+			edit.addEventListener("click", () => this.editPreset(id));
+			const remove = button("×", "ts-builder-icon-button");
+			remove.setAttribute("aria-label", `Remove ${id}`);
+			remove.addEventListener("click", () => {
+				delete this.project.presets[id];
+				this.render();
+				this.renderPresetList();
+			});
+			row.append(label, edit, remove);
+			list.append(row);
+		}
+		const add = button("New preset", "ts-builder-secondary-button");
+		add.addEventListener("click", () => {
+			const id = this.createPreset();
+			if (id) this.editPreset(id);
+		});
+		list.append(add);
+		this.dialogBody.replaceChildren(list);
+	}
+
+	private editPreset(id: string): void {
+		const target: FormTarget = { kind: "preset", id };
+		this.activeTarget = target;
+		this.confirmDialog = () => this.renderPresetList();
+		this.renderInspector(target);
+	}
+
+	private createPreset(): string | null {
 		const tracks = Object.entries(this.project.media)
 			.filter(([, media]) => media.config.type === "audio")
 			.map(([id]) => id);
 		if (!tracks.length) {
 			this.setStatus("Add audio before creating a preset.", true);
-			return;
+			return null;
 		}
 		const id = uniqueId("preset", Object.keys(this.project.presets));
 		this.project.presets[id] = { tracks };
 		this.render();
-		this.openInspector({ kind: "preset", id });
+		return id;
 	}
 
 	private openInspector(target: FormTarget): void {
@@ -1294,7 +1699,7 @@ export class BuilderApp {
 		if (target.kind === "media" && target.id) {
 			const binding = this.project.media[target.id];
 			if (!binding) return;
-			title = `${target.id} media`;
+			title = "Media settings";
 			value = binding.config as unknown as Record<string, unknown>;
 			schema = getDiscriminatedSchema(
 				this.rootSchema,
@@ -1365,7 +1770,7 @@ export class BuilderApp {
 		} else if (target.kind === "marker" && target.id) {
 			const marker = this.project.markers[target.id];
 			if (!marker) return;
-			title = `${target.id} marker settings`;
+			title = "Marker settings";
 			value = marker.config as unknown as Record<string, unknown>;
 			schema = getDefinition(this.rootSchema, "MarkerSequenceSourceConfig");
 			this.dialogBody.append(
@@ -1378,7 +1783,7 @@ export class BuilderApp {
 		} else if (target.kind === "preset" && target.id) {
 			const preset = this.project.presets[target.id];
 			if (!preset) return;
-			title = `${target.id} preset`;
+			title = "Preset settings";
 			value = preset as unknown as Record<string, unknown>;
 			schema = getDefinition(this.rootSchema, "PresetConfig");
 			this.dialogBody.append(
@@ -1392,7 +1797,7 @@ export class BuilderApp {
 				}),
 			);
 		} else if (target.kind === "features") {
-			title = "Feature settings";
+			title = "Global player settings";
 			value = this.project.features as Record<string, unknown>;
 			schema = schemaForFeatures(this.rootSchema);
 		} else return;
@@ -1427,7 +1832,8 @@ export class BuilderApp {
 		rename: (oldId: string, nextId: string) => void,
 	): HTMLElement {
 		const field = document.createElement("label");
-		field.className = "ts-builder-special-field";
+		field.className =
+			"ts-builder-special-field ts-builder-special-field--inline";
 		field.append(document.createTextNode(labelText));
 		const input = document.createElement("input");
 		input.className = "ts-builder-input";
@@ -1624,9 +2030,10 @@ export class BuilderApp {
 		const resource = binding.synchronizedResourceId
 			? this.project.resources[binding.synchronizedResourceId]
 			: undefined;
-		const copy = document.createElement("span");
-		copy.textContent = resource ? resource.file.name : "Not included";
-		const choose = button(resource ? "Replace source" : "Choose audio file");
+		const choose = button(
+			resource ? "Replace source" : "Choose audio file",
+			"ts-builder-sidebar-link",
+		);
 		const input = document.createElement("input");
 		input.type = "file";
 		input.accept = "audio/*";
@@ -1655,7 +2062,17 @@ export class BuilderApp {
 				binding.config.srcTimeScaled = { src: result.added[0].exportPath };
 			this.render();
 		});
-		wrapper.append(label, copy, choose, input);
+		const header = document.createElement("div");
+		header.className = "ts-builder-special-field__row";
+		header.append(label);
+		if (resource) {
+			const copy = document.createElement("span");
+			copy.className = "ts-builder-special-field__value";
+			copy.textContent = resource.file.name;
+			header.append(copy);
+		}
+		header.append(choose, input);
+		wrapper.append(header);
 		if (
 			resource &&
 			binding.config.type === "audio" &&
@@ -1722,6 +2139,16 @@ export class BuilderApp {
 			this.preview.addEventListener("trackswitch-loaded", () => {
 				this.runtimeFailed = false;
 				this.pendingViewId = null;
+				this.previewLoaded = true;
+				this.previewHost.querySelector(".ts-builder-drop-prompt")?.remove();
+				this.preview?.classList.remove("is-loading");
+				this.syncEmptyState();
+				// The panel controls follow once the rest has faded in.
+				window.setTimeout(() => {
+					this.root
+						.querySelector(".ts-builder-app")
+						?.classList.add("is-revealed");
+				}, 400);
 				this.setExportDisabled(this.validationErrors().length > 0);
 				this.decoratePreviewPanels();
 			});
@@ -1752,6 +2179,7 @@ export class BuilderApp {
 					return;
 				}
 				this.runtimeFailed = true;
+				this.syncEmptyState();
 				this.setExportDisabled(true);
 				this.setStatus(`Player could not load: ${message}`, true);
 			});
@@ -1759,7 +2187,8 @@ export class BuilderApp {
 				const detail = (event as CustomEvent<{ sequenceId: string }>).detail;
 				this.persistEditedMarkers(detail.sequenceId);
 			});
-			this.previewHost.replaceChildren(this.preview);
+			this.preview.classList.add("is-loading");
+			this.previewHost.append(this.preview);
 		}
 		this.preview.config = config;
 		window.requestAnimationFrame(() => this.decoratePreviewPanels());
@@ -1862,29 +2291,7 @@ export class BuilderApp {
 			row.addEventListener("dragend", () => {
 				this.draggedViewId = null;
 				row.classList.remove("is-dragging");
-				for (const item of this.panelRail.children) {
-					item.classList.remove("is-drop-before", "is-drop-after");
-				}
-			});
-			// Insertion slot (0..views.length): before this panel when the pointer
-			// is in its upper half, after it otherwise.
-			const slotFor = (event: DragEvent) => {
-				const rect = row.getBoundingClientRect();
-				return event.clientY < rect.top + rect.height / 2 ? index : index + 1;
-			};
-			row.addEventListener("dragover", (event) => {
-				if (!this.draggedViewId) return;
-				event.preventDefault();
-				if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-				this.showViewDropIndicator(row, slotFor(event) === index);
-			});
-			row.addEventListener("dragleave", () =>
-				row.classList.remove("is-drop-before", "is-drop-after"),
-			);
-			row.addEventListener("drop", (event) => {
-				if (!this.draggedViewId) return;
-				event.preventDefault();
-				this.dropViewAt(slotFor(event));
+				this.clearViewDropIndicator();
 			});
 			this.panelRail.append(row);
 		});
@@ -2003,8 +2410,19 @@ export class BuilderApp {
 	}
 
 	private setStatus(message: string, error = false): void {
-		this.status.textContent = message;
-		this.status.classList.toggle("is-error", error);
+		// Keep the old text while sliding out so the bar keeps its size.
+		if (message) {
+			this.status.textContent = message;
+			this.status.classList.toggle("is-error", error);
+		}
+		this.currentStatus = message;
+		this.status.classList.toggle("is-visible", message !== "");
+		window.clearTimeout(this.statusTimer);
+		if (message) {
+			this.statusTimer = window.setTimeout(() => {
+				this.setStatus("");
+			}, STATUS_TIMEOUT_MS);
+		}
 	}
 
 	private revokeAllUrls(): void {

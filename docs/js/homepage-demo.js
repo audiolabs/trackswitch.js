@@ -22,103 +22,6 @@
 		return view;
 	}
 
-	/**
-	 * What the player already assumes when an option is absent. The snippet is
-	 * meant to read as the configuration someone would have to write themselves,
-	 * so an option that only restates a default is noise. Pruning applies to the
-	 * preview alone — the player is still handed every option explicitly, so the
-	 * two can never disagree about behaviour.
-	 */
-	var OPTION_DEFAULTS = {
-		features: {
-			muteOtherPlayerInstances: true,
-			customizablePanelOrder: false,
-			tabView: false,
-			keyboard: true,
-			lockZoom: false,
-		},
-		// Nothing for `alignment`: outsideCoverage and duplicateAnchors both
-		// default to "error", so the values the showcase sets are load-bearing.
-		markerLayer: { line: "dashed", foldToReference: false },
-		view: {
-			navigationBar: { repeatEnabled: false, globalPanControl: "balance" },
-			trackList: {
-				trackVolumeControls: false,
-				trackPanControls: false,
-			},
-			waveform: {
-				height: 150,
-				maxZoom: 0,
-				playbackFollowMode: "center",
-				timeAxis: "shared",
-				alignedPlayhead: false,
-				// No `timer`: a waveform reads `config.timer ?? isAlignmentMode()`, so
-				// omitting it is not the same as setting it false once aligned.
-			},
-			spectrogram: {
-				height: 200,
-				maxZoom: 0,
-				playbackFollowMode: "center",
-				timeAxis: "shared",
-				alignedPlayhead: false,
-				frequencyScale: "linear",
-				axisLabels: "hz",
-				amplitude: "log1p",
-				dynamicRange: 80,
-				gamma: 10000,
-				fftSize: 4096,
-				window: "hann",
-				hopSize: 2048,
-			},
-			pianoRoll: {
-				height: 180,
-				maxZoom: 5,
-				playbackFollowMode: "center",
-				timer: false,
-			},
-			sheetMusic: {
-				maxWidth: 1000,
-				maxHeight: 380,
-				renderScale: 0.7,
-				followPlayback: true,
-				cursorAlpha: 0.4,
-			},
-			image: { seekable: false },
-			perTrackImage: { seekable: false },
-			text: { bold: false, italic: false, align: "center" },
-			separator: { thickness: 2 },
-		},
-	};
-
-	function withoutDefaults(source, defaults) {
-		var result = {};
-		Object.keys(source).forEach(function (key) {
-			if (defaults && source[key] === defaults[key]) return;
-			result[key] = source[key];
-		});
-		return result;
-	}
-
-	function prunedView(view) {
-		var result = withoutDefaults(view, OPTION_DEFAULTS.view[view.type]);
-		if (!result.markerLayers) return result;
-		result.markerLayers = result.markerLayers.map(function (layer) {
-			return withoutDefaults(layer, OPTION_DEFAULTS.markerLayer);
-		});
-		return result;
-	}
-
-	function prunedConfig(config) {
-		var result = withoutDefaults(config, null);
-		result.views = config.views.map(prunedView);
-		if (config.features) {
-			var features = withoutDefaults(config.features, OPTION_DEFAULTS.features);
-			if (Object.keys(features).length === 0) delete result.features;
-			else result.features = features;
-		}
-		return result;
-	}
-
 	function buildDefaultConfig(basePath, controls) {
 		var stems = [
 			{ id: "violins", title: "Violins", file: "violins" },
@@ -452,67 +355,13 @@
 	document.addEventListener("DOMContentLoaded", function () {
 		var playerRoot = document.getElementById("ts-showcase-player");
 		var controlsRoot = document.getElementById("ts-showcase-controls");
-		var quickstart = document.getElementById("ts-dynamic-quickstart");
-		var copyButton = document.getElementById("ts-copy-quickstart");
-		var showcase = playerRoot ? playerRoot.closest(".ts-showcase") : null;
-		var codeCallout = showcase
-			? showcase.querySelector(".ts-showcase__code-callout")
-			: null;
-		var snippetPanel = showcase
-			? showcase.querySelector(".ts-showcase__snippet-panel")
-			: null;
 		var modeButtons = document.querySelectorAll("[data-ts-mode-button]");
 		var note = document.getElementById("ts-showcase-note");
 		var mode = MODE_DEFAULT;
 		var controller = null;
 		var rebuildTimer = null;
-		var previewHideTimer = null;
 
 		if (!playerRoot || !controlsRoot || !window.TrackSwitch) return;
-
-		function setSnippetPreviewVisible(visible) {
-			if (showcase) {
-				showcase.classList.toggle("is-snippet-preview-visible", visible);
-			}
-		}
-
-		function cancelSnippetPreviewHide() {
-			clearTimeout(previewHideTimer);
-			previewHideTimer = null;
-		}
-
-		function scheduleSnippetPreviewHide() {
-			cancelSnippetPreviewHide();
-			previewHideTimer = setTimeout(function () {
-				setSnippetPreviewVisible(false);
-			}, 120);
-		}
-
-		function bindSnippetPreview(target) {
-			target.addEventListener("mouseenter", function () {
-				cancelSnippetPreviewHide();
-				setSnippetPreviewVisible(true);
-			});
-			target.addEventListener("mouseleave", function () {
-				scheduleSnippetPreviewHide();
-			});
-			target.addEventListener("focusin", function () {
-				cancelSnippetPreviewHide();
-				setSnippetPreviewVisible(true);
-			});
-			target.addEventListener("focusout", function (event) {
-				if (!target.contains(event.relatedTarget)) {
-					scheduleSnippetPreviewHide();
-				}
-			});
-		}
-
-		if (codeCallout) {
-			bindSnippetPreview(codeCallout);
-		}
-		if (snippetPanel) {
-			bindSnippetPreview(snippetPanel);
-		}
 
 		function controls() {
 			var names = [
@@ -649,30 +498,6 @@
 			}
 		}
 
-		function escapeHtml(value) {
-			return value
-				.replace(/&/g, "&amp;")
-				.replace(/</g, "&lt;")
-				.replace(/>/g, "&gt;");
-		}
-
-		function highlightJson(value) {
-			return escapeHtml(value).replace(
-				/("(?:\\.|[^"\\])*")(?=\s*:)|("(?:\\.|[^"\\])*")|\b(true|false)\b|\b(null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-				function (match, key, string, booleanValue, nullValue, number) {
-					if (key) return '<span class="ts-code-key">' + key + "</span>";
-					if (string) return '<span class="ts-code-string">' + string + "</span>";
-					if (booleanValue) return '<span class="ts-code-bool">' + booleanValue + "</span>";
-					if (nullValue) return '<span class="ts-code-null">' + nullValue + "</span>";
-					return '<span class="ts-code-number">' + number + "</span>";
-				},
-			);
-		}
-
-		function highlightedConfig(config) {
-			return highlightJson(JSON.stringify(prunedConfig(config), null, 2));
-		}
-
 		function render(createNewPlayer) {
 			var config;
 			config = configForCurrentMode();
@@ -687,10 +512,6 @@
 			} else {
 				controller = window.TrackSwitch.createTrackSwitch(playerRoot, config);
 				controller.load();
-			}
-			if (quickstart) {
-				quickstart.innerHTML = highlightedConfig(config);
-				quickstart.className = "language-json";
 			}
 			if (note) note.textContent = "";
 		}
@@ -732,16 +553,6 @@
 				});
 			},
 		);
-
-		if (copyButton) {
-			copyButton.addEventListener("click", function () {
-				var text = quickstart ? quickstart.textContent || "" : "";
-				navigator.clipboard.writeText(text).then(function () {
-					copyButton.textContent = "Copied";
-					setTimeout(function () { copyButton.textContent = "Copy to clipboard"; }, 1200);
-				});
-			});
-		}
 
 		updateWaveformTimeAxisAvailability();
 		updateSoloModeVisibility();

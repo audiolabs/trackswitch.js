@@ -1,0 +1,33 @@
+{% assign tutorials = site.data.tutorials %}
+{% assign prev_t = nil %}
+{% assign next_t = nil %}
+{% for t in tutorials %}
+  {% if t.url == page.url %}
+    {% unless forloop.first %}{% assign prev_index = forloop.index0 | minus: 1 %}{% assign prev_t = tutorials[prev_index] %}{% endunless %}
+    {% unless forloop.last %}{% assign next_index = forloop.index0 | plus: 1 %}{% assign next_t = tutorials[next_index] %}{% endunless %}
+  {% endif %}
+{% endfor %}
+<nav class="tutorial-nav" aria-label="Tutorial navigation">
+  {% if prev_t %}
+  <a class="tutorial-nav__button tutorial-nav__button--prev" href="{{ prev_t.url | relative_url }}">
+    <span class="tutorial-nav__label">&larr; Previous Tutorial</span>
+    <span class="tutorial-nav__title">{{ prev_t.title }}</span>
+  </a>
+  {% else %}
+  <a class="tutorial-nav__button tutorial-nav__button--prev" href="{{ '/use-cases/' | relative_url }}">
+    <span class="tutorial-nav__label">&larr; Back to</span>
+    <span class="tutorial-nav__title">Overview</span>
+  </a>
+  {% endif %}
+  {% if next_t %}
+  <a class="tutorial-nav__button tutorial-nav__button--next" href="{{ next_t.url | relative_url }}">
+    <span class="tutorial-nav__label">Next Tutorial &rarr;</span>
+    <span class="tutorial-nav__title">{{ next_t.title }}</span>
+  </a>
+  {% else %}
+  <a class="tutorial-nav__button tutorial-nav__button--next" href="{{ '/use-cases/' | relative_url }}">
+    <span class="tutorial-nav__label">Back to &rarr;</span>
+    <span class="tutorial-nav__title">Overview</span>
+  </a>
+  {% endif %}
+</nav>

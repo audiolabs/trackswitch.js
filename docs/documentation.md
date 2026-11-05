@@ -1351,7 +1351,6 @@ A `trackList` view shows audio tracks and their controls.
 | `rowHeight?` | `number` | auto | Fixes the track-row height in pixels. Padding, control size, icon size, font size and slider size scale down with it, so values below the default row height produce compact rows. |
 | `trackVolumeControls?` | `boolean` | `false` | Shows a volume control for each track. |
 | `trackPanControls?` | `"balance" \| "pan" \| "none"` | `"none"` | Shows a left-right pan control for each track and selects its algorithm. |
-| `channelColorIcons?` | `boolean` | `true` | Repeats a track's piano-roll channel colour(s) on its `solo` icon. Set to `false` to keep every row's icon in the plain foreground colour regardless of channel pairing. |
 
 `tracks` contains audio media IDs. Every track in `media` must appear in some `trackList` view.
 Multiple `trackList` views can show separate track groups in different layout positions.

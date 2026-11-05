@@ -31,12 +31,7 @@
 	"views": [
 		{
 			"type": "navigationBar",
-			"controls": ["playback", "globalVolume", "timer", "fullscreen-control"]
-		},
-		{
-			"type": "waveform",
-			"tracks": "audible",
-			"height": 80
+			"controls": ["playback", "seekBar", "timer"]
 		},
 		{
 			"type": "trackList",

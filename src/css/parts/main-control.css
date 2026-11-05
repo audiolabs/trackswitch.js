@@ -23,8 +23,9 @@
 }
 
 /* fullscreen-control is pinned to the top-right corner (see below). Room for
-   it is reserved only on the items that sit at the right edge of the first
-   row, so a seekbar wrapped onto its own row can still span the full width. */
+   it is reserved on the items that sit at the right edge of the first row.
+   A seekbar wrapped onto its own row spans the full width, except in
+   fullscreen, where it fits beside the timer and would run under the icon. */
 .trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.timing,
 .trackswitch
 	.main-control
@@ -33,11 +34,24 @@
 .trackswitch
 	.main-control
 	ul.control:has(> li.fullscreen-toggle)
-	> li.seekwrap:first-child {
+	> li.seekwrap:first-child,
+.trackswitch.ts-fullscreen
+	.main-control
+	ul.control:has(> li.fullscreen-toggle)
+	> li.seekwrap {
 	margin-inline-end: calc(
 		var(--ts-main-control-icon-size) +
 		var(--ts-main-control-column-gap)
 	);
+}
+
+/* In fullscreen the seekbar sits beside the timer and keeps the reserve
+   itself, so the timer needs none: it would only widen the gap between them. */
+.trackswitch.ts-fullscreen
+	.main-control
+	ul.control:has(> li.fullscreen-toggle)
+	> li.timing:has(~ li.seekwrap) {
+	margin-inline-end: 0;
 }
 
 .trackswitch .main-control ul.control > li {

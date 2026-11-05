@@ -253,7 +253,6 @@ export function buildTrackGroups(
 			rowHeight: view.rowHeight,
 			trackVolumeControls: view.trackVolumeControls ?? false,
 			trackPanControls: view.trackPanControls ?? "none",
-			channelColorIcons: view.channelColorIcons ?? true,
 		});
 	});
 

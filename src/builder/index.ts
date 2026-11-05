@@ -9,7 +9,14 @@ function startBuilder(): void {
 	const license = root.dataset.license;
 	const thirdPartyNotices = root.dataset.thirdPartyNotices;
 	const alignmentWorkerUrl = root.dataset.alignmentWorkerUrl;
-	if (!playerScript || !license || !thirdPartyNotices || !alignmentWorkerUrl) {
+	const sampleBaseUrl = root.dataset.sampleBaseUrl;
+	if (
+		!playerScript ||
+		!license ||
+		!thirdPartyNotices ||
+		!alignmentWorkerUrl ||
+		!sampleBaseUrl
+	) {
 		throw new Error("Builder export asset URLs are missing.");
 	}
 	new BuilderApp(root, JSON.parse(schemaSource) as JsonSchema, {
@@ -17,6 +24,7 @@ function startBuilder(): void {
 		license,
 		thirdPartyNotices,
 		alignmentWorkerUrl,
+		sampleBaseUrl,
 	});
 }
 

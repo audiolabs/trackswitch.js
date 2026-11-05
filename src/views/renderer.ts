@@ -1359,13 +1359,6 @@ export class ViewRenderer {
 		viewRendererPianoRoll.updatePianoRollChannelVisibility(this, runtimes);
 	}
 
-	public resolvePianoRollTrackChannelColors(trackId: TrackId): string[] | null {
-		return viewRendererPianoRoll.resolvePianoRollTrackChannelColors(
-			this,
-			trackId,
-		);
-	}
-
 	public updatePianoRollPlaybackState(
 		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,

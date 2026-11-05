@@ -10,7 +10,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     <label for="ts-nav-toggle" class="ts-nav-toggle__button" aria-hidden="true"><span></span></label>
     <nav class="site-nav ts-hero__nav" aria-label="Documentation">
       <a href="{{ '/documentation.html' | relative_url }}">Documentation</a>
-      <a href="{{ '/builder.html' | relative_url }}">Builder</a>
+      <a class="ts-hero__builder-link" href="{{ '/builder.html' | relative_url }}">Builder<svg class="ts-builder-circle" viewBox="0 0 120 50" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" vector-effect="non-scaling-stroke" d="M62 5 C96 2 118 14 116 28 C114 42 86 48 56 47 C22 46 3 36 5 22 C7 9 34 3 72 6 C84 8 92 11 98 15" /></svg><span class="ts-builder-hint" aria-hidden="true"><span class="ts-builder-hint__arrow">↑</span>Build your own player</span></a>
       <a href="{{ '/use-cases/' | relative_url }}">Tutorials &amp; Use Cases</a>
       <a href="{{ '/references.html' | relative_url }}">References</a>
       <a href="{{ '/citation.html' | relative_url }}">Cite</a>
@@ -41,12 +41,31 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 
 <section class="ts-showcase">
   <div class="ts-showcase__layout">
-    <aside class="ts-showcase__code-callout" aria-label="Copy player code">
-      <h4 class="ts-showcase__code-title">Copy player config</h4>
-      <p class="ts-showcase__preview-hint">Hover here to preview the config for this player.</p>
-      <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy to clipboard</button>
-      <p class="ts-showcase__copy-note">Updates as you change the options on the right.</p>
-    </aside>
+    <section class="ts-mode-panel" aria-label="Player mode">
+      <h4>Player Mode</h4>
+      <div class="ts-control-mode-tabs" role="tablist" aria-label="Showcase mode">
+        <button
+          type="button"
+          class="ts-mode-tab is-active"
+          data-ts-mode-button
+          data-ts-mode="default"
+          role="tab"
+          aria-selected="true"
+        >
+          Default Multitrack
+        </button>
+        <button
+          type="button"
+          class="ts-mode-tab"
+          data-ts-mode-button
+          data-ts-mode="sync"
+          role="tab"
+          aria-selected="false"
+        >
+          Aligned Timelines
+        </button>
+      </div>
+    </section>
 
     <div class="ts-showcase__player-stage">
       <div class="ts-showcase__player-shell">
@@ -59,32 +78,6 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     </div>
 
     <div class="ts-showcase__sidebar">
-      <section class="ts-mode-panel" aria-label="Player mode">
-        <h4>Player Mode</h4>
-        <div class="ts-control-mode-tabs" role="tablist" aria-label="Showcase mode">
-          <button
-            type="button"
-            class="ts-mode-tab is-active"
-            data-ts-mode-button
-            data-ts-mode="default"
-            role="tab"
-            aria-selected="true"
-          >
-            Default Multitrack
-          </button>
-          <button
-            type="button"
-            class="ts-mode-tab"
-            data-ts-mode-button
-            data-ts-mode="sync"
-            role="tab"
-            aria-selected="false"
-          >
-            Aligned Timelines
-          </button>
-        </div>
-      </section>
-
       <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
       <h4>Features</h4>
       <div class="ts-control-group" data-ts-control-group="playback">
@@ -224,10 +217,6 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 
       <p id="ts-showcase-note" class="ts-control-note" role="status" aria-live="polite"></p>
       </aside>
-    </div>
-
-    <div class="ts-showcase__snippet-panel" aria-label="Code preview">
-      <pre class="ts-showcase__snippet-shell"><code id="ts-dynamic-quickstart"></code></pre>
     </div>
   </div>
 </section>

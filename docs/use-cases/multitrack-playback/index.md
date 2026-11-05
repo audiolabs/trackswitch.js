@@ -15,7 +15,7 @@ In comparative listening mode, only one track plays at a time, which makes direc
 ## Simultaneous listening
 
 This player mixes violin, synth, bass, and drum stems of an arrangement.
-All four tracks play together by default, and the per-track volume and pan controls let listeners adjust the mix.
+All four tracks play together by default, and listeners switch single tracks on or off.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy simultaneous listening player code">

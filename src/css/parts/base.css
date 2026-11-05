@@ -33,6 +33,13 @@
 	border-right: 1px solid var(--ts-color-border-mid);
 }
 
+.trackswitch.trackswitch
+	> .ts-stack-section:not(.main-control):not(
+		.ts-stack-section ~ .ts-stack-section
+	) {
+	border-top: 1px solid var(--ts-color-border-mid);
+}
+
 .trackswitch.trackswitch > .ts-stack-section:not(.main-control):last-child {
 	border-bottom: 1px solid var(--ts-color-border-mid);
 }

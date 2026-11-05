@@ -29,11 +29,8 @@ import type {
 } from "../types";
 import {
 	getHostIconSlot,
-	getIconMaskDataUri,
-	getIconSplitGlyphMaskDataUri,
 	renderIconSlotHtml,
 	setHostIcon,
-	type TrackSwitchIconName,
 } from "./icons";
 import type {
 	PerTrackImageSource,
@@ -198,74 +195,6 @@ function sanitizePan(value: number): number {
 	}
 
 	return clamp(value, -1, 1);
-}
-
-/** A top-to-bottom gradient with hard edges, one even band per colour. */
-function buildHardStopGradient(colors: string[]): string {
-	const bandPercent = 100 / colors.length;
-	const stops = colors.map((color, index) => {
-		const start = (index * bandPercent).toFixed(4);
-		const end = ((index + 1) * bandPercent).toFixed(4);
-		return `${color} ${start}%, ${color} ${end}%`;
-	});
-	return `linear-gradient(180deg, ${stops.join(", ")})`;
-}
-
-/**
- * Colours a track row's `solo` icon: a plain `currentColor` swap for one
- * channel, a hard-edged split across the ring alone when more than one
- * channel shares the track. The split stays on the ring — reusing the plain
- * `circle` icon's outline regardless of which of circle/circle-check/
- * circle-dot is showing — rather than the whole icon: a checkmark or dot
- * only ever covers a slice of the ring's height, so masking the same
- * gradient to the whole icon cut those glyphs into arbitrary, misleading
- * bands instead of the even split the ring shows. The glyph itself is
- * layered on top in the plain foreground colour, same as it would be
- * unsplit.
- */
-function applyTrackChannelColors(
-	row: HTMLElement,
-	solo: Element | null,
-	colors: string[] | null,
-): void {
-	const iconSlot = solo instanceof HTMLElement ? getHostIconSlot(solo) : null;
-
-	if (!colors || colors.length <= 1) {
-		if (colors?.[0]) {
-			row.style.setProperty("--ts-track-channel-color", colors[0]);
-		} else {
-			row.style.removeProperty("--ts-track-channel-color");
-		}
-		if (iconSlot) {
-			iconSlot.classList.remove("split-channel-color");
-			iconSlot.style.removeProperty("--ts-track-split-mask");
-			iconSlot.style.removeProperty("--ts-track-split-gradient");
-			iconSlot.style.removeProperty("--ts-track-split-glyph-mask");
-		}
-		return;
-	}
-
-	row.style.removeProperty("--ts-track-channel-color");
-	if (!iconSlot) {
-		return;
-	}
-
-	const iconName = iconSlot.getAttribute("data-icon") as TrackSwitchIconName;
-	iconSlot.classList.add("split-channel-color");
-	iconSlot.style.setProperty(
-		"--ts-track-split-mask",
-		getIconMaskDataUri("circle"),
-	);
-	iconSlot.style.setProperty(
-		"--ts-track-split-gradient",
-		buildHardStopGradient(colors),
-	);
-	const glyphMask = getIconSplitGlyphMaskDataUri(iconName);
-	if (glyphMask) {
-		iconSlot.style.setProperty("--ts-track-split-glyph-mask", glyphMask);
-	} else {
-		iconSlot.style.removeProperty("--ts-track-split-glyph-mask");
-	}
 }
 
 function applySoloIconState(
@@ -1581,12 +1510,6 @@ export function updateTrackControls(
 		// where StereoPannerNode ("pan" tracks only) is unavailable.
 		const panSupported =
 			runtime.panAlgorithm === "balance" || stereoPanningSupported;
-		// A row repeats the colour(s) its track carries in a piano roll, so the
-		// list and the notes read as one code.
-		const channelColors = ctx.resolvePianoRollTrackChannelColors(
-			runtime.definition.id,
-		);
-
 		rows.forEach((row: HTMLElement) => {
 			const solo = row.querySelector(".solo");
 			// A track may be listed twice, so each row follows the list it sits in.
@@ -1604,14 +1527,6 @@ export function updateTrackControls(
 					!!syncEnabled,
 				);
 			}
-
-			const group = ctx.trackGroups[trackGroupIndexOfRow(row)];
-			const iconColorsEnabled = group?.channelColorIcons ?? true;
-			applyTrackChannelColors(
-				row,
-				solo,
-				iconColorsEnabled ? channelColors : null,
-			);
 
 			const trackVolumeSlider = row.querySelector(".track-volume-slider");
 			if (trackVolumeSlider instanceof HTMLInputElement) {

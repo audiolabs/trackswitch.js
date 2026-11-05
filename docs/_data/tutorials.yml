@@ -1,0 +1,13 @@
+- {url: /use-cases/multitrack-playback/, title: Multitrack Playback}
+- {url: /use-cases/waveform-views/, title: Waveform Views}
+- {url: /use-cases/spectrogram-views/, title: Spectrogram Views}
+- {url: /use-cases/images/, title: Seekable Images}
+- {url: /use-cases/aligned-timelines/, title: Aligned Timelines}
+- {url: /use-cases/markers/, title: Markers}
+- {url: /use-cases/score-following/, title: Score Following}
+- {url: /use-cases/shared-timeline-groups/, title: Shared Timeline - Groups}
+- {url: /use-cases/repeated-section/, title: A Repeated Section}
+- {url: /use-cases/separated-stems/, title: Separated Stems on Aligned Timelines}
+- {url: /use-cases/multi-instrument-transcription/, title: Piano Roll}
+- {url: /use-cases/timeline-units/, title: Timeline Units}
+- {url: /use-cases/interactive-alignment/, title: Interactive Alignment}

@@ -73,6 +73,8 @@ export function closeShortcutHelp(ctx: TrackSwitchControllerImpl): void {
 export function toggleFullscreen(ctx: TrackSwitchControllerImpl): void {
 	ctx.fullscreen = !ctx.fullscreen;
 	ctx.renderer.setFullscreen(ctx.fullscreen);
+	// The panel width changed, so the score has to be laid out again.
+	ctx.sheetMusicEngine.resize();
 	ctx.updateMainControls();
 }
 

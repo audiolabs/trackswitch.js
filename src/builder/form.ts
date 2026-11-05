@@ -70,7 +70,6 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	axisLabels: "hz",
 	autoload: false,
 	bold: false,
-	channelColorIcons: true,
 	colorPerChannel: true,
 	comparisonGroup: 0,
 	customizablePanelOrder: false,
@@ -168,6 +167,16 @@ function defaultValue(context: FormContext, schema: JsonSchema): unknown {
 	return "";
 }
 
+function viewTypeOf(context: FormContext): string | undefined {
+	if (context.target.kind !== "view" && context.target.kind !== "view-draft")
+		return undefined;
+	return (
+		context.target.viewType ??
+		context.project.views.find((entry) => entry.id === context.target.id)
+			?.config.type
+	);
+}
+
 function defaultFieldValue(
 	context: FormContext,
 	key: string,
@@ -190,6 +199,10 @@ function defaultFieldValue(
 		if (key === "height" && viewType === "pianoRoll") return 180;
 		if (key === "height" && viewType === "spectrogram") return 200;
 		if (key === "height" && viewType === "warpingMatrix") return "";
+	}
+	// A surface timer follows the alignment while unset: on once aligned.
+	if (key === "timer" && viewTypeOf(context) !== undefined) {
+		return context.project.alignment !== undefined;
 	}
 	const describedDefault = node.description?.match(/^Default: (.+)$/)?.[1];
 	if (describedDefault !== undefined && schemaType(context, node) === "string")
@@ -340,7 +353,7 @@ function renderScalar(
 		basicInput.type =
 			type === "number" || type === "integer" ? "number" : "text";
 		basicInput.value = value === undefined ? "" : String(value);
-		basicInput.step = type === "integer" ? "1" : "any";
+		basicInput.step = type === "integer" ? "1" : (NUMBER_STEPS[key] ?? "any");
 		input = basicInput;
 	}
 	input.id = `ts-builder-${path.replace(/[^a-z0-9]+/gi, "-")}`;
@@ -795,6 +808,32 @@ function unionBranch(
 	);
 }
 
+/** The merged string choices of a union made only of string enums and constants. */
+function stringChoices(
+	context: FormContext,
+	node: JsonSchema,
+): string[] | undefined {
+	const union = node.oneOf ?? node.anyOf;
+	if (!union?.length) return undefined;
+	const choices: string[] = [];
+	for (const branch of union) {
+		const candidate = resolved(context, branch);
+		const nested = candidate.oneOf ?? candidate.anyOf;
+		if (nested) {
+			const inner = stringChoices(context, candidate);
+			if (!inner) return undefined;
+			choices.push(...inner);
+		} else if (typeof candidate.const === "string") {
+			choices.push(candidate.const);
+		} else if (candidate.enum?.every((entry) => typeof entry === "string")) {
+			choices.push(...(candidate.enum as string[]));
+		} else {
+			return undefined;
+		}
+	}
+	return choices;
+}
+
 function renderValue(
 	container: HTMLElement,
 	key: string,
@@ -805,7 +844,9 @@ function renderValue(
 	path: string,
 	bare = false,
 ): void {
-	const node = resolved(context, schema);
+	let node = resolved(context, schema);
+	const choices = stringChoices(context, node);
+	if (choices) node = { type: "string", enum: choices };
 	if (Array.isArray(node.type)) {
 		renderValue(
 			container,
@@ -947,9 +988,20 @@ function renderObjectFields(
 				fieldPath,
 			);
 		}
+		const control = row.querySelector(":scope > .ts-builder-field__control");
+		if (
+			control?.children.length === 1 &&
+			(control.firstElementChild instanceof HTMLInputElement ||
+				control.firstElementChild instanceof HTMLSelectElement)
+		) {
+			row.classList.add("ts-builder-field--inline");
+		}
 		container.append(row);
 	}
 }
+
+/** Fields whose arrows should move in fixed fractions instead of whole numbers. */
+const NUMBER_STEPS: Record<string, string> = { renderScale: "0.05" };
 
 export function renderSchemaForm(
 	container: HTMLElement,

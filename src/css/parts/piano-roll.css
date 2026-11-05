@@ -542,6 +542,15 @@
 	user-select: none;
 }
 
+.trackswitch
+	.piano-roll-wrap
+	.piano-roll-note-tooltip-note
+	+ .piano-roll-note-tooltip-note {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--ts-color-surface-raised-18);
+}
+
 .trackswitch .piano-roll-wrap .piano-roll-note-tooltip-heading {
 	display: flex;
 	gap: 6px;

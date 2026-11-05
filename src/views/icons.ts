@@ -127,64 +127,6 @@ export function renderIconSlotHtml(
 	);
 }
 
-const iconMaskDataUriByName = new Map<TrackSwitchIconName, string>();
-
-/**
- * A CSS `mask-image` source shaped like the given icon, for colouring it with
- * something a plain `color` can't express — a hard-edged split, for instance.
- * Alpha-masks from the icon's own outline, so it stays exact through icon
- * swaps (e.g. a `solo` button's circle/circle-check/circle-dot states).
- */
-export function getIconMaskDataUri(iconName: TrackSwitchIconName): string {
-	let uri = iconMaskDataUriByName.get(iconName);
-	if (uri === undefined) {
-		// The inline markup skips xmlns since it's only ever set via innerHTML;
-		// a standalone image source (what a CSS mask needs) requires it.
-		const masked = ICON_SVG_BY_NAME[iconName]
-			.replace(/currentColor/g, "#000")
-			.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
-		uri = `url("data:image/svg+xml,${encodeURIComponent(masked)}")`;
-		iconMaskDataUriByName.set(iconName, uri);
-	}
-	return uri;
-}
-
-const SPLIT_GLYPH_PATH_BY_NAME: Partial<Record<TrackSwitchIconName, string>> = {
-	"circle-check":
-		'<path fill="#000" d="M326.7 169.9c7.8-10.7 22.8-13.1 33.5-5.3 10.7 7.8 13.1 22.8 5.3 33.5L243.4 366.1c-4.1 5.7-10.5 9.3-17.5 9.8-7 .5-13.9-2-18.8-6.9l-55.9-55.9c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l36 36 105.6-145.2z"></path>',
-	"circle-dot":
-		'<path fill="#000" d="M256 352a96 96 0 1 1 0-192 96 96 0 1 1 0 192z"></path>',
-};
-
-const iconSplitGlyphMaskDataUriByName = new Map<
-	TrackSwitchIconName,
-	string | null
->();
-
-/**
- * A CSS `mask-image` source shaped like just the inner glyph of a ring icon —
- * the check in `circle-check`, the dot in `circle-dot`. The ring itself
- * reuses `getIconMaskDataUri("circle")`. Splitting the two keeps a
- * multi-channel track's hard-edged colour split on the ring alone: masking a
- * single gradient to the *whole* icon cuts the glyph into arbitrary bands,
- * since a checkmark or dot only ever covers a slice of the ring's height.
- * Null when the icon carries no separate glyph (`circle`).
- */
-export function getIconSplitGlyphMaskDataUri(
-	iconName: TrackSwitchIconName,
-): string | null {
-	if (!iconSplitGlyphMaskDataUriByName.has(iconName)) {
-		const glyph = SPLIT_GLYPH_PATH_BY_NAME[iconName];
-		const uri = glyph
-			? `url("data:image/svg+xml,${encodeURIComponent(
-					`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${glyph}</svg>`,
-				)}")`
-			: null;
-		iconSplitGlyphMaskDataUriByName.set(iconName, uri);
-	}
-	return iconSplitGlyphMaskDataUriByName.get(iconName) ?? null;
-}
-
 export function getHostIconSlot(host: HTMLElement): HTMLElement | null {
 	const slot = host.querySelector(".ts-icon-slot");
 	return slot instanceof HTMLElement ? slot : null;

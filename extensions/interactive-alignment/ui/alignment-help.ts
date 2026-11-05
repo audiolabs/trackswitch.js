@@ -209,7 +209,11 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 	function updateTooltipLayout(root: TooltipRootElement): void {
 		const tooltip = root.__tsHelpTooltip;
 		const button = root.__tsHelpButton;
-		const playerRoot = root.closest(".trackswitch") as HTMLElement | null;
+		// The player, or the builder dialog that hosts the same controls: the
+		// tooltip is lifted into it so no scrolling or clipping parent cuts it off.
+		const playerRoot = root.closest(
+			".trackswitch, .ts-builder-dialog",
+		) as HTMLElement | null;
 		if (!tooltip || !button || !playerRoot) {
 			return;
 		}
