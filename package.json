@@ -119,6 +119,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.5",
 		"@types/d3": "^7.4.3",
+		"playwright": "^1.65.0",
 		"rimraf": "^6.1.4",
 		"ts-json-schema-generator": "^2.9.0",
 		"tsx": "^4.23.15",

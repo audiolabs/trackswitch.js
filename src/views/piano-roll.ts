@@ -2025,7 +2025,11 @@ export function updatePianoRollPlaybackState(
 			);
 		}
 
-		if (!suppressPlaybackFollow && safeDuration > 0) {
+		if (
+			!suppressPlaybackFollow &&
+			safeDuration > 0 &&
+			!ctx.isLockedPlaybackFollower(surface.seekWrap)
+		) {
 			const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
 				surface,
 				position / safeDuration,

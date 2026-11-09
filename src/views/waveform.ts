@@ -2223,7 +2223,10 @@ export function updateWaveformPlaybackFollow(
 	}
 
 	ctx.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
-		if (surface.playbackFollowMode === "off") {
+		if (
+			surface.playbackFollowMode === "off" ||
+			ctx.isLockedPlaybackFollower(surface.seekWrap)
+		) {
 			return;
 		}
 
