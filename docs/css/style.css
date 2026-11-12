@@ -192,7 +192,8 @@ kbd {
 }
 
 .ts-hero__nav {
-	grid-column: 1;
+	grid-column: 1 / -1;
+	grid-row: 2;
 	justify-content: flex-start;
 	align-self: center;
 	flex-wrap: nowrap;
