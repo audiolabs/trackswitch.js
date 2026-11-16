@@ -27,6 +27,10 @@
 .trackswitch .waveform-wrap .waveform-surface {
 	position: relative;
 	min-width: 100%;
+	/* Own stacking context: the loop region sits at z-index -1, above this
+	   background but below the waveform canvas. */
+	isolation: isolate;
+	background-color: var(--ts-color-surface-base);
 }
 
 .trackswitch .waveform-wrap .waveform-surface .waveform-tile-layer {
@@ -74,19 +78,16 @@
 .trackswitch .waveform {
 	display: block;
 	width: 100%;
-	background-color: var(--ts-color-surface-base);
 	--waveform-color: var(--ts-color-accent);
 	--waveform-lane-divider-color: var(--ts-color-border-mid-45);
 }
 
-/* Spans the medium rather than the whole surface: `width` is written by the
- * renderer, so a `pinnedLeft` pad past the end is not seekable. */
+/* Spans the medium: `width` is written by the renderer. */
 .trackswitch .waveform-wrap .seekwrap {
 	position: absolute;
 	top: 0;
 	bottom: 0;
 	left: 0;
-	z-index: 2;
 	cursor: pointer;
 	pointer-events: auto;
 	touch-action: pan-y;
@@ -192,7 +193,6 @@
 	height: 18px;
 	overflow: hidden;
 	border-radius: 5px;
-	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
 	pointer-events: auto;
 	cursor: grab;
 }
@@ -219,8 +219,10 @@
 	min-width: 0;
 	border-radius: 4px;
 	border: 1px solid var(--ts-color-text-inverse);
-	background: var(--ts-color-surface-raised-16);
-	box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
+	background: transparent;
+	/* Spotlight: the minimap clips this shadow, so everything outside the
+	 * viewport is dimmed and only the visible stretch stays bright. */
+	box-shadow: 0 0 0 400px var(--ts-color-surface-panel-dark-50);
 	pointer-events: none;
 }
 
@@ -278,4 +280,9 @@
 .trackswitch .waveform-wrap.waveform-silent .seekwrap .seekhead,
 .trackswitch .waveform-wrap.waveform-silent .waveform-zoom {
 	display: none;
+}
+
+/* A spectrogram paints every pixel, so its loop region stays an overlay. */
+.trackswitch .spectrogram-wrap .seekwrap {
+	z-index: 2;
 }

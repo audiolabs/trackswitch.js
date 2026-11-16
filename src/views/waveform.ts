@@ -67,8 +67,6 @@ export interface WaveformSeekSurfaceMetadata {
 	/** Whether seeking here makes the tracks of `waveformSource` the audible ones. */
 	switchTracksOnSeek: boolean;
 	playbackFollowMode: WaveformPlaybackFollowMode;
-	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
-	trailingPadPx?: number;
 	timeAxis: WaveformTimeAxis;
 	/**
 	 * Draws a stretch of this waveform, given as fractions of the surface's
@@ -586,8 +584,7 @@ function renderPlaceholderCanvas(
 
 /**
  * Writes the geometry of a waveform surface: the virtual width, the height, and
- * the seek surface, which spans the medium rather than a `pinnedLeft` pad past
- * the end of it.
+ * the seek surface, which spans the medium.
  */
 function applyWaveformSurfaceGeometry(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
@@ -2132,7 +2129,13 @@ export function applyWaveformLocalSeekVisuals(
 		const playhead: WaveformHooks["playhead"] = [];
 		const alignmentPoints: WaveformHooks["alignmentPoints"] = [];
 
-		if (surface.alignedPlayhead && seekDuration > 0) {
+		// Zoomed in, the curve no longer shows the whole distance between the
+		// playheads, so the plain playhead takes over.
+		if (
+			surface.alignedPlayhead &&
+			seekDuration > 0 &&
+			surface.zoom <= MIN_WAVEFORM_ZOOM
+		) {
 			surface.seekWrap.classList.add("aligned-playhead");
 			playhead.push({
 				local: localPosition / seekDuration,

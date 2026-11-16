@@ -113,7 +113,7 @@
 		.piano-roll-wrap .seekwrap .loop-region,
 		.seekable-img-wrap .seekwrap .loop-region
 	).active {
-	background-color: var(--ts-color-accent-soft-30);
+	background-color: var(--ts-color-accent-soft-20);
 }
 
 .trackswitch
@@ -133,4 +133,14 @@
 
 .trackswitch .main-control .seekbar .loop-marker::after {
 	background-color: var(--ts-color-surface-panel-dark);
+}
+
+/* On waveforms and piano rolls the loop region is a backdrop: the drawn
+   content stays on top of it. */
+.trackswitch
+	:is(
+		.waveform-wrap:not(.spectrogram-wrap) .seekwrap .loop-region,
+		.piano-roll-wrap .seekwrap .loop-region
+	) {
+	z-index: -1;
 }

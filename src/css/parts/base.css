@@ -366,3 +366,43 @@
 		transform: rotate(360deg);
 	}
 }
+
+/* PANEL RESIZE HANDLE ------------------------------------------------------- */
+
+/* A strip along a panel's bottom edge that drags its height. */
+.trackswitch.trackswitch .ts-resize-handle {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 6;
+	height: 8px;
+	cursor: ns-resize;
+	touch-action: none;
+	background: transparent;
+}
+
+.trackswitch.trackswitch .ts-resize-handle::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	bottom: 2px;
+	width: 32px;
+	height: 3px;
+	border-radius: 2px;
+	background: var(--ts-color-border-mid);
+	transform: translateX(-50%);
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.trackswitch.trackswitch .ts-resize-handle:hover::after,
+.trackswitch.trackswitch .ts-resize-handle:focus-visible::after,
+.trackswitch.trackswitch .ts-resize-handle-active::after {
+	opacity: 1;
+}
+
+.trackswitch.trackswitch .ts-resize-handle:focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: -2px;
+}

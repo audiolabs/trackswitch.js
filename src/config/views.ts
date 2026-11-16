@@ -7,7 +7,6 @@ import type {
 	MarkerLayerConfig,
 	MediaConfig,
 	MidiNoteRange,
-	PianoRollPlaybackFollowMode,
 	SpectrogramFrequencyRef,
 	SpectrogramWindow,
 	TrackId,
@@ -106,6 +105,8 @@ const uiSpectrogramAllowedKeys = keysOf<TrackSwitchSpectrogramViewConfig>()([
 const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"type",
 	"mediaID",
+	"timeAxis",
+	"alignedPlayhead",
 	"switchTracksOnSeek",
 	"height",
 	"maxZoom",
@@ -113,6 +114,7 @@ const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"playbackFollowMode",
 	"timer",
 	"pianoKeyboard",
+	"pitchLabels",
 	"noteRange",
 	"grid",
 	"noteTooltip",
@@ -268,17 +270,6 @@ function normalizePlaybackFollowMode(
 		["off", "center", "jump"] as const,
 		`${label}.playbackFollowMode`,
 		fallback,
-	);
-}
-
-function normalizePianoRollFollowMode(
-	value: unknown,
-): PianoRollPlaybackFollowMode {
-	return normalizeEnum(
-		value,
-		["off", "center", "jump", "pinned"] as const,
-		"pianoRoll.playbackFollowMode",
-		"center",
 	);
 }
 
@@ -539,8 +530,12 @@ function normalizeAudioTimelineConfig<
 	// currently-soloed track (alignment forces exclusive solo) and renders it
 	// like a fixed single-track waveform — so it defaults to the same
 	// own-duration reading a fixed source would use.
+	// The aligned playhead measures distance on the shared axis, so asking for it
+	// keeps that axis.
 	const defaultsToIndividualTimeAxis =
-		ctx.hasAlignment && waveformSource === "audible";
+		ctx.hasAlignment &&
+		waveformSource === "audible" &&
+		view.alignedPlayhead !== true;
 
 	const normalized: TView = {
 		...view,
@@ -573,6 +568,11 @@ function normalizeAudioTimelineConfig<
 	};
 
 	if (normalized.timeAxis === "individual") {
+		if (normalized.alignedPlayhead === true) {
+			throw new Error(
+				`Invalid ${label} configuration: alignedPlayhead needs timeAxis 'shared', since it shows how far apart the playheads are in absolute time.`,
+			);
+		}
 		if (!ctx.hasAlignment) {
 			throw new Error(
 				`Invalid ${label} configuration: timeAxis 'individual' requires an alignment block.`,
@@ -981,6 +981,30 @@ function normalizePianoRollConfig(
 		);
 	}
 
+	// As for a waveform: the roll that follows the audible track shows the pace
+	// of that track, so it defaults to its own axis.
+	const timeAxis = normalizeWaveformTimeAxis(
+		pianoRoll.timeAxis,
+		"pianoRoll",
+		ctx.hasAlignment &&
+			pianoRoll.mediaID === "audible" &&
+			pianoRoll.alignedPlayhead !== true,
+	);
+	const alignedPlayhead = normalizeOptionalBoolean(
+		pianoRoll.alignedPlayhead,
+		"pianoRoll.alignedPlayhead",
+	);
+	if (timeAxis === "individual" && alignedPlayhead === true) {
+		throw new Error(
+			"Invalid pianoRoll configuration: alignedPlayhead needs timeAxis 'shared', since it shows how far apart the playheads are in absolute time.",
+		);
+	}
+	if (timeAxis === "individual" && !ctx.hasAlignment) {
+		throw new Error(
+			"Invalid pianoRoll configuration: timeAxis 'individual' requires an alignment block.",
+		);
+	}
+
 	// A keyboard turns the roll into a falling-notes display: the playhead sits
 	// on the keys and the notes scroll into them. Its `defaultZoom` fallback is
 	// left to the renderer, which states it in seconds rather than in whatever
@@ -994,10 +1018,11 @@ function normalizePianoRollConfig(
 	return {
 		...pianoRoll,
 		height: toCanvasSize(pianoRoll.height, 180, "pianoRoll.height"),
-		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll", 5),
+		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll", 0),
 		defaultZoom: normalizeDefaultZoom(pianoRoll.defaultZoom, "pianoRoll"),
-		playbackFollowMode: normalizePianoRollFollowMode(
+		playbackFollowMode: normalizePlaybackFollowMode(
 			pianoRoll.playbackFollowMode,
+			"pianoRoll",
 		),
 		timer: normalizeOptionalBoolean(pianoRoll.timer, "pianoRoll.timer"),
 		switchTracksOnSeek:
@@ -1005,7 +1030,14 @@ function normalizePianoRollConfig(
 				pianoRoll.switchTracksOnSeek,
 				"pianoRoll.switchTracksOnSeek",
 			) ?? true,
+		timeAxis,
+		alignedPlayhead,
 		pianoKeyboard,
+		pitchLabels:
+			normalizeOptionalBoolean(
+				pianoRoll.pitchLabels,
+				"pianoRoll.pitchLabels",
+			) ?? true,
 		noteRange: normalizeNoteRange(pianoRoll.noteRange),
 		grid: normalizeEnum(
 			pianoRoll.grid,

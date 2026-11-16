@@ -4,13 +4,7 @@ import type { WaveformPlaybackFollowMode } from "../types";
 
 export const MIN_TIMELINE_ZOOM = 1;
 
-/**
- * `WaveformPlaybackFollowMode` plus `pinnedLeft`, which holds the playhead
- * against the left edge of the viewport and scrolls the surface underneath it
- * instead — what a piano roll with a keyboard column needs, so the notes fly
- * into the keys. Only the piano roll uses it, configured as `"pinned"`.
- */
-export type TimelineFollowMode = WaveformPlaybackFollowMode | "pinnedLeft";
+export type TimelineFollowMode = WaveformPlaybackFollowMode;
 
 export interface TimelineSurfaceGeometry {
 	scrollContainer: HTMLElement;
@@ -25,21 +19,7 @@ export interface TimelineSurfaceGeometry {
 	 * cache instead. Refreshed whenever the surface is reflowed or resized.
 	 */
 	cachedViewportWidth?: number;
-	/**
-	 * A column drawn beside the scroller, such as a piano keyboard. Centered
-	 * follow centers the playhead on the whole view, column included, not on
-	 * the scroller alone.
-	 */
-	leadingColumn?: HTMLElement | null;
-	/** Last known width the `leadingColumn` takes from the view; see `cachedViewportWidth`. */
-	cachedLeadingColumnPx?: number;
 	playbackFollowMode?: TimelineFollowMode;
-	/**
-	 * Empty surface past the end of the medium. A `pinnedLeft` surface needs one
-	 * viewport of it so the playhead can hold against the left edge while the
-	 * final seconds scroll past; every other mode leaves it at zero.
-	 */
-	trailingPadPx?: number;
 	/** An in-flight animated follow-scroll started by `applyTimelineFollowScrollLeft`. */
 	scrollAnimation?: TimelineScrollAnimation | null;
 }
@@ -100,14 +80,9 @@ export function getTimelineTimeWidth(
 }
 
 export function getTimelineSurfaceWidth(
-	surface: Pick<
-		TimelineSurfaceGeometry,
-		"baseWidth" | "zoom" | "trailingPadPx"
-	>,
+	surface: Pick<TimelineSurfaceGeometry, "baseWidth" | "zoom">,
 ): number {
-	return (
-		getTimelineTimeWidth(surface) + Math.max(0, surface.trailingPadPx ?? 0)
-	);
+	return getTimelineTimeWidth(surface);
 }
 
 /**
@@ -129,15 +104,6 @@ export function refreshTimelineViewportWidth(
 ): number {
 	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
 	surface.cachedViewportWidth = viewportWidth;
-	const column = surface.leadingColumn;
-	surface.cachedLeadingColumnPx = column
-		? column.offsetWidth +
-			(Number.parseFloat(getComputedStyle(column).marginRight) || 0)
-		: 0;
-	// The pad is exactly one viewport, so the last scroll position puts the end
-	// of the medium under a left-pinned playhead.
-	surface.trailingPadPx =
-		surface.playbackFollowMode === "pinnedLeft" ? viewportWidth : 0;
 	return viewportWidth;
 }
 
@@ -333,10 +299,6 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	}
 
 	const playheadPx = clamp(playheadRatio, 0, 1) * getTimelineTimeWidth(surface);
-	if (surface.playbackFollowMode === "pinnedLeft") {
-		return clamp(playheadPx, 0, maxScrollLeft);
-	}
-
 	const currentScrollLeft = clamp(
 		surface.scrollContainer.scrollLeft,
 		0,
@@ -346,8 +308,7 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	const visibleEnd = currentScrollLeft + viewportWidth;
 
 	if (surface.playbackFollowMode === "center") {
-		const columnPx = surface.cachedLeadingColumnPx ?? 0;
-		return clamp(playheadPx - (viewportWidth - columnPx) / 2, 0, maxScrollLeft);
+		return clamp(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
 	}
 
 	if (playheadPx < visibleStart || playheadPx > visibleEnd) {

@@ -125,11 +125,14 @@ kbd {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
+	flex: 1 1 auto;
+	min-width: 0;
 	gap: 0.4rem;
 }
 
 .site-nav a {
 	display: inline-flex;
+	white-space: nowrap;
 	align-items: center;
 	min-height: 40px;
 	padding: 0 0.9rem;
@@ -202,6 +205,42 @@ kbd {
 
 .ts-hero__builder-link {
 	position: relative;
+}
+
+/* On wide screens the nav shares the title row instead of wrapping below it.
+   Equal side columns keep the title centered; the smaller type lets the nav
+   fit (wrapping to a second line within its column if it must). */
+@media (min-width: 1150px) {
+	.ts-hero__row {
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+		gap: 1.5rem;
+	}
+
+	.ts-hero__nav {
+		grid-column: 1;
+		grid-row: 1;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		font-size: 0.85rem;
+	}
+
+	.ts-hero__nav a {
+		min-height: 34px;
+		padding: 0 0.6rem;
+	}
+
+	.ts-hero__copy {
+		grid-column: 2;
+	}
+
+	.ts-hero h1 {
+		font-size: 2.6rem;
+	}
+
+	.ts-hero__description {
+		max-width: 380px;
+		font-size: 0.95rem;
+	}
 }
 
 /* A hand-drawn ring that keeps redrawing itself around the Builder link. */
@@ -498,6 +537,14 @@ kbd {
 	border-radius: 14px;
 	overflow: hidden;
 	box-shadow: none;
+}
+
+/* The player root carries the id itself, so its `width: 100%` would override
+   the fullscreen inset and push the overlay off the right edge. */
+#ts-showcase-player.ts-fullscreen {
+	width: auto;
+	margin: auto;
+	filter: none;
 }
 
 #ts-showcase-player .trackswitch .overlay {

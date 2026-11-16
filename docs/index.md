@@ -127,10 +127,6 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
       <div class="ts-control-group" data-ts-control-group="visualizations">
         <h5>Visualizations</h5>
         <label class="ts-control-row">
-          <span>Seekbar</span>
-          <input type="checkbox" name="seekBar" checked />
-        </label>
-        <label class="ts-control-row">
           <span>Timer</span>
           <input type="checkbox" name="timer" checked />
         </label>
@@ -143,7 +139,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="spectrogram" />
         </label>
         <label class="ts-control-row">
-          <span>Waveform Time Axis</span>
+          <span>Time Axis</span>
           <select name="waveformTimeAxis">
             <option value="shared" selected>Shared</option>
             <option value="individual">Individual</option>
@@ -164,10 +160,6 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         <label class="ts-control-row">
           <span>Aligned Playhead</span>
           <input type="checkbox" name="alignedPlayhead" />
-        </label>
-        <label class="ts-control-row">
-          <span>Show all alignment points</span>
-          <input type="checkbox" name="showAlignmentPoints" />
         </label>
         <label class="ts-control-row">
           <span>Markers</span>
@@ -200,6 +192,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         <label class="ts-control-row">
 		  <span>User-customizable panel order</span>
           <input type="checkbox" name="customizablePanelOrder" />
+        </label>
+        <label class="ts-control-row">
+          <span>Resizable Panels</span>
+          <input type="checkbox" name="resizablePanels" checked />
         </label>
         <label class="ts-control-row">
           <span>Keyboard Shortcuts</span>

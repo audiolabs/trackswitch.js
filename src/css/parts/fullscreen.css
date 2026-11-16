@@ -2,11 +2,15 @@
 
 /* Lifts the player out of the page flow into a viewport-anchored overlay, kept
    off the screen edges by a margin, with the page behind it dimmed through a
-   box-shadow spread rather than a separate backdrop element. */
+   box-shadow spread rather than a separate backdrop element. The player is
+   only as tall as its content, up to the viewport, and centered, so a short one doesn't
+   leave an empty strip below its last panel. */
 .trackswitch.trackswitch.ts-fullscreen {
 	position: fixed;
 	inset: 48px;
-	margin: 0;
+	height: fit-content;
+	max-height: calc(100dvh - 96px);
+	margin: auto;
 	z-index: 2147483000;
 	overflow-y: auto;
 	box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
@@ -28,5 +32,6 @@
 @media (max-width: 600px) {
 	.trackswitch.trackswitch.ts-fullscreen {
 		inset: 0;
+		max-height: 100dvh;
 	}
 }

@@ -464,6 +464,7 @@ export function initialize(ctx: ViewRenderer, runtimes: TrackRuntime[]): void {
 	ctx.reflowPianoRollDisplays();
 	ctx.renderTrackList(runtimes);
 	ctx.prepareCustomizablePanels();
+	ctx.prepareResizablePanels();
 
 	if (ctx.query(".seekable:not(.seekable-img-wrap > .seekable)")) {
 		ctx.queryAll(".main-control .seekwrap").forEach((seekWrap: HTMLElement) => {
@@ -905,8 +906,75 @@ export function prepareTextPanels(ctx: ViewRenderer): void {
 	});
 }
 
+/** Marks each panel with its place in the configured order, which is what lets a rearranged stack be put back after a rebuild. */
+const PANEL_KEY_ATTRIBUTE = "data-ts-panel-key";
+
+function readPanelKey(element: HTMLElement): string | null {
+	return (
+		element.getAttribute(PANEL_KEY_ATTRIBUTE) ??
+		element
+			.querySelector(`[${PANEL_KEY_ATTRIBUTE}]`)
+			?.getAttribute(PANEL_KEY_ATTRIBUTE) ??
+		null
+	);
+}
+
+function tagPanelKeys(ctx: ViewRenderer): void {
+	let index = 0;
+	Array.from(ctx.root.children).forEach((child) => {
+		if (
+			!(child instanceof HTMLElement) ||
+			!child.classList.contains("ts-stack-section") ||
+			child.classList.contains("main-control")
+		) {
+			return;
+		}
+		if (!child.hasAttribute(PANEL_KEY_ATTRIBUTE)) {
+			child.setAttribute(PANEL_KEY_ATTRIBUTE, String(index));
+		}
+		index += 1;
+	});
+}
+
+/** The panels' keys in their current order, so a rebuild can put them back the way the user arranged them. */
+export function captureStackOrder(ctx: ViewRenderer): string[] {
+	const order: string[] = [];
+	Array.from(ctx.root.children).forEach((child) => {
+		const key = child instanceof HTMLElement ? readPanelKey(child) : null;
+		if (key !== null) {
+			order.push(key);
+		}
+	});
+	return order;
+}
+
+/** Puts the panels back in `order`, as captured from a stack built from the same views. */
+export function restoreStackOrder(ctx: ViewRenderer, order: string[]): void {
+	const panels = new Map<string, HTMLElement>();
+	Array.from(ctx.root.children).forEach((child) => {
+		const key = child instanceof HTMLElement ? readPanelKey(child) : null;
+		if (key !== null && child instanceof HTMLElement) {
+			panels.set(key, child);
+		}
+	});
+	if (panels.size !== order.length || order.some((key) => !panels.has(key))) {
+		throw new Error("Cannot restore the panel order of a different stack.");
+	}
+
+	const last = Array.from(panels.values()).reduce((latest, panel) =>
+		latest.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING
+			? panel
+			: latest,
+	);
+	const anchor = last.nextSibling;
+	order.forEach((key) => {
+		ctx.root.insertBefore(panels.get(key) as HTMLElement, anchor);
+	});
+}
+
 export function prepareCustomizablePanels(ctx: ViewRenderer): void {
 	const root = ctx.root as HTMLElement;
+	tagPanelKeys(ctx);
 	// A separator is a rule, not a panel: wrapping it in a drag shell would
 	// give a 2px divider a 24px handle.
 	const panels = Array.from(ctx.root.children).filter(

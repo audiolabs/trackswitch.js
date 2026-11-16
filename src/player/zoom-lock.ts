@@ -50,25 +50,6 @@ export function alignLockedZoom(ctx: TrackSwitchControllerImpl): void {
 	}
 }
 
-/**
- * The share of a surface's whole view that a column beside its scroller takes,
- * such as a piano keyboard. The lock compares whole views, column included —
- * that is where a centered playhead sits — so a roll with a keyboard reads as
- * wider than its scroller, extending under the column.
- */
-function getLeadingShare(
-	ctx: TrackSwitchControllerImpl,
-	surface: LockedSurface,
-): number {
-	if (!surface.isPianoRoll) {
-		return 0;
-	}
-	const roll = ctx.renderer.findPianoRollSurface(surface.seekWrap);
-	const columnPx = roll?.cachedLeadingColumnPx ?? 0;
-	const viewPx = surface.scrollContainer.clientWidth + columnPx;
-	return viewPx > 0 ? columnPx / viewPx : 0;
-}
-
 function getZoom(
 	ctx: TrackSwitchControllerImpl,
 	surface: LockedSurface,
@@ -78,23 +59,14 @@ function getZoom(
 		: ctx.renderer.getWaveformZoom(surface.seekWrap);
 }
 
-/** The visible stretch of the whole view, as ratios of the surface's timeline. */
+/** The visible stretch of a surface, as ratios of its timeline. */
 function getViewport(
 	ctx: TrackSwitchControllerImpl,
 	surface: LockedSurface,
 ): { startRatio: number; widthRatio: number } | null {
-	const viewport = surface.isPianoRoll
+	return surface.isPianoRoll
 		? ctx.renderer.getPianoRollMinimapViewport(surface.seekWrap)
 		: ctx.renderer.getWaveformMinimapViewport(surface.seekWrap);
-	if (!viewport) {
-		return null;
-	}
-	const share = getLeadingShare(ctx, surface);
-	const widthRatio = viewport.widthRatio / (1 - share);
-	return {
-		startRatio: viewport.startRatio - widthRatio * share,
-		widthRatio,
-	};
 }
 
 /**
@@ -174,6 +146,68 @@ export function syncLockedZoom(
 				nextZoom,
 				timeline.duration,
 				undefined,
+			);
+			movedWaveform = true;
+		}
+	});
+
+	if (movedWaveform) {
+		ctx.requestWaveformRender();
+	}
+}
+
+/**
+ * Carries where the window of the surface behind `source` sits to every other
+ * zoomable surface while `features.lockZoom` is on, after the listener has moved
+ * it — dragging its zoom overview. Where the window starts travels through the
+ * reference timeline, so aligned surfaces show the same passage. The zoom itself
+ * is already locked; follow-scrolling with the playhead is not carried, since each
+ * surface follows its own.
+ */
+export function syncLockedViewport(
+	ctx: TrackSwitchControllerImpl,
+	source: HTMLElement,
+): void {
+	if (!ctx.features.lockZoom) {
+		return;
+	}
+
+	const surfaces = listLockedSurfaces(ctx);
+	const sourceSurface = surfaces.find((surface) => surface.seekWrap === source);
+	if (!sourceSurface) {
+		return;
+	}
+
+	const sourceTimeline = ctx.getSeekTimelineContext(source);
+	const sourceViewport = getViewport(ctx, sourceSurface);
+	if (!sourceViewport || sourceTimeline.duration <= 0) {
+		return;
+	}
+	const referenceStart = sourceTimeline.toReferenceTime(
+		sourceViewport.startRatio * sourceTimeline.duration,
+	);
+
+	let movedWaveform = false;
+	surfaces.forEach((surface) => {
+		if (surface === sourceSurface) {
+			return;
+		}
+
+		const timeline = ctx.getSeekTimelineContext(surface.seekWrap);
+		if (timeline.duration <= 0) {
+			return;
+		}
+		const startRatio =
+			timeline.fromReferenceTime(referenceStart) / timeline.duration;
+		if (surface.isPianoRoll) {
+			ctx.renderer.setPianoRollMinimapViewportStart(
+				surface.seekWrap,
+				startRatio,
+			);
+		} else {
+			ctx.renderer.setWaveformMinimapViewportStart(
+				surface.seekWrap,
+				startRatio,
 			);
 			movedWaveform = true;
 		}

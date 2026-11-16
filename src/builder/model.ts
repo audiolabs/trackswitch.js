@@ -232,7 +232,6 @@ function addMediaDefaults(
 		addViewBeforeTrackList(project, {
 			type: "pianoRoll",
 			mediaID: mediaId,
-			pianoKeyboard: true,
 		});
 	} else if (resource.kind === "musicxml") {
 		addViewBeforeTrackList(project, { type: "sheetMusic", mediaID: mediaId });

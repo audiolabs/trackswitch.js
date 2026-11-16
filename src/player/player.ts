@@ -118,16 +118,6 @@ interface WaveformMinimapDragState {
 	pointerOffsetRatio: number;
 }
 
-/**
- * An in-progress drag-to-pan gesture on a keyboard-enabled piano roll's note
- * grid: the sheet tracks the pointer directly, panning playback position along
- * with it, rather than jumping to the clicked spot like every other seekwrap.
- */
-interface PianoRollPanDragState {
-	seekWrap: HTMLElement;
-	lastPageX: number;
-}
-
 export class TrackSwitchControllerImpl
 	implements TrackSwitchController, InputController
 {
@@ -159,13 +149,15 @@ export class TrackSwitchControllerImpl
 	public resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	public seekingElement: HTMLElement | null = null;
+	public hoveredZoomWrap: HTMLElement | null = null;
+	public selectedZoomWrap: HTMLElement | null = null;
+	public zoomPointerPageX: number | undefined;
 	public rightClickDragging = false;
 	public loopDragStart: number | null = null;
 	public draggingMarker: LoopMarker | null = null;
 	public pinchZoomState: PinchZoomState | null = null;
 	public pendingWaveformTouchSeek: PendingWaveformTouchSeek | null = null;
 	public waveformMinimapDragState: WaveformMinimapDragState | null = null;
-	public pianoRollPanDragState: PianoRollPanDragState | null = null;
 	public waveformRenderFrameId: number | null = null;
 	public readonly loopMinDistance = 0.1;
 	public readonly touchSeekMoveThresholdPx = 10;
@@ -713,6 +705,10 @@ export class TrackSwitchControllerImpl
 		controllerInput.onWaveformMinimapStart(this, event);
 	}
 
+	zoomFocusedView(direction: 1 | -1): boolean {
+		return controllerSeek.zoomFocusedView(this, direction);
+	}
+
 	onPianoRollZoomWheel(event: ControllerPointerEvent): void {
 		controllerSeek.onPianoRollZoomWheel(this, event);
 	}
@@ -1144,6 +1140,10 @@ export class TrackSwitchControllerImpl
 		seekingElement: HTMLElement | null,
 	): SeekTimelineContext {
 		return controllerSeek.getSeekTimelineContext(this, seekingElement);
+	}
+
+	public getSharedAxisDuration(): number {
+		return controllerPlayback.getSharedAxisDuration(this);
 	}
 
 	public getPianoRollTimelineContext(

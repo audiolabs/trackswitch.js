@@ -70,7 +70,12 @@
 		if (controls.waveform) {
 			views.push(
 				withMarkerLayers(
-					{ type: "waveform", playbackFollowMode: controls.playbackFollowMode },
+					{
+						type: "waveform",
+						height: 110,
+						playbackFollowMode: controls.playbackFollowMode,
+						timer: controls.timer ? undefined : false,
+					},
 					controls.markers ? [markerLayer("sections")] : [],
 				),
 			);
@@ -81,6 +86,7 @@
 					{
 						type: "spectrogram",
 						playbackFollowMode: controls.playbackFollowMode,
+						timer: controls.timer ? undefined : false,
 					},
 					controls.markers ? [markerLayer("sections")] : [],
 				),
@@ -103,7 +109,7 @@
 			trackVolumeControls: controls.trackVolumeControls,
 			trackPanControls: controls.trackPanControls,
 		});
-		views.unshift(buildNavigationBar(controls, true, true));
+		views.unshift(buildNavigationBar(controls, true));
 
 		var config = {
 			media: media,
@@ -159,12 +165,14 @@
 				trackID: "hu33",
 				// The recording's own trim, so the notes sit where its audio does.
 				startOffsetMs: 200,
+				endOffsetMs: 515,
 			};
 			media.midiSC06 = {
 				type: "midi",
 				src: basePath + "/Schubert_D911-03_SC06.mid",
 				trackID: "sc06",
 				startOffsetMs: 600,
+				endOffsetMs: 710,
 			};
 		}
 		Object.assign(media, {
@@ -226,11 +234,12 @@
 					{
 						type: "pianoRoll",
 						mediaID: "audible",
-						height: 180,
-						maxZoom: 5,
+						height: 260,
+						timeAxis: controls.waveformTimeAxis,
+						alignedPlayhead: controls.alignedPlayhead,
 						pianoKeyboard: true,
 						colorPerChannel: true,
-						timer: true,
+						timer: controls.timer,
 					},
 					markerLayersA,
 				),
@@ -245,9 +254,6 @@
 			});
 		}
 		if (controls.waveform) {
-			var alignmentLayer = [
-				{ sequence: "alignment", line: "dashed", foldToReference: true },
-			];
 			[
 				{ track: "hu33", layers: markerLayersA },
 				{ track: "sc06", layers: markerLayersB },
@@ -259,12 +265,11 @@
 							tracks: [performance.track],
 							height: 100,
 							playbackFollowMode: controls.playbackFollowMode,
+							timer: controls.timer ? undefined : false,
 							timeAxis: controls.waveformTimeAxis,
 							alignedPlayhead: controls.alignedPlayhead,
 						},
-						controls.showAlignmentPoints
-							? performance.layers.concat(alignmentLayer)
-							: performance.layers,
+						performance.layers,
 					),
 				);
 				views.push(performanceTrackList(performance.track));
@@ -283,6 +288,7 @@
 							height: 120,
 							axisLabels: "midi",
 							playbackFollowMode: controls.playbackFollowMode,
+							timer: controls.timer ? undefined : false,
 							timeAxis: controls.waveformTimeAxis,
 							alignedPlayhead: controls.alignedPlayhead,
 						},
@@ -298,7 +304,7 @@
 		if (!controls.waveform) {
 			views.push(performanceTrackList("hu33"), performanceTrackList("sc06"));
 		}
-		views.unshift(buildNavigationBar(controls, false, false));
+		views.unshift(buildNavigationBar(controls, false));
 
 		// A timeline is only worth declaring for a medium the config still carries.
 		var timelines = {};
@@ -356,10 +362,11 @@
 			tabView: controls.tabView,
 			keyboard: controls.keyboard,
 			lockZoom: controls.lockZoom,
+			resizablePanels: controls.resizablePanels,
 		};
 	}
 
-	function buildNavigationBar(controls, includePresets, includeSeekBar) {
+	function buildNavigationBar(controls, includePresets) {
 		return {
 			type: "navigationBar",
 			controls: [
@@ -371,7 +378,7 @@
 				"sync",
 				includePresets && controls.presets && "presets",
 				controls.timer && "timer",
-				includeSeekBar && controls.seekBar && "seekBar",
+				"fullscreen-control",
 			].filter(Boolean),
 			repeatEnabled: controls.repeatEnabled,
 			globalPanControl: controls.globalPanControl,
@@ -392,8 +399,8 @@
 		function controls() {
 			var names = [
 				"looping", "globalVolume", "trackVolumeControls",
-				"customizablePanelOrder", "presets", "seekBar", "timer", "keyboard",
-				"waveform", "spectrogram", "pianoRoll", "text", "alignedPlayhead", "showAlignmentPoints",
+				"customizablePanelOrder", "resizablePanels", "presets", "timer", "keyboard",
+				"waveform", "spectrogram", "pianoRoll", "text", "alignedPlayhead",
 				"markers", "sheetNotePreview", "warpingMatrix", "customImage",
 				"trackImageBySolo", "exclusiveSolo", "tabView", "lockZoom",
 				"muteOtherPlayerInstances", "repeatEnabled"
@@ -457,9 +464,24 @@
 			if (!control) return;
 			var waveformEnabled =
 				readControl(controlsRoot, "waveform", false) ||
-				readControl(controlsRoot, "spectrogram", false);
+				readControl(controlsRoot, "spectrogram", false) ||
+				readControl(controlsRoot, "pianoRoll", false);
 			var disabled = mode !== MODE_SYNC || !waveformEnabled;
 			control.disabled = disabled;
+			var row = control.closest(".ts-control-row");
+			if (row) row.classList.toggle("is-disabled", disabled);
+		}
+
+		// The aligned playhead measures distance on the shared axis.
+		function updateAlignedPlayheadAvailability() {
+			var control = controlsRoot.querySelector(
+				'input[name="alignedPlayhead"]',
+			);
+			if (!control) return;
+			var disabled =
+				readControl(controlsRoot, "waveformTimeAxis", "shared") !== "shared";
+			control.disabled = disabled;
+			if (disabled) control.checked = false;
 			var row = control.closest(".ts-control-row");
 			if (row) row.classList.toggle("is-disabled", disabled);
 		}
@@ -494,7 +516,6 @@
 		function updateAlignmentControlVisibility() {
 			[
 				"alignedPlayhead",
-				"showAlignmentPoints",
 				"waveformTimeAxis",
 				"pianoRoll",
 				"sheetNotePreview",
@@ -549,6 +570,7 @@
 
 		controlsRoot.addEventListener("change", function () {
 			updateWaveformTimeAxisAvailability();
+			updateAlignedPlayheadAvailability();
 			updateSoloModeVisibility();
 			updatePresetVisibility();
 			updateDefaultVisualizationControlVisibility();
@@ -570,6 +592,7 @@
 						},
 					);
 					updateWaveformTimeAxisAvailability();
+					updateAlignedPlayheadAvailability();
 					updateSoloModeVisibility();
 					updatePresetVisibility();
 					updateDefaultVisualizationControlVisibility();
@@ -581,6 +604,7 @@
 		);
 
 		updateWaveformTimeAxisAvailability();
+		updateAlignedPlayheadAvailability();
 		updateSoloModeVisibility();
 		updatePresetVisibility();
 		updateDefaultVisualizationControlVisibility();

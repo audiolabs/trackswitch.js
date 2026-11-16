@@ -31,6 +31,7 @@ import * as viewRendererMarkerEditing from "./marker-editing";
 import type { MarkerRenderData } from "./markers";
 import * as viewRendererMarkers from "./markers";
 import * as viewRendererWarping from "./matrix";
+import { attachPanelResizeHandle } from "./panel-resize";
 import type {
 	PianoRollSeekSurfaceMetadata,
 	PianoRollTimelineContextResolver,
@@ -300,6 +301,13 @@ interface FullscreenGrowTarget {
 	setHeight(height: number): void;
 }
 
+/** A panel whose height the user can drag: what to measure, what to set, and which element carries the handle. */
+interface PanelHeightTarget {
+	panel: HTMLElement;
+	getHeight(): number;
+	setHeight(height: number): void;
+}
+
 interface PanelDragState {
 	handle: HTMLElement;
 	panel: HTMLElement;
@@ -342,6 +350,8 @@ export class ViewRenderer {
 	public readonly pianoRollSeekSurfaces: PianoRollSeekSurfaceMetadata[] = [];
 	public readonly imageSeekSurfaces: ImageSeekSurfaceMetadata[] = [];
 	public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
+	/** Each grown panel's height from just before fullscreen, in target order, so exiting restores a height the user dragged to. */
+	private fullscreenRestoreHeights: number[] = [];
 	public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
 	public readonly configuredViewHosts = new WeakMap<
 		Element,
@@ -728,8 +738,73 @@ export class ViewRenderer {
 		viewRendererCore.renderTrackList(this, runtimes);
 	}
 
+	public captureStackOrder(): string[] {
+		return viewRendererCore.captureStackOrder(this);
+	}
+
+	public restoreStackOrder(order: string[]): void {
+		viewRendererCore.restoreStackOrder(this, order);
+	}
+
 	public prepareCustomizablePanels(): void {
 		viewRendererCore.prepareCustomizablePanels(this);
+	}
+
+	/** Adds (or, with the feature off, removes) the drag handle that resizes each panel with a height. */
+	public prepareResizablePanels(): void {
+		this.queryAll(".ts-resize-handle").forEach((handle: Element) => {
+			handle.remove();
+		});
+		if (!this.features.resizablePanels) {
+			return;
+		}
+
+		this.collectHeightTargets().forEach((target) => {
+			attachPanelResizeHandle({
+				...target,
+				getMaxHeight: () => this.maxPanelHeight(target.getHeight()),
+			});
+		});
+		this.warpingMatrixHosts.forEach((host) => {
+			attachPanelResizeHandle({
+				panel: host.wrapper,
+				getHeight: () => host.configuredHeight ?? host.matrixPanel.clientHeight,
+				setHeight: (height) => {
+					host.configuredHeight = height;
+					this.ensureWarpingLayout(host);
+				},
+				getMaxHeight: () =>
+					this.maxPanelHeight(
+						host.configuredHeight ?? host.matrixPanel.clientHeight,
+					),
+			});
+		});
+	}
+
+	/** The height the fullscreen player may fill: the viewport less the margin above it, mirrored below. */
+	private fullscreenAvailableHeight(): number {
+		return (
+			window.innerHeight -
+			2 * Number.parseFloat(getComputedStyle(this.root).top)
+		);
+	}
+
+	/**
+	 * How tall a panel of `currentHeight` may grow. Fullscreen has a fixed
+	 * height, so a panel can only take the space the stack leaves free; outside
+	 * fullscreen the page just grows, and nothing bounds it.
+	 */
+	private maxPanelHeight(currentHeight: number): number {
+		if (!this.root.classList.contains("ts-fullscreen")) {
+			return Number.POSITIVE_INFINITY;
+		}
+
+		const used = Array.from(this.root.children).reduce(
+			(sum, child) =>
+				sum + (child as HTMLElement).getBoundingClientRect().height,
+			0,
+		);
+		return currentHeight + Math.max(0, this.fullscreenAvailableHeight() - used);
 	}
 
 	public prepareTextPanels(): void {
@@ -1634,12 +1709,13 @@ export class ViewRenderer {
 	 * alone; an explicit `warpingMatrix.height` is also left alone, since that is
 	 * the author's own choice.
 	 */
-	private applyFullscreenPanelHeights(active: boolean): void {
-		const targets: FullscreenGrowTarget[] = [];
+	private collectHeightTargets(): PanelHeightTarget[] {
+		const targets: PanelHeightTarget[] = [];
 
 		this.waveformSeekSurfaces.forEach((surface) => {
 			targets.push({
-				baseHeight: surface.configuredHeight,
+				panel: surface.wrapper,
+				getHeight: () => surface.originalHeight,
 				setHeight: (height) =>
 					viewRendererWaveform.setWaveformSurfaceHeight(this, surface, height),
 			});
@@ -1647,7 +1723,8 @@ export class ViewRenderer {
 
 		this.pianoRollSeekSurfaces.forEach((surface) => {
 			targets.push({
-				baseHeight: surface.configuredHeight,
+				panel: surface.wrapper,
+				getHeight: () => surface.originalHeight,
 				setHeight: (height) =>
 					viewRendererPianoRoll.setPianoRollSurfaceHeight(
 						this,
@@ -1662,8 +1739,13 @@ export class ViewRenderer {
 				return;
 			}
 			const scrollContainer = host.scrollContainer;
+			const panel = scrollContainer.parentElement;
+			if (!panel) {
+				return;
+			}
 			targets.push({
-				baseHeight: host.configuredMaxHeight,
+				panel,
+				getHeight: () => scrollContainer.clientHeight,
 				setHeight: (height) => {
 					scrollContainer.style.maxHeight = `${height}px`;
 					scrollContainer.style.height = `${height}px`;
@@ -1671,6 +1753,19 @@ export class ViewRenderer {
 				},
 			});
 		});
+
+		return targets;
+	}
+
+	private applyFullscreenPanelHeights(active: boolean): void {
+		const targets: FullscreenGrowTarget[] = this.collectHeightTargets().map(
+			(target) => ({
+				// The height the panel has now, so one the user dragged to survives
+				// a round trip through fullscreen.
+				baseHeight: target.getHeight(),
+				setHeight: target.setHeight,
+			}),
+		);
 
 		this.warpingMatrixHosts.forEach((host) => {
 			if (host.authoredHeight !== null) {
@@ -1691,9 +1786,12 @@ export class ViewRenderer {
 		});
 
 		if (!active) {
-			targets.forEach((target) => {
-				target.setHeight(target.baseHeight);
+			targets.forEach((target, index) => {
+				target.setHeight(
+					this.fullscreenRestoreHeights[index] ?? target.baseHeight,
+				);
 			});
+			this.fullscreenRestoreHeights = [];
 			this.warpingMatrixHosts.forEach((host) => {
 				host.preFullscreenHeight = null;
 			});
@@ -1704,11 +1802,13 @@ export class ViewRenderer {
 			return;
 		}
 
+		this.fullscreenRestoreHeights = targets.map((target) => target.baseHeight);
+
 		const totalBase = targets.reduce(
 			(sum, target) => sum + target.baseHeight,
 			0,
 		);
-		const available = this.root.clientHeight;
+		const available = this.fullscreenAvailableHeight();
 		// The root's own scrollHeight is useless here: fullscreen positioning
 		// (`inset`) forces the root to a definite viewport-derived height, so
 		// `scrollHeight` reports that forced height back rather than the shorter
@@ -1725,9 +1825,35 @@ export class ViewRenderer {
 			return;
 		}
 
-		targets.forEach((target) => {
-			const share = (extra * target.baseHeight) / totalBase;
-			target.setHeight(Math.round(target.baseHeight + share));
+		const grown = targets.map((target) =>
+			Math.round(target.baseHeight + (extra * target.baseHeight) / totalBase),
+		);
+		targets.forEach((target, index) => {
+			target.setHeight(grown[index]);
+		});
+
+		// Rounding, and chrome that scales with the new heights, can leave the
+		// stack taller than the viewport; take the overflow back from the growth
+		// (never below the starting heights) so nothing scrolls.
+		const overflow = Array.from(this.root.children).reduce(
+			(sum, child) =>
+				sum + (child as HTMLElement).getBoundingClientRect().height,
+			-available,
+		);
+		if (overflow <= 0) {
+			return;
+		}
+		const grownTotal = grown.reduce(
+			(sum, height, index) => sum + height - targets[index].baseHeight,
+			0,
+		);
+		if (grownTotal <= 0) {
+			return;
+		}
+		targets.forEach((target, index) => {
+			const growth = grown[index] - target.baseHeight;
+			const give = Math.min(growth, (overflow * growth) / grownTotal);
+			target.setHeight(Math.floor(grown[index] - give));
 		});
 	}
 

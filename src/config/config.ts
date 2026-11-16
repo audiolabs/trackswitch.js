@@ -1155,6 +1155,7 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	normalizeLoudness: false,
 	autoload: false,
 	lockZoom: true,
+	resizablePanels: true,
 };
 
 const featureKeys = new Set<keyof TrackSwitchFeatures>(

@@ -14,6 +14,7 @@ import type {
 	TrackRuntime,
 	TrackSwitchPianoRollViewConfig,
 	TrackSwitchUiState,
+	WaveformTimeAxis,
 } from "../types";
 import type {
 	ConfiguredViewHost,
@@ -46,7 +47,6 @@ import {
 } from "./surface";
 
 const MIN_PIANO_ROLL_ZOOM = MIN_TIMELINE_ZOOM;
-const PIANO_ROLL_RANGE_PADDING = 2;
 const MIN_PIANO_ROLL_NOTE_WIDTH = 1;
 /** Below this row height an outline would swallow the note body, so skip it. */
 const PIANO_ROLL_NOTE_BORDER_MIN_HEIGHT = 4;
@@ -131,6 +131,14 @@ export interface PianoRollSeekSurfaceMetadata {
 	scrollContainer: HTMLElement;
 	surface: HTMLElement;
 	noteCanvas: HTMLCanvasElement;
+	/** Gray note names beside the playhead, between the notes and the sounding ones. */
+	pitchLabelCanvas: HTMLCanvasElement | null;
+	lastPitchLabelKey: string | null;
+	/** Over the labels, drawing the notes sounding at the playhead again. */
+	activeCanvas: HTMLCanvasElement;
+	/** The position the highlight was last wanted for, so a redraw of the notes can repeat it. */
+	lastActivePosition: number;
+	lastActiveKey: string | null;
 	overlay: HTMLElement;
 	seekWrap: HTMLElement;
 	source: string;
@@ -138,11 +146,9 @@ export interface PianoRollSeekSurfaceMetadata {
 	/** The media entry this roll draws, which is also its timeline id. */
 	mediaId: string;
 	/**
-	 * The configured `playbackFollowMode`, with `"pinned"` stored as `pinnedLeft`;
-	 * see `TimelineFollowMode`.
+	 * The configured `playbackFollowMode`.
 	 */
 	playbackFollowMode: TimelineFollowMode;
-	trailingPadPx: number;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
@@ -162,12 +168,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	zoomMinimapNode: HTMLElement;
 	zoomCanvas: HTMLCanvasElement;
 	zoomViewportNode: HTMLElement;
-	/** The keyboard column, drawn beside the roll when `pianoKeyboard` is on. */
+	/** The keyboard, drawn over the roll's right edge when `pianoKeyboard` is on. */
 	keyboardCanvas: HTMLCanvasElement | null;
-	/** The keyboard column again, as the geometry sees it; see `TimelineSurfaceGeometry`. */
-	leadingColumn: HTMLElement | null;
-	/** Cached width the keyboard takes from the view; written by `refreshTimelineViewportWidth`. */
-	cachedLeadingColumnPx?: number;
 	/** The keyboard's configured width, at `configuredHeight` — a fullscreen grow scales from this. */
 	baseKeyboardWidth: number;
 	/** Serialized sounding pitches, so the keyboard only redraws when they change. */
@@ -203,6 +205,16 @@ export interface PianoRollSeekSurfaceMetadata {
 	maxNoteDuration: number;
 	/** The audio tracks each paired channel follows, from the view config. */
 	channelTrackIds: Map<number, string[]>;
+	/** Whether the axis runs over the file alone or over the longest track; see `timeAxis`. */
+	timeAxis: WaveformTimeAxis;
+	/** Shades the stretch of a shared axis after the file has ended. */
+	endedRegion: HTMLElement;
+	/** Draws the reference playhead and this roll's own joined by hooks, instead of one playhead. */
+	alignedPlayhead: boolean;
+	refHooksCanvas: HTMLCanvasElement | null;
+	/** The hook as fractions of the axis, or null while the plain playhead shows. */
+	playheadHook: { reference: number; local: number } | null;
+	hooksDrawKey: string | null;
 	/** The MIDI files an `"audible"` roll swaps between, or null for a roll with one fixed file. */
 	candidates: PianoRollCandidate[] | null;
 	/** The offsets of a roll with one fixed file. */
@@ -288,6 +300,10 @@ function setPianoRollSurfaceWidth(
 	surface.surface.style.width = `${surfaceWidth}px`;
 	surface.surface.style.height = `${surface.originalHeight}px`;
 	surface.noteCanvas.style.height = `${surface.originalHeight}px`;
+	surface.activeCanvas.style.height = `${surface.originalHeight}px`;
+	if (surface.pitchLabelCanvas) {
+		surface.pitchLabelCanvas.style.height = `${surface.originalHeight}px`;
+	}
 	// The seek surface covers the file, not the pad past its end, so a seek
 	// ratio, a loop marker and a marker layer all still land on the right time.
 	surface.seekWrap.style.width = `${getTimelineTimeWidth(surface)}px`;
@@ -307,6 +323,12 @@ export function setPianoRollSurfaceHeight(
 	surface.originalHeight = height;
 	surface.surface.style.height = `${height}px`;
 	surface.noteCanvas.style.height = `${height}px`;
+	surface.activeCanvas.style.height = `${height}px`;
+	if (surface.pitchLabelCanvas) {
+		surface.pitchLabelCanvas.style.height = `${height}px`;
+	}
+	surface.lastPitchLabelKey = null;
+	surface.lastActiveKey = null;
 	if (surface.keyboardCanvas) {
 		surface.keyboardCanvas.style.height = `${height}px`;
 		// A fullscreen grow changes row height, so the keys have to widen by the
@@ -328,36 +350,19 @@ export function setPianoRollSurfaceHeight(
 	ctx.refreshPianoRollNoteTiles();
 }
 
-/**
- * A `pinnedLeft` roll always keeps the playhead the same distance from the
- * left edge, but the anchor-ratio math in `setTimelineZoomForSurface` doesn't
- * know about that mode — while paused, it would otherwise drift the surface
- * away from the pinned position on every zoom step. Force it back afterwards.
- */
 function setPianoRollZoomForSurface(
 	surface: PianoRollSeekSurfaceMetadata,
 	zoom: number,
 	maximum: number,
 	anchorPageX?: number,
 ): boolean {
-	const changed = setTimelineZoomForSurface(
+	return setTimelineZoomForSurface(
 		surface,
 		zoom,
 		maximum,
 		anchorPageX,
 		setPianoRollSurfaceWidth,
 	);
-	if (changed && surface.playbackFollowMode === "pinnedLeft") {
-		const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
-			surface,
-			surface.lastPlayheadRatio,
-		);
-		if (scrollLeft !== null) {
-			surface.lastFollowScrollLeft = scrollLeft;
-			surface.scrollContainer.scrollLeft = scrollLeft;
-		}
-	}
-	return changed;
 }
 
 function createPianoRollTooltipNode(overlay: HTMLElement): HTMLElement {
@@ -740,8 +745,8 @@ function applyMidiNotes(
 	// where it is. A configured one stands as written.
 	surface.notes = notes;
 	if (surface.noteRange === "automatic") {
-		surface.minMidi = Math.floor(minMidi) - PIANO_ROLL_RANGE_PADDING;
-		surface.maxMidi = Math.ceil(maxMidi) + PIANO_ROLL_RANGE_PADDING;
+		surface.minMidi = Math.floor(minMidi);
+		surface.maxMidi = Math.ceil(maxMidi);
 	} else {
 		[surface.minMidi, surface.maxMidi] = surface.noteRange;
 	}
@@ -975,6 +980,8 @@ function renderPianoRollNotes(
 	const safeDuration = sanitizeDuration(durationSeconds);
 	const tileWindow = resolveVisibleTileWindow(surface, height);
 	positionTileCanvas(surface.noteCanvas, tileWindow);
+	drawPianoRollAlignmentOverlay(surface);
+	drawPianoRollPitchLabels(surface);
 
 	const { tileStartPx, tileCssWidth, tileCssHeight, surfaceWidth } = tileWindow;
 	const timeWidth = getTimelineTimeWidth(surface);
@@ -1022,6 +1029,8 @@ function renderPianoRollNotes(
 		{ tileStartPx, tileCssWidth, timeWidth },
 		height,
 	);
+	surface.lastActiveKey = null;
+	refreshPianoRollActiveNotes(surface, surface.lastActivePosition);
 }
 
 /**
@@ -1174,8 +1183,7 @@ function drawPianoRollGrid(
 ): void {
 	// Everything the grid draws belongs to the file, so all of it stops where the
 	// file does. That is not the end of the surface: the roll spans the player's
-	// timeline, which a longer audio track can carry well past the last note, and
-	// a `pinnedLeft` roll pads even that so the last notes can reach the playhead.
+	// timeline, which a longer audio track can carry well past the last note.
 	const { tileStartPx, tileCssWidth, timeWidth } = tileWindow;
 	const fileEndPx = Math.min(
 		timeWidth,
@@ -1508,14 +1516,101 @@ function sameNotes(left: MidiNoteEvent[], right: MidiNoteEvent[]): boolean {
 	);
 }
 
+/**
+ * The length of the axis: the file's own on an individual axis, the player's
+ * shared one otherwise — which a roll beside a waveform shares, so the same time
+ * sits at the same place in both.
+ */
 function resolvePianoRollTimelineDuration(
 	surface: PianoRollSeekSurfaceMetadata,
 	playerDuration: number,
 	usePianoRollLocalTimeline: boolean,
 ): number {
-	return usePianoRollLocalTimeline
+	return usePianoRollLocalTimeline && surface.timeAxis === "individual"
 		? sanitizeDuration(surface.pianoRollDurationSeconds)
 		: sanitizeDuration(playerDuration);
+}
+
+/**
+ * Draws the playhead hook into the same window around the viewport as the notes:
+ * from the reference position at the top and bottom to the roll's own position
+ * in the middle, so the gap between the two reads as time on the shared axis.
+ */
+function drawPianoRollAlignmentOverlay(
+	surface: PianoRollSeekSurfaceMetadata,
+): void {
+	const canvas = surface.refHooksCanvas;
+	if (!canvas) {
+		return;
+	}
+
+	const tileWindow = resolveVisibleTileWindow(surface, surface.originalHeight);
+	const hook = surface.playheadHook;
+	const drawKey = [
+		hook ? `${hook.reference}:${hook.local}` : "-",
+		tileWindow.tileStartPx,
+		tileWindow.tileCssWidth,
+		tileWindow.tileCssHeight,
+		tileWindow.timeWidth,
+	].join("#");
+	if (surface.hooksDrawKey === drawKey) {
+		return;
+	}
+	surface.hooksDrawKey = drawKey;
+
+	positionTileCanvas(canvas, tileWindow);
+	const context = resizeCanvasForCssSize(
+		canvas,
+		tileWindow.tileCssWidth,
+		tileWindow.tileCssHeight,
+	);
+	if (!context || !hook) {
+		return;
+	}
+
+	const height = tileWindow.tileCssHeight;
+	const computedStyle = getComputedStyle(surface.seekWrap);
+	const vertExtentRaw = parseFloat(
+		computedStyle.getPropertyValue("--seekhead-vertical-extent").trim(),
+	);
+	const vertExtent = Number.isFinite(vertExtentRaw)
+		? Math.max(0, Math.min(0.5, vertExtentRaw))
+		: 0.35;
+	const referenceX =
+		hook.reference * tileWindow.timeWidth - tileWindow.tileStartPx;
+	const localX = hook.local * tileWindow.timeWidth - tileWindow.tileStartPx;
+	if (
+		Math.max(referenceX, localX) < 0 ||
+		Math.min(referenceX, localX) > tileWindow.tileCssWidth
+	) {
+		return;
+	}
+
+	context.strokeStyle =
+		computedStyle.getPropertyValue("--seekhead-ref-color").trim() || "#383838";
+	context.lineWidth = 2;
+	context.beginPath();
+	context.moveTo(referenceX, 0);
+	context.lineTo(localX, height * (0.5 - vertExtent));
+	context.lineTo(localX, height * (0.5 + vertExtent));
+	context.lineTo(referenceX, height);
+	context.stroke();
+}
+
+/** Shades what lies past the end of the file on a shared axis. */
+function updatePianoRollEndedRegion(
+	surface: PianoRollSeekSurfaceMetadata,
+	axisDuration: number,
+): void {
+	const fileDuration = surface.pianoRollDurationSeconds;
+	const visible =
+		surface.timeAxis === "shared" &&
+		fileDuration > 0 &&
+		axisDuration > fileDuration + 0.000001;
+	surface.endedRegion.style.display = visible ? "block" : "none";
+	if (visible) {
+		surface.endedRegion.style.left = `${(fileDuration / axisDuration) * 100}%`;
+	}
 }
 
 function resolvePianoRollTimelinePosition(
@@ -1655,6 +1750,14 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 		// note count no longer drives the DOM node count.
 		const noteCanvas = document.createElement("canvas");
 		noteCanvas.className = "piano-roll-note-layer";
+		let pitchLabelCanvas: HTMLCanvasElement | null = null;
+		// The keyboard names the pitches itself.
+		if (config.pitchLabels === true && config.pianoKeyboard !== true) {
+			pitchLabelCanvas = document.createElement("canvas");
+			pitchLabelCanvas.className = "piano-roll-pitch-labels";
+		}
+		const activeCanvas = document.createElement("canvas");
+		activeCanvas.className = "piano-roll-note-layer piano-roll-active-layer";
 
 		const overlay = document.createElement("div");
 		overlay.className = "piano-roll-overlay";
@@ -1664,8 +1767,9 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			return;
 		}
 
-		// The keyboard is a column beside the scroller rather than part of the
-		// scrolled surface, so the notes travel into keys that stay put.
+		// The keyboard is not part of the scrolled surface, so the notes travel
+		// into keys that stay put. It lies translucent over the right edge of the
+		// roll, which spans the whole width, and turns opaque under the pointer.
 		const pianoKeyboard = config.pianoKeyboard === true;
 		let keyboardCanvas: HTMLCanvasElement | null = null;
 		if (pianoKeyboard) {
@@ -1674,18 +1778,24 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			keyboardCanvas.className = "piano-roll-keyboard";
 		}
 
-		if (config.playbackFollowMode === "pinned") {
-			wrapper.classList.add("piano-roll-pinned");
-		}
-
 		parent.insertBefore(wrapper, canvasElement);
+		wrapper.appendChild(scrollContainer);
 		if (keyboardCanvas) {
 			wrapper.appendChild(keyboardCanvas);
 		}
-		wrapper.appendChild(scrollContainer);
 		scrollContainer.appendChild(surface);
 		surface.appendChild(noteCanvas);
-		surface.insertAdjacentHTML("beforeend", buildSeekWrap());
+		surface.appendChild(activeCanvas);
+		const endedRegion = document.createElement("div");
+		endedRegion.className = "piano-roll-ended-region";
+		surface.appendChild(endedRegion);
+		surface.insertAdjacentHTML(
+			"beforeend",
+			buildSeekWrap({ referenceHookCanvas: config.alignedPlayhead === true }),
+		);
+		if (pitchLabelCanvas) {
+			overlay.appendChild(pitchLabelCanvas);
+		}
 		wrapper.appendChild(overlay);
 		canvasElement.remove();
 
@@ -1693,6 +1803,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 		if (!(seekWrap instanceof HTMLElement)) {
 			return;
 		}
+		const refHooksCanvas = seekWrap.querySelector(".seekhead-ref-hooks");
 		ctx.registerSeekMarkerLayers(seekWrap, config.markerLayers);
 		ctx.registerSeekTimeline(
 			seekWrap,
@@ -1705,6 +1816,10 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 		const originalHeight = Math.max(1, canvasElement.height);
 		surface.style.height = `${originalHeight}px`;
 		noteCanvas.style.height = `${originalHeight}px`;
+		activeCanvas.style.height = `${originalHeight}px`;
+		if (pitchLabelCanvas) {
+			pitchLabelCanvas.style.height = `${originalHeight}px`;
+		}
 		let baseKeyboardWidth = 0;
 		if (keyboardCanvas) {
 			keyboardCanvas.style.height = `${originalHeight}px`;
@@ -1741,27 +1856,35 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			scrollContainer,
 			surface,
 			noteCanvas,
+			pitchLabelCanvas,
+			lastPitchLabelKey: null,
+			activeCanvas,
+			lastActivePosition: 0,
+			lastActiveKey: null,
 			overlay,
 			seekWrap,
 			source,
 			alignmentColumn: definition.alignmentTimeline?.trim() || null,
 			mediaId: candidates ? candidates[0].mediaId : config.mediaID,
+			timeAxis: config.timeAxis ?? "shared",
+			endedRegion,
+			alignedPlayhead: config.alignedPlayhead === true,
+			refHooksCanvas:
+				refHooksCanvas instanceof HTMLCanvasElement ? refHooksCanvas : null,
+			playheadHook: null,
+			hooksDrawKey: null,
 			candidates,
 			midiOffsets: definition.midiOffsets ?? {},
 			candidateData: new Map(),
 			candidateRangeNotes: [],
 			desiredMediaId: null,
 			shownMediaId: null,
-			playbackFollowMode:
-				config.playbackFollowMode === "pinned"
-					? "pinnedLeft"
-					: (config.playbackFollowMode ?? "center"),
-			trailingPadPx: 0,
+			playbackFollowMode: config.playbackFollowMode ?? "center",
 			originalHeight,
 			configuredHeight: originalHeight,
-			maxZoomValue: config.maxZoom ?? 5,
+			maxZoomValue: config.maxZoom ?? 0,
 			defaultZoomValue: config.defaultZoom ?? null,
-			maxZoomSeconds: config.maxZoom ?? 5,
+			maxZoomSeconds: config.maxZoom ?? 0,
 			defaultZoomSeconds: null,
 			zoomUnitsResolved: false,
 			defaultZoomApplied: false,
@@ -1776,7 +1899,6 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			zoomCanvas,
 			zoomViewportNode,
 			keyboardCanvas,
-			leadingColumn: keyboardCanvas,
 			baseKeyboardWidth,
 			lastKeyboardKey: null,
 			lastKeyboardPosition: 0,
@@ -1834,6 +1956,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			{ passive: true },
 		);
 
+		bindPianoRollKeyboardFade(metadata);
 		if (metadata.tooltipNode) {
 			bindPianoRollTooltip(metadata);
 		}
@@ -1976,9 +2099,12 @@ function showPianoRollMedia(
 
 	const latest = ctx.latestPianoRollRenderInput;
 	if (latest) {
+		// A zoom leaves the last file's duration behind as the timeline's, which
+		// would stretch this file's roll to the old length. In an alignment each
+		// roll runs on its own file's timeline, so say so.
 		ctx.renderPianoRollDisplays(
 			latest.timelineDuration,
-			latest.usePianoRollLocalTimeline,
+			ctx.hasAlignment || latest.usePianoRollLocalTimeline,
 		);
 	}
 }
@@ -2051,6 +2177,7 @@ export function renderPianoRollDisplays(
 			);
 		}
 		setPianoRollZoomForSurface(surface, targetZoom, maximumZoom);
+		updatePianoRollEndedRegion(surface, surfaceDuration);
 		renderPianoRollNotes(surface, surfaceDuration);
 		renderPianoRollMinimap(surface, surfaceDuration);
 		refreshPianoRollKeyboard(surface, surface.lastKeyboardPosition);
@@ -2075,6 +2202,7 @@ export function refreshPianoRollNoteTiles(ctx: ViewRenderer): void {
 			latestInput.timelineDuration,
 			latestInput.usePianoRollLocalTimeline,
 		);
+		updatePianoRollEndedRegion(surface, surfaceDuration);
 		renderPianoRollNotes(surface, surfaceDuration);
 		renderPianoRollMinimap(surface, surfaceDuration);
 	});
@@ -2194,6 +2322,22 @@ export function updatePianoRollPlaybackState(
 						)
 					: clamp(state.loop.pointB, 0, safeDuration);
 		surface.lastPlayheadRatio = safeDuration > 0 ? position / safeDuration : 0;
+		// Aligned, the plain playhead gives way to the hook while the roll is not
+		// zoomed in; zoomed in, the hook no longer shows the whole distance.
+		const hooked =
+			surface.alignedPlayhead &&
+			!!timelineContext &&
+			surface.timeAxis === "shared" &&
+			safeDuration > 0 &&
+			surface.zoom <= MIN_PIANO_ROLL_ZOOM;
+		surface.playheadHook = hooked
+			? {
+					reference: clamp(state.position / safeDuration, 0, 1),
+					local: surface.lastPlayheadRatio,
+				}
+			: null;
+		surface.seekWrap.classList.toggle("aligned-playhead", hooked);
+		drawPianoRollAlignmentOverlay(surface);
 		// This runs on every 16 ms playback tick, so bail out early when nothing
 		// observable changed since the previous one.
 		const playbackKey = [
@@ -2210,6 +2354,7 @@ export function updatePianoRollPlaybackState(
 		surface.lastPlaybackKey = playbackKey;
 
 		refreshPianoRollKeyboard(surface, position);
+		refreshPianoRollActiveNotes(surface, position);
 
 		ctx.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
 			pointA: loopPointA,
@@ -2258,6 +2403,220 @@ export function updatePianoRollPlaybackState(
  * playing it, by ascending channel. A pitch two channels hold at once lights its
  * key with both.
  */
+const PITCH_LABEL_WIDTH = 34;
+const PITCH_LABEL_FONT_SIZE = 10;
+/** While zoomed in the zoom readout keeps the top left corner, so no label is drawn above this height. */
+const PITCH_LABEL_TOP_CLEARANCE = 32;
+/** From this row height on, every semitone is named; below it, only the Cs. */
+const PITCH_LABEL_ALL_ROWS_MIN_HEIGHT = 11;
+
+/**
+ * Names the pitch rows in gray on a narrow canvas of their own, fixed at the left
+ * edge of the roll in the overlay, so the labels always lie on top of the notes.
+ */
+function drawPianoRollPitchLabels(surface: PianoRollSeekSurfaceMetadata): void {
+	const canvas = surface.pitchLabelCanvas;
+	if (!canvas) {
+		return;
+	}
+
+	const height = Math.max(1, surface.originalHeight);
+	// The zoom readout only shows while zoomed in.
+	const zoomedIn = surface.zoom > MIN_PIANO_ROLL_ZOOM;
+	const computed = getComputedStyle(canvas);
+	const color =
+		computed.getPropertyValue("--piano-roll-keyboard-label").trim() ||
+		"#808080";
+	const font = `${PITCH_LABEL_FONT_SIZE}px ${computed.getPropertyValue("--ts-font-ui").trim() || "sans-serif"}`;
+	const drawKey = [
+		surface.minMidi,
+		surface.maxMidi,
+		height,
+		color,
+		font,
+		zoomedIn,
+		Math.max(1, window.devicePixelRatio || 1),
+	].join("#");
+	if (surface.lastPitchLabelKey === drawKey) {
+		return;
+	}
+	surface.lastPitchLabelKey = drawKey;
+
+	const context = resizeCanvasForCssSize(canvas, PITCH_LABEL_WIDTH, height);
+	if (!context) {
+		return;
+	}
+
+	const rowHeight = height / Math.max(1, surface.maxMidi - surface.minMidi + 1);
+	const everyRow = rowHeight >= PITCH_LABEL_ALL_ROWS_MIN_HEIGHT;
+	context.fillStyle = color;
+	context.font = font;
+	context.textBaseline = "middle";
+	for (let midi = surface.maxMidi; midi >= surface.minMidi; midi -= 1) {
+		const centerY = (surface.maxMidi - midi + 0.5) * rowHeight;
+		if (
+			(zoomedIn && centerY < PITCH_LABEL_TOP_CLEARANCE) ||
+			(!everyRow && midi % SEMITONES_PER_OCTAVE !== 0)
+		) {
+			continue;
+		}
+		context.fillText(formatMidiNoteName(midi), 0, centerY);
+	}
+}
+
+/** Indices of the notes sounding at `position`, in file order, without the silenced channels'. */
+function collectActiveNotes(
+	surface: PianoRollSeekSurfaceMetadata,
+	position: number,
+): number[] {
+	const active: number[] = [];
+	const notes = surface.notes;
+	for (
+		let index = findFirstVisibleNoteIndex(
+			notes,
+			position - surface.maxNoteDuration,
+		);
+		index < notes.length;
+		index += 1
+	) {
+		const note = notes[index];
+		if (note.time > position) {
+			break;
+		}
+		if (
+			note.time + note.duration > position &&
+			!surface.hiddenChannels.has(note.channel)
+		) {
+			active.push(index);
+		}
+	}
+	return active;
+}
+
+/**
+ * Draws the notes sounding at the playhead brighter than the rest, on a layer of
+ * their own over the notes: a note lighting up or going out redraws a handful of
+ * rectangles rather than the whole window of notes.
+ */
+function refreshPianoRollActiveNotes(
+	surface: PianoRollSeekSurfaceMetadata,
+	position: number,
+): void {
+	surface.lastActivePosition = position;
+	const geometry = surface.lastNoteGeometry;
+	const canvas = surface.activeCanvas;
+	const tileWindow = resolveVisibleTileWindow(surface, surface.originalHeight);
+	const active = geometry ? collectActiveNotes(surface, position) : [];
+	const drawKey = [
+		tileWindow.tileStartPx,
+		tileWindow.tileCssWidth,
+		tileWindow.tileCssHeight,
+		tileWindow.timeWidth,
+		geometry?.pixelsPerSecond,
+		surface.minMidi,
+		surface.maxMidi,
+		Math.max(1, window.devicePixelRatio || 1),
+		surface.mediaId,
+		active.join(","),
+	].join("#");
+	if (surface.lastActiveKey === drawKey) {
+		return;
+	}
+	surface.lastActiveKey = drawKey;
+
+	positionTileCanvas(canvas, tileWindow);
+	const context = resizeCanvasForCssSize(
+		canvas,
+		tileWindow.tileCssWidth,
+		tileWindow.tileCssHeight,
+	);
+	if (!context || !geometry || active.length === 0) {
+		return;
+	}
+
+	context.translate(-tileWindow.tileStartPx, 0);
+	const activeNotes = active.map((index) => surface.notes[index]);
+	const rects = activeNotes.map((note) => ({
+		...resolveNoteRect(surface, note, geometry),
+		note,
+		// The darker border tone of the channel carries more contrast against
+		// the surface than its fill does.
+		color: resolvePianoRollChannelColors(surface, note.channel).border,
+	}));
+	const trace = (
+		rect: (typeof rects)[number],
+		outset: number,
+		radius: number,
+	): void =>
+		traceNoteShape(
+			context,
+			rect.left - outset,
+			rect.top - outset,
+			rect.width + 2 * outset,
+			geometry.noteHeight + 2 * outset,
+			radius,
+		);
+
+	// A glow in the channel's dark tone, kept to the outside of the notes by
+	// cutting the notes themselves out of it...
+	context.save();
+	context.globalAlpha = 0.75;
+	context.shadowBlur = 9;
+	for (const rect of rects) {
+		context.shadowColor = rect.color;
+		context.fillStyle = rect.color;
+		trace(rect, 0, PIANO_ROLL_NOTE_CORNER_RADIUS);
+		context.fill();
+	}
+	context.restore();
+	context.save();
+	context.globalCompositeOperation = "destination-out";
+	for (const rect of rects) {
+		trace(rect, 0, PIANO_ROLL_NOTE_CORNER_RADIUS);
+		context.fill();
+	}
+	context.restore();
+
+	// ...then the sounding notes drawn again, so that they lie in front of the
+	// pitch labels the layer below carries: the body, a strong white wash to
+	// brighten it, the checkerboard where several channels sound one pitch on top
+	// of the wash so that it stays as it is, and the border.
+	for (const rect of rects) {
+		context.globalAlpha = resolveNoteAlpha(surface, rect.note);
+		context.fillStyle = resolveNoteFill(surface, rect.note.channel);
+		trace(rect, 0, PIANO_ROLL_NOTE_CORNER_RADIUS);
+		context.fill();
+	}
+	context.globalAlpha = 1;
+	context.fillStyle = "rgba(255, 255, 255, 0.55)";
+	for (const rect of rects) {
+		trace(rect, 0, PIANO_ROLL_NOTE_CORNER_RADIUS);
+		context.fill();
+	}
+	drawOverlapCheckerboards(context, surface, activeNotes, geometry);
+	context.lineWidth = 1;
+	for (const rect of rects) {
+		const colors = resolvePianoRollChannelColors(surface, rect.note.channel);
+		context.strokeStyle = colors.border;
+		traceNoteShape(
+			context,
+			rect.left + 0.5,
+			rect.top + 0.5,
+			rect.width - 1,
+			geometry.noteHeight - 1,
+			PIANO_ROLL_NOTE_CORNER_RADIUS - 0.5,
+		);
+		context.stroke();
+	}
+
+	// A crisp ring just outside each note's edge, to define it.
+	for (const rect of rects) {
+		context.strokeStyle = rect.color;
+		trace(rect, 0.5, PIANO_ROLL_NOTE_CORNER_RADIUS + 0.5);
+		context.stroke();
+	}
+}
+
 function collectSoundingPitches(
 	surface: PianoRollSeekSurfaceMetadata,
 	position: number,
@@ -2303,6 +2662,43 @@ function collectSoundingPitches(
 		);
 	});
 	return colors;
+}
+
+function bindPianoRollKeyboardFade(
+	surface: PianoRollSeekSurfaceMetadata,
+): void {
+	surface.scrollContainer.addEventListener("pointermove", (event) => {
+		updatePianoRollKeyboardFade(
+			surface,
+			event.pointerType === "mouse" ? event.clientX : null,
+		);
+	});
+	surface.scrollContainer.addEventListener("pointerleave", () => {
+		updatePianoRollKeyboardFade(surface, null);
+	});
+}
+
+/**
+ * Turns the keyboard mostly transparent while the pointer is over it. The
+ * keyboard itself ignores the pointer, so that the roll underneath can still be
+ * clicked there — to seek to the very start, say — and this is told from where
+ * the pointer is over the roll.
+ */
+function updatePianoRollKeyboardFade(
+	surface: PianoRollSeekSurfaceMetadata,
+	clientX: number | null,
+): void {
+	const keyboard = surface.keyboardCanvas;
+	if (!keyboard) {
+		return;
+	}
+
+	keyboard.classList.toggle(
+		"piano-roll-keyboard-faded",
+		clientX !== null &&
+			clientX >= surface.scrollContainer.getBoundingClientRect().left &&
+			clientX < keyboard.getBoundingClientRect().right,
+	);
 }
 
 /** Redraws the keyboard column, but only when what it shows has changed. */
@@ -2601,9 +2997,10 @@ function drawPianoRollKeyboard(
 	const { minMidi, maxMidi, colors, active } = options;
 	const range = Math.max(1, maxMidi - minMidi + 1);
 	const rowHeight = height / range;
-	// Black keys sit at the back of the keyboard, the far (left) edge, and stop
-	// short; the white keys' fronts face the notes arriving at the near edge.
-	const blackEnd = width * BLACK_KEY_LENGTH_RATIO;
+	// Black keys point to the right: they start at the left edge, the one beside
+	// the roll, and stop short of the far one.
+	const blackLength = width * BLACK_KEY_LENGTH_RATIO;
+	const blackStart = 0;
 	const whiteKeys = collectWhiteKeys(minMidi, maxMidi);
 	// The pitch axis in canvas coordinates, in semitones rather than in rows, so
 	// the white-key bands — 12 rows to every 7 keys — can be placed on it.
@@ -2636,7 +3033,7 @@ function drawPianoRollKeyboard(
 			context.fillStyle = colors.label;
 			context.fillText(
 				formatMidiNoteName(midi),
-				blackEnd + 3,
+				blackLength + 3,
 				top + keyHeight / 2,
 			);
 		}
@@ -2651,13 +3048,25 @@ function drawPianoRollKeyboard(
 
 		const top = semitoneY(midi + 1);
 		context.fillStyle = colors.black;
-		context.fillRect(0, top, blackEnd, rowHeight);
+		context.fillRect(blackStart, top, blackLength, rowHeight);
 
 		const activeColors = active.get(midi);
 		if (activeColors && activeColors.length > 0) {
-			fillActiveBoxes(context, activeColors, 0, top, blackEnd, rowHeight);
+			fillActiveBoxes(
+				context,
+				activeColors,
+				blackStart,
+				top,
+				blackLength,
+				rowHeight,
+			);
 		}
 
-		context.strokeRect(0.5, top + 0.5, blackEnd - 1, rowHeight - 1);
+		context.strokeRect(
+			blackStart + 0.5,
+			top + 0.5,
+			blackLength - 1,
+			rowHeight - 1,
+		);
 	}
 }

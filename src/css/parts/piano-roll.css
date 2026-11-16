@@ -371,6 +371,9 @@
 	position: relative;
 	min-width: 100%;
 	overflow: hidden;
+	/* Own stacking context: the loop region sits at z-index -1, above this
+	   background but below the note canvas. */
+	isolation: isolate;
 	background: var(--piano-roll-surface-background);
 }
 
@@ -395,44 +398,54 @@
 }
 
 /*
- * With a keyboard the wrapper becomes a row: the keys stay put on the left
- * while the roll scrolls past them, which puts the playhead — pinned to the
- * left edge of the scroller — exactly on the near edge of the keys.
- */
-.trackswitch .piano-roll-wrap.piano-roll-has-keyboard {
-	display: flex;
-	align-items: stretch;
-}
-
-.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .piano-roll-scroll {
-	flex: 1 1 auto;
-	min-width: 0;
-}
-
-/*
- * The keyboard's near edge and the pinnedLeft seekhead are meant to sit
- * flush, but the seekhead's position comes from `scrollLeft`, which the
- * browser rounds to a device pixel every frame while the underlying
- * playhead value is continuous — so the two edges wobble against each
- * other by a fraction of a pixel. Rather than chase that rounding, the
- * keyboard overlaps a few pixels onto the scroller and paints over the
- * seekhead there (which is only 2px wide, so the overlap hides it with
- * room to spare) instead of trying to butt up against it exactly. z-index
- * has to clear the seekhead's own z-index: 4 (set in timeline.css) for
- * the overlap to actually paint on top rather than underneath it.
+ * The keyboard lies over the left edge of the roll, which spans the whole
+ * width. It is opaque, and turns mostly transparent while the pointer is over
+ * it (the class is set from the pointer's place over the roll). It ignores the
+ * pointer itself, so that the roll underneath can still be clicked there, to
+ * seek to the start. z-index has to clear the seekhead's own z-index: 4 (set in
+ * timeline.css).
  */
 .trackswitch .piano-roll-wrap .piano-roll-keyboard {
-	flex: 0 0 auto;
-	display: block;
-	position: relative;
+	position: absolute;
+	top: 0;
+	left: 0;
 	z-index: 5;
-	width: calc(var(--ts-piano-roll-keyboard-width) + 4px);
-	margin-right: -4px;
-	background: var(--piano-roll-surface-background);
+	display: block;
+	width: var(--ts-piano-roll-keyboard-width);
+	pointer-events: none;
+	transition: opacity 160ms ease;
 }
 
-.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .piano-roll-overlay {
-	left: var(--ts-piano-roll-keyboard-width);
+.trackswitch .piano-roll-wrap .piano-roll-keyboard.piano-roll-keyboard-faded {
+	opacity: 0.25;
+}
+
+/* The zoom readout sits beside the keyboard, not under it. */
+.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .piano-roll-zoom {
+	left: calc(var(--ts-piano-roll-keyboard-width) + 6px);
+}
+
+/* The pitch labels stay at the left edge of the roll, in the overlay, on top of
+ * the notes. */
+.trackswitch .piano-roll-wrap .piano-roll-pitch-labels {
+	position: absolute;
+	top: 0;
+	left: 6px;
+	display: block;
+	pointer-events: none;
+}
+
+/* Shades what a shared axis holds past the end of the file; `left` is written by
+ * the renderer. */
+.trackswitch .piano-roll-wrap .piano-roll-ended-region {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 1;
+	display: none;
+	background: var(--ts-color-surface-panel-dark-14);
+	pointer-events: none;
 }
 
 /* Spans the file rather than the whole surface: `width` is written by the
@@ -448,15 +461,19 @@
 	touch-action: pan-y;
 	--seekhead-vertical-extent: 0.35;
 	--seekhead-color: var(--ts-color-surface-panel-dark);
+	--seekhead-ref-color: var(--ts-color-surface-panel-dark);
 }
 
-/* With pinned follow, dragging pans the sheet instead of jumping to the click. */
-.trackswitch .piano-roll-wrap.piano-roll-pinned .seekwrap {
-	cursor: grab;
+/* Placed and sized by the renderer over the window around the viewport. */
+.trackswitch .piano-roll-wrap .seekwrap .seekhead-ref-hooks {
+	position: absolute;
+	top: 0;
+	pointer-events: none;
+	z-index: 4;
 }
 
-.trackswitch .piano-roll-wrap.piano-roll-pinned .seekwrap:active {
-	cursor: grabbing;
+.trackswitch .piano-roll-wrap .seekwrap.aligned-playhead .seekhead {
+	display: none;
 }
 
 /*
@@ -467,6 +484,7 @@
 .trackswitch .piano-roll-wrap[data-palette="dark"] .seekwrap,
 .trackswitch .piano-roll-wrap[data-palette="colorblind-dark"] .seekwrap {
 	--seekhead-color: var(--ts-color-text-inverse);
+	--seekhead-ref-color: var(--ts-color-text-inverse);
 	--loop-marker-color: var(--ts-color-text-inverse);
 }
 
@@ -579,7 +597,6 @@
 	overflow: hidden;
 	border-radius: 5px;
 	background: var(--piano-roll-surface-background);
-	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
 	pointer-events: auto;
 	cursor: grab;
 }
@@ -657,8 +674,10 @@
 	min-width: 0;
 	border-radius: 4px;
 	border: 1px solid var(--ts-color-text-inverse);
-	background: var(--ts-color-surface-raised-16);
-	box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
+	background: transparent;
+	/* Spotlight: the minimap clips this shadow, so everything outside the
+	 * viewport is dimmed and only the visible stretch stays bright. */
+	box-shadow: 0 0 0 400px var(--ts-color-surface-panel-dark-50);
 	pointer-events: none;
 }
 

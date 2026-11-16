@@ -50,6 +50,10 @@
 				"lockZoom": {
 					"type": "boolean",
 					"description": "Locks the zoom level of every zoomable view — `waveform`, `spectrogram`, and `pianoRoll` — together: zooming one gives all of them the same amount of music in view. Scroll positions stay independent."
+				},
+				"resizablePanels": {
+					"type": "boolean",
+					"description": "Adds a handle along the bottom edge of every `waveform`, `spectrogram`, `pianoRoll`, `warpingMatrix`, and height-bounded `sheetMusic` panel, which users drag to set that panel's height; a double click resets it. Defaults to `true`."
 				}
 			},
 			"additionalProperties": false
@@ -1442,6 +1446,13 @@
 					"$ref": "#/definitions/TrackId",
 					"description": "The track this MIDI file is the notation of, such as an expressive transcription of one recording. A `pianoRoll` with `mediaID: \"audible\"` shows the file of the track that is audible."
 				},
+				"startOffsetMs": {
+					"type": "number",
+					"description": "Trims or pads the file's start and end like the audio entry's offsets: a positive start offset cuts that much off the front, a negative one adds silence before it; likewise at the end. Give a MIDI file the offsets of the recording it notates, so that both sit on the same timeline."
+				},
+				"endOffsetMs": {
+					"type": "number"
+				},
 				"soundFont": {
 					"type": "string",
 					"description": "URL of a SoundFont (`.sf2`, `.sf3`) to play this file through. With it the medium is also a track, rendered to audio once at load time, and appears in a `trackList` like any recording; without it the file only draws in a piano roll. The track's fields below apply only then."
@@ -1829,7 +1840,8 @@
 					"type": "boolean"
 				},
 				"alignedPlayhead": {
-					"type": "boolean"
+					"type": "boolean",
+					"description": "Draws the distance between the reference playhead and this track's own as a curve, while the view is not zoomed in. Needs `timeAxis: \"shared\"`, which it also makes the default."
 				},
 				"markerLayers": {
 					"type": "array",
@@ -1952,7 +1964,8 @@
 					"type": "boolean"
 				},
 				"alignedPlayhead": {
-					"type": "boolean"
+					"type": "boolean",
+					"description": "Draws the distance between the reference playhead and this track's own as a curve, while the view is not zoomed in. Needs `timeAxis: \"shared\"`, which it also makes the default."
 				},
 				"markerLayers": {
 					"type": "array",
@@ -2032,6 +2045,14 @@
 					],
 					"description": "The MIDI medium to draw. `\"audible\"` draws the one whose `trackID` names the audible track instead, swapping as the selection moves, and nothing while several tracks sound at once or the audible track has no MIDI file."
 				},
+				"timeAxis": {
+					"$ref": "#/definitions/WaveformTimeAxis",
+					"description": "`\"shared\"` runs the axis over the longest track, like a waveform's, so the same time sits at the same place in every view and a shorter file leaves shaded space after its end. `\"individual\"` runs it over the file alone. Defaults to `\"shared\"`, and to `\"individual\"` for `mediaID: \"audible\"` under an alignment."
+				},
+				"alignedPlayhead": {
+					"type": "boolean",
+					"description": "Draws the distance between the reference playhead and this roll's own as a hook, while the view is not zoomed in. Needs `timeAxis: \"shared\"`, which it also makes the default."
+				},
 				"switchTracksOnSeek": {
 					"type": "boolean",
 					"description": "Seeking in this view makes exactly the tracks `channelToTrackIDMap` names the audible ones. Defaults to `true`; with no map there is nothing to select."
@@ -2046,19 +2067,23 @@
 					"type": "number"
 				},
 				"playbackFollowMode": {
-					"$ref": "#/definitions/PianoRollPlaybackFollowMode",
-					"description": "Defaults to `\"center\"`. `\"pinned\"` holds the playhead against the left edge."
+					"$ref": "#/definitions/WaveformPlaybackFollowMode",
+					"description": "Defaults to `\"center\"`."
 				},
 				"timer": {
 					"type": "boolean"
 				},
 				"pianoKeyboard": {
 					"type": "boolean",
-					"description": "Draws a piano keyboard beside the pitch axis and, with `\"pinned\"` follow, pins the playhead to its edge, and the key of every sounding note lights up in the colour of its channel. Defaults to `true`.\n\nFollow behaviour stays up to `playbackFollowMode`; with `\"pinned\"` the playhead sits against the keys so the notes fly into them, and dragging the note grid pans the sheet under the pointer instead of jumping."
+					"description": "Draws a piano keyboard along the pitch axis, translucent over the left edge of the roll and opaque under the pointer. The key of every sounding note lights up in the colour of its channel. Defaults to `true`.\n\nFollow behaviour stays up to `playbackFollowMode`."
+				},
+				"pitchLabels": {
+					"type": "boolean",
+					"description": "Labels the pitch rows with note names, in gray, at the left edge of the roll, on top of the notes. Not drawn with `pianoKeyboard`, which names the pitches itself. Defaults to `true`."
 				},
 				"noteRange": {
 					"$ref": "#/definitions/MidiNoteRange",
-					"description": "The pitch axis of the roll. `\"automatic\"` (the default) spans every note of the file with two semitones of padding on each side; a pair fixes it."
+					"description": "The pitch axis of the roll. `\"automatic\"` (the default) spans every note of every file the roll can show, exactly, with no padding; a pair fixes it."
 				},
 				"grid": {
 					"type": "string",
@@ -2139,18 +2164,6 @@
 				"mediaID"
 			],
 			"additionalProperties": false
-		},
-		"PianoRollPlaybackFollowMode": {
-			"anyOf": [
-				{
-					"$ref": "#/definitions/WaveformPlaybackFollowMode"
-				},
-				{
-					"type": "string",
-					"const": "pinned"
-				}
-			],
-			"description": "How a piano roll moves with playback: the waveform modes, plus `\"pinned\"`, which holds the playhead against the left edge of the roll (the near edge of the keys, with a keyboard) and scrolls the notes underneath it."
 		},
 		"MidiNoteRange": {
 			"anyOf": [

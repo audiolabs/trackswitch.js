@@ -93,6 +93,7 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	legend: "none",
 	line: "dashed",
 	lockZoom: true,
+	resizablePanels: true,
 	lineWidth: 1,
 	maxHeight: 380,
 	maxWidth: 1000,
@@ -193,7 +194,9 @@ function defaultFieldValue(
 				?.config.type;
 		if (
 			key === "maxZoom" &&
-			(viewType === "waveform" || viewType === "spectrogram")
+			(viewType === "waveform" ||
+				viewType === "spectrogram" ||
+				viewType === "pianoRoll")
 		)
 			return 0;
 		if (key === "height" && viewType === "pianoRoll") return 180;

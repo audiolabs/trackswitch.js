@@ -18,12 +18,6 @@ export type OutsideCoverageMode = "hold" | "extrapolate" | "error";
 export type DuplicateAnchorPolicy = "first" | "average" | "error";
 /** How a zoomable surface moves with playback. */
 export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
-/**
- * How a piano roll moves with playback: the waveform modes, plus `"pinned"`,
- * which holds the playhead against the left edge of the roll (the near edge of
- * the keys, with a keyboard) and scrolls the notes underneath it.
- */
-export type PianoRollPlaybackFollowMode = WaveformPlaybackFollowMode | "pinned";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
 type MarkerLineStyle = "solid" | "dashed";
 
@@ -259,6 +253,11 @@ export interface TrackSwitchWaveformViewConfig {
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timeAxis?: WaveformTimeAxis;
 	timer?: boolean;
+	/**
+	 * Draws the distance between the reference playhead and this track's own as a
+	 * curve, while the view is not zoomed in. Needs `timeAxis: "shared"`, which it
+	 * also makes the default.
+	 */
 	alignedPlayhead?: boolean;
 	markerLayers?: MarkerLayerConfig[];
 	css?: TrackSwitchCssOverrides;
@@ -342,6 +341,11 @@ export interface TrackSwitchSpectrogramViewConfig {
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timeAxis?: WaveformTimeAxis;
 	timer?: boolean;
+	/**
+	 * Draws the distance between the reference playhead and this track's own as a
+	 * curve, while the view is not zoomed in. Needs `timeAxis: "shared"`, which it
+	 * also makes the default.
+	 */
 	alignedPlayhead?: boolean;
 	markerLayers?: MarkerLayerConfig[];
 	css?: TrackSwitchCssOverrides;
@@ -373,6 +377,20 @@ export interface TrackSwitchPianoRollViewConfig {
 	 */
 	mediaID: MediaId | "audible";
 	/**
+	 * `"shared"` runs the axis over the longest track, like a waveform's, so the
+	 * same time sits at the same place in every view and a shorter file leaves
+	 * shaded space after its end. `"individual"` runs it over the file alone.
+	 * Defaults to `"shared"`, and to `"individual"` for `mediaID: "audible"` under
+	 * an alignment.
+	 */
+	timeAxis?: WaveformTimeAxis;
+	/**
+	 * Draws the distance between the reference playhead and this roll's own as a
+	 * hook, while the view is not zoomed in. Needs `timeAxis: "shared"`, which it
+	 * also makes the default.
+	 */
+	alignedPlayhead?: boolean;
+	/**
 	 * Seeking in this view makes exactly the tracks `channelToTrackIDMap` names
 	 * the audible ones. Defaults to `true`; with no map there is nothing to select.
 	 */
@@ -380,22 +398,26 @@ export interface TrackSwitchPianoRollViewConfig {
 	height?: number;
 	maxZoom?: number;
 	defaultZoom?: number;
-	/** Defaults to `"center"`. `"pinned"` holds the playhead against the left edge. */
-	playbackFollowMode?: PianoRollPlaybackFollowMode;
+	/** Defaults to `"center"`. */
+	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timer?: boolean;
 	/**
-	 * Draws a piano keyboard beside the pitch axis and, with `"pinned"` follow, pins the playhead to its
-	 * edge, and the key of every sounding note lights up in the colour of its
-	 * channel. Defaults to `true`.
+	 * Draws a piano keyboard along the pitch axis, translucent over the left
+	 * edge of the roll and opaque under the pointer. The key of every sounding
+	 * note lights up in the colour of its channel. Defaults to `true`.
 	 *
-	 * Follow behaviour stays up to `playbackFollowMode`; with `"pinned"` the
-	 * playhead sits against the keys so the notes fly into them, and dragging
-	 * the note grid pans the sheet under the pointer instead of jumping.
+	 * Follow behaviour stays up to `playbackFollowMode`.
 	 */
 	pianoKeyboard?: boolean;
 	/**
+	 * Labels the pitch rows with note names, in gray, at the left edge of the
+	 * roll, on top of the notes. Not drawn with `pianoKeyboard`,
+	 * which names the pitches itself. Defaults to `true`.
+	 */
+	pitchLabels?: boolean;
+	/**
 	 * The pitch axis of the roll. `"automatic"` (the default) spans every note of
-	 * the file with two semitones of padding on each side; a pair fixes it.
+	 * every file the roll can show, exactly, with no padding; a pair fixes it.
 	 */
 	noteRange?: MidiNoteRange;
 	/**
@@ -576,6 +598,12 @@ export interface TrackSwitchFeatures {
 	 * the same amount of music in view. Scroll positions stay independent.
 	 */
 	lockZoom: boolean;
+	/**
+	 * Adds a handle along the bottom edge of every `waveform`, `spectrogram`,
+	 * `pianoRoll`, `warpingMatrix`, and height-bounded `sheetMusic` panel, which
+	 * users drag to set that panel's height; a double click resets it. Defaults to `true`.
+	 */
+	resizablePanels: boolean;
 }
 
 export interface TrackSwitchInit {

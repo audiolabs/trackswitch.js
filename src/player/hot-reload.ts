@@ -236,6 +236,10 @@ async function applyAudioPreservingConfig(
 	}
 
 	resetTransientInteractionState(controller);
+	// Before the score leaves the stack, or its place in the order is lost.
+	const stackOrder = configsMatch(controller.views, config.views)
+		? controller.renderer.captureStackOrder()
+		: null;
 	const preservedSheetMusic = detachPreservableSheetMusicViews(
 		controller,
 		config,
@@ -287,6 +291,9 @@ async function applyAudioPreservingConfig(
 	controller.trackListSoloMemory.clear();
 
 	controller.renderer.initialize(controller.runtimes);
+	if (stackOrder) {
+		controller.renderer.restoreStackOrder(stackOrder);
+	}
 	if (preservedSheetMusic) {
 		rebindPreservedSheetMusicViews(controller, preservedSheetMusic);
 	}
@@ -314,7 +321,7 @@ async function applyAudioPreservingConfig(
 	}
 	await controller.attachSheetMusicMeasureMaps();
 	await controller.renderer.initializePianoRollDisplays(
-		controller.longestDuration,
+		controller.getSharedAxisDuration(),
 		controller.isAlignmentMode(),
 	);
 	restoreZoomState(controller, zoomState);
@@ -435,6 +442,10 @@ async function updateConfigNow(
 		controller.audioEngine.disconnectRuntimes(oldRuntimes);
 		committed = true;
 		resetTransientInteractionState(controller);
+		// Before the score leaves the stack, or its place in the order is lost.
+		const stackOrder = configsMatch(controller.views, nextConfig.views)
+			? controller.renderer.captureStackOrder()
+			: null;
 		const preservedSheetMusic = detachPreservableSheetMusicViews(
 			controller,
 			nextConfig,
@@ -499,6 +510,9 @@ async function updateConfigNow(
 		};
 
 		controller.renderer.initialize(controller.runtimes);
+		if (stackOrder) {
+			controller.renderer.restoreStackOrder(stackOrder);
+		}
 		if (preservedSheetMusic) {
 			rebindPreservedSheetMusicViews(controller, preservedSheetMusic);
 		}
@@ -516,7 +530,7 @@ async function updateConfigNow(
 		}
 		await controller.attachSheetMusicMeasureMaps();
 		await controller.renderer.initializePianoRollDisplays(
-			controller.longestDuration,
+			controller.getSharedAxisDuration(),
 			controller.isAlignmentMode(),
 		);
 		restoreZoomState(controller, zoomState);
@@ -720,6 +734,11 @@ function restorePreservedSheetMusicViews(
 		const placeholder = placeholders[index];
 		const definition = controller.renderer.getConfiguredViewHost(placeholder);
 		controller.renderer.registerConfiguredViewHost(entry.host, definition);
+		// The wrapper left the stack as a panel's content, which may have been
+		// inside a drag shell that took its panel class; the new render decides
+		// again whether it gets one.
+		wrapper.classList.add("ts-stack-section");
+		wrapper.removeAttribute("data-customizable-panel-content");
 		placeholder.replaceWith(wrapper);
 	});
 }

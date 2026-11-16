@@ -35,6 +35,7 @@ import {
 	setActiveKeyboardController,
 	type TrackSwitchControllerImpl,
 } from "./player";
+import { syncLockedViewport } from "./zoom-lock";
 
 export function setKeyboardActive(ctx: TrackSwitchControllerImpl): void {
 	setActiveKeyboardController(ctx.instanceId);
@@ -73,9 +74,27 @@ export function closeShortcutHelp(ctx: TrackSwitchControllerImpl): void {
 export function toggleFullscreen(ctx: TrackSwitchControllerImpl): void {
 	ctx.fullscreen = !ctx.fullscreen;
 	ctx.renderer.setFullscreen(ctx.fullscreen);
-	// The panel width changed, so the score has to be laid out again.
+	// Entering and leaving both change the panels' size, so what they show was
+	// computed for the wrong one and has to be drawn again, as after a resize.
+	redrawViews(ctx);
 	ctx.sheetMusicEngine.resize();
 	ctx.updateMainControls();
+}
+
+/** Re-measures every waveform, spectrogram, and piano roll against its current size and draws it again. */
+function redrawViews(ctx: TrackSwitchControllerImpl): void {
+	ctx.renderer.reflowWaveforms();
+	ctx.renderer.renderWaveforms(
+		ctx.waveformEngine,
+		ctx.runtimes,
+		ctx.longestDuration,
+		ctx.getWaveformTimelineProjector(),
+		ctx.getWaveformTimelineContext(),
+	);
+	ctx.renderer.renderPianoRollDisplays(
+		ctx.getSharedAxisDuration(),
+		ctx.isAlignmentMode(),
+	);
 }
 
 export function onFullscreenToggle(
@@ -514,6 +533,7 @@ export function onWaveformMinimapStart(
 		minimapStart.seekWrap,
 		minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
 	);
+	syncLockedViewport(ctx, minimapStart.seekWrap);
 	event.preventDefault();
 	event.stopPropagation();
 }
@@ -553,6 +573,7 @@ export function onPianoRollMinimapStart(
 		minimapStart.seekWrap,
 		minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
 	);
+	syncLockedViewport(ctx, minimapStart.seekWrap);
 	event.preventDefault();
 	event.stopPropagation();
 }
@@ -941,18 +962,7 @@ export function onResize(ctx: TrackSwitchControllerImpl): void {
 	}
 
 	ctx.resizeDebounceTimer = setTimeout(() => {
-		ctx.renderer.reflowWaveforms();
-		ctx.renderer.renderWaveforms(
-			ctx.waveformEngine,
-			ctx.runtimes,
-			ctx.longestDuration,
-			ctx.getWaveformTimelineProjector(),
-			ctx.getWaveformTimelineContext(),
-		);
-		ctx.renderer.renderPianoRollDisplays(
-			ctx.longestDuration,
-			ctx.isAlignmentMode(),
-		);
+		redrawViews(ctx);
 		ctx.sheetMusicEngine.resize();
 		if (ctx.fullscreen) {
 			ctx.renderer.refreshFullscreenPanelHeights();
@@ -1093,17 +1103,6 @@ function finishSeekEndInteraction(
 	controller: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): boolean {
-	if (controller.pianoRollPanDragState) {
-		controller.pianoRollPanDragState = null;
-		if (controller.state.playing) {
-			controller.stopAudio();
-			controller.startAudio();
-		}
-		event.preventDefault();
-		event.stopPropagation();
-		return true;
-	}
-
 	if (controller.waveformMinimapDragState) {
 		controller.endWaveformMinimapDrag();
 		event.preventDefault();
@@ -1236,6 +1235,10 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		event: ControllerPointerEvent,
 	) => boolean
 > = {
+	"+": (controller) => controller.zoomFocusedView(1),
+	"=": (controller) => controller.zoomFocusedView(1),
+	"-": (controller) => controller.zoomFocusedView(-1),
+	_: (controller) => controller.zoomFocusedView(-1),
 	" ": (controller) => {
 		controller.togglePlay();
 		return true;
@@ -1639,6 +1642,10 @@ export interface InputController {
 	onPreset(event: ControllerPointerEvent): void;
 	onPresetScroll(event: ControllerPointerEvent): void;
 	onWaveformZoomWheel(event: ControllerPointerEvent): void;
+	zoomFocusedView(direction: 1 | -1): boolean;
+	hoveredZoomWrap: HTMLElement | null;
+	selectedZoomWrap: HTMLElement | null;
+	zoomPointerPageX: number | undefined;
 	onWaveformMinimapStart(event: ControllerPointerEvent): void;
 	onPianoRollZoomWheel(event: ControllerPointerEvent): void;
 	onPianoRollMinimapStart(event: ControllerPointerEvent): void;
@@ -2211,7 +2218,29 @@ export class InputBinder {
 		});
 	}
 
+	private bindZoomFocusTracking(): void {
+		const zoomWrapSelector = ".waveform-wrap, .piano-roll-wrap";
+		this.addDelegatedListener("mousemove", zoomWrapSelector, (event, wrap) => {
+			this.controller.hoveredZoomWrap = wrap as HTMLElement;
+			this.controller.zoomPointerPageX = event.pageX;
+		});
+		this.addDelegatedListener("mouseout", zoomWrapSelector, (event, wrap) => {
+			const related = (event.originalEvent as MouseEvent | undefined)
+				?.relatedTarget;
+			if (related instanceof Node && wrap.contains(related)) {
+				return;
+			}
+			if (this.controller.hoveredZoomWrap === wrap) {
+				this.controller.hoveredZoomWrap = null;
+			}
+		});
+		this.addDelegatedListener("mousedown", zoomWrapSelector, (_event, wrap) => {
+			this.controller.selectedZoomWrap = wrap as HTMLElement;
+		});
+	}
+
 	private bindKeyboardShortcuts(): void {
+		this.bindZoomFocusTracking();
 		this.addListener(getOwnerWindow(this.root), "keydown", (event) => {
 			this.controller.onKeyboard(eventToPointerEvent(event));
 		});

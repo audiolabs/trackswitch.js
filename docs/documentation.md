@@ -975,7 +975,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
   "maxZoom": 0,
   "defaultZoom": 30,
   "playbackFollowMode": "center",
-  "timeAxis": "individual",
+  "timeAxis": "shared",
   "timer": true,
   "alignedPlayhead": true,
   "markerLayers": [{ "sequence": "sections", "color": "#ed8c01" }]
@@ -993,7 +993,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |
 | `timeAxis?` | `"shared" \| "individual"` | `"shared"` (`"individual"` for `tracks: "audible"` under `alignment`) | Selects a shared longest-track duration or the duration of each fixed track. |
 | `timer?` | `boolean` | `false` (`true` under `alignment`) | Shows a local timer in the waveform. Each aligned waveform runs on its own timeline, so it carries a timer unless you set this to `false`. |
-| `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead. |
+| `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead, while the view is not zoomed in. Needs `timeAxis: "shared"`, and makes it the default. |
 | `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the waveform. |
 | `css?` | `object` | none | Overrides [theming tokens](#theming) for this view. |
 
@@ -1009,7 +1009,7 @@ For an aligned `"audible"` waveform, `timeAxis` defaults to `"individual"`. This
 
 The current track can change with the solo state. Fixed sources use `"shared"` by default.
 
-Set `timeAxis` explicitly to replace either default. This property changes the meaning of distances between playheads in different waveform views:
+Set `timeAxis` explicitly to replace either default. `alignedPlayhead` measures distance on the shared axis, so it makes `"shared"` the default for an `"audible"` waveform too, and combining it with `"individual"` is an error. This property changes the meaning of distances between playheads in different waveform views:
 
 - **`shared`** — Each waveform uses the duration of the longest track. A gap between playheads shows the absolute time difference between performances.
 - **`individual`** — Each waveform uses its own total duration from 0% to 100%. A playhead shows progress through that recording.
@@ -1069,7 +1069,7 @@ Labels on the left edge of each lane show the frequency axis, in Hz and kHz or a
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |
 | `timeAxis?` | `"shared" \| "individual"` | as for `waveform` | See [`waveform`](#waveform). |
 | `timer?` | `boolean` | `false` (`true` under `alignment`) | Shows a local timer in the spectrogram. |
-| `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead. |
+| `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead, while the view is not zoomed in. Needs `timeAxis: "shared"`, and makes it the default. |
 | `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the spectrogram. |
 | `css?` | `object` | none | Overrides [theming tokens](#theming) for this view. |
 
@@ -1096,7 +1096,7 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
   "type": "pianoRoll",
   "mediaID": "notes",
   "height": 180,
-  "maxZoom": 5,
+  "maxZoom": 0,
   "defaultZoom": 30,
   "playbackFollowMode": "center",
   "timer": true
@@ -1106,13 +1106,16 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `mediaID` | `string \| "audible"` | - | Identifies a `media` entry with `type: "midi"`. `"audible"` draws the MIDI file whose `trackID` names the audible track instead; see [following the audible track](#following-the-audible-track). |
+| `timeAxis?` | `"shared" \| "individual"` | `"shared"` (`"individual"` for `mediaID: "audible"` under `alignment`) | As for a waveform: `"shared"` runs the axis over the longest track, so the same time sits at the same place in every view and a shorter file leaves shaded space after its end; `"individual"` runs it over the file alone. |
+| `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the roll's own playhead, while the view is not zoomed in. Needs `timeAxis: "shared"`, and makes it the default. |
 | `height?` | `number` | `180` | Specifies the piano-roll height in pixels. |
-| `maxZoom?` | `number` | `5` | Specifies the smallest visible interval, where `0` lifts the zoom limit. |
-| `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`) | Specifies the visible interval the view opens on. Unset shows the whole file. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinned"` | `"center"` | Controls how the piano roll moves with playback. `"pinned"` holds the playhead against the left edge (the near edge of the keys with `pianoKeyboard`) and scrolls the notes under it. |
+| `maxZoom?` | `number` | `0` | Specifies the smallest visible interval. `0` lifts the zoom limit, as for a waveform. |
+| `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`, the default) | Specifies the visible interval the view opens on. Unset shows the whole file. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the piano roll moves with playback. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the piano roll. |
 | `switchTracksOnSeek?` | `boolean` | `true` | Seeking in this view makes exactly the tracks named in `channelToTrackIDMap` the audible ones, un-soloing all others. Has no effect without that map. |
-| `pianoKeyboard?` | `boolean` | `true` | Draws a piano keyboard beside the pitch axis. Combine with `playbackFollowMode: "pinned"` to pin the playhead to its edge. |
+| `pianoKeyboard?` | `boolean` | `true` | Draws a piano keyboard over the left edge of the roll. See [Piano keyboard](#piano-keyboard). |
+| `pitchLabels?` | `boolean` | `true` | Labels the pitch rows with note names, in gray, at the left edge of the roll. The labels lie on top of the notes, and, while the view is zoomed in, leave the top left corner to the zoom readout. Not drawn with `pianoKeyboard`, which names the pitches itself. |
 | `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |
 | `grid?` | `"none" \| "time" \| "pitch" \| "both"` | `"pitch"` | Draws reference lines behind the notes: a time grid, a pitch grid, or both. |
 | `noteTooltip?` | `boolean` | `true` | Shows the pitch, instrument, start, end, duration, velocity and channel of the note event under the cursor. |
@@ -1207,7 +1210,7 @@ The background is `--ts-color-surface-base` (light) or `--ts-color-surface-base-
 
 #### Pitch axis
 
-With `noteRange` at its default of `"automatic"`, the pitch axis spans every note of the file, hidden channels included, so switching a track off never rescales the roll. A pair fixes it instead. Each entry is a MIDI note number or a name in scientific pitch notation, where middle C is `C4` = 60, so these two are the same axis:
+With `noteRange` at its default of `"automatic"`, the pitch axis spans exactly the notes of every file the roll can show, with no padding, hidden channels included, so switching a track off never rescales the roll. A pair fixes it instead. Each entry is a MIDI note number or a name in scientific pitch notation, where middle C is `C4` = 60, so these two are the same axis:
 
 ```json
 { "type": "pianoRoll", "mediaID": "notes", "noteRange": ["C1", "C4"] }
@@ -1232,17 +1235,17 @@ With `"mediaID": "audible"` a piano roll draws whichever MIDI file belongs to th
 
 Each file brings its own timeline, so seeks and markers on the roll follow the file shown. Files never overlap: while several tracks sound at once, as in sync mode, or while the audible track has no MIDI file, the roll draws nothing. The pitch axis spans every paired file, so it holds still when the roll swaps.
 
+#### Highlighted notes
+
+The notes sounding at the playhead are marked by a soft glow in their channel's colour around them. The notes themselves stay exactly as drawn, including the checkerboard where several channels sound one pitch. They light up and go out as the playhead passes, also while paused, and silenced channels are left out. There is nothing to configure.
+
 #### Piano keyboard
 
-`pianoKeyboard` draws a keyboard column beside the pitch axis and turns the roll into a falling-notes display. It is drawn like a piano with its front toward the notes: seven white keys per octave reach the near edge, where the notes arrive, while the black keys sit at the back, on the far edge, and stop short of it. Every C carries a gray label.
+`pianoKeyboard` draws a keyboard along the pitch axis, at the left edge of the roll. It is drawn like a piano seen from the roll: seven white keys per octave, with the black keys pointing to the right: they start at the left edge, beside the roll, and stop short of the right one. Every C carries a gray label. The keyboard lies translucent over the left edge of the roll, which spans the whole width, so the notes show through it; it turns opaque while the pointer is on it. 
 
 A sounding note lights its key in the colour of its channel. Two channels holding one pitch split that key along its length, one box each.
 
-The keyboard leaves playback follow to `playbackFollowMode`, and adds a `defaultZoom` default that can be set on its own:
-
-- With `playbackFollowMode: "pinned"`, the playhead is held against the left edge of the surface — the near edge of the keys — and the notes scroll into it. The surface carries one viewport of empty space past the end of the medium, so the playhead stays pinned through the final note. Any other follow mode (default `"center"`) works as it does without a keyboard.
-- With `"pinned"`, dragging the note grid pans the sheet directly under the pointer instead of jumping to the click, as if pulling the paper: the notes track the drag, and playback position pans along with them.
-- `defaultZoom` becomes 10 seconds, so the view opens on a phrase rather than on the whole file.
+The keyboard leaves playback follow to `playbackFollowMode`, and adds a `defaultZoom` default that can be set on its own: `defaultZoom` becomes 10 seconds, so the view opens on a phrase rather than on the whole file.
 
 #### Velocity
 
@@ -1500,7 +1503,8 @@ An omitted feature uses the default value in the table.
     "keyboard": true,
     "normalizeLoudness": false,
     "autoload": false,
-    "lockZoom": true
+    "lockZoom": true,
+    "resizablePanels": true
   }
 }
 ```
@@ -1514,6 +1518,7 @@ An omitted feature uses the default value in the table.
 | `normalizeLoudness?` | `boolean` | `false` | Normalizes each track to -14 LUFS integrated loudness at load time, clamped so it never clips. |
 | `autoload?` | `boolean` | `false` | Decodes the audio and renders the waveforms as soon as the player is created, instead of waiting for the first click or keypress. This doesn't start playback — browsers only gate producing sound behind a user gesture, not decoding — so it needs no interaction, but it does spend bandwidth and CPU on every visitor whether or not they press play. |
 | `lockZoom?` | `boolean` | `true` | Locks the zoom level of all `waveform`, `spectrogram`, and `pianoRoll` views together. Zooming one view, or dragging its zoom overview, gives the others the same amount of music in view; where each one looks is its own, so each keeps following its playhead. In an aligned player the amount is matched through the reference timeline, so views of performances at different tempos show the same stretch of music. A view that cannot zoom as far as another, because of its `maxZoom`, shows as close a stretch as it can. On load, every view takes the zoom of the first one on the page. |
+| `resizablePanels?` | `boolean` | `true` | Adds a handle along the bottom edge of every `waveform`, `spectrogram`, `pianoRoll`, `warpingMatrix`, and height-bounded `sheetMusic` panel. Users drag it, or focus it and press the up and down arrow keys, to set that panel's height while the player is in use; a double click resets it to the height it opened at. A fullscreen player keeps these heights when it is left. |
 
 The player rejects unknown feature keys.
 

@@ -20,18 +20,10 @@ import type {
 	WaveformTimelineContext,
 } from "../views/renderer";
 import {
-	getTimelineTimeWidth,
-	resolveTimelinePlaybackFollowScrollLeft,
-} from "../views/surface";
-import {
 	applyReferenceReadoutUnit,
 	toggleSoloWithinAlignment,
 } from "./alignment";
-import {
-	type ControllerPointerEvent,
-	getPointerPageX,
-	getSeekMetrics,
-} from "./input";
+import { type ControllerPointerEvent, getSeekMetrics } from "./input";
 import { placeMarkerFromEvent, updateMarkerAdjust } from "./marker-editing";
 import { resetMarkerClicks, scheduleMarkerClicks } from "./marker-sonification";
 import { snapLoopEndToMarker } from "./markers";
@@ -44,7 +36,11 @@ import {
 	unregisterController,
 } from "./player";
 import { type PlayerAction, playerStateReducer } from "./state";
-import { alignLockedZoom, syncLockedZoom } from "./zoom-lock";
+import {
+	alignLockedZoom,
+	syncLockedViewport,
+	syncLockedZoom,
+} from "./zoom-lock";
 
 function getLoadErrorMessage(error: unknown): string {
 	if (error instanceof Error && error.message.trim().length > 0) {
@@ -214,7 +210,7 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 		}
 
 		await ctx.renderer.initializePianoRollDisplays(
-			ctx.longestDuration,
+			ctx.getSharedAxisDuration(),
 			ctx.isAlignmentMode(),
 		);
 		// The notes exist now, so the first paint can already drop the channels
@@ -1280,10 +1276,6 @@ export function onSeekMove(
 		return;
 	}
 
-	if (updatePianoRollPanDrag(ctx, event)) {
-		return;
-	}
-
 	if (handleWaveformAuxiliarySeekState(ctx, event)) {
 		return;
 	}
@@ -1351,6 +1343,69 @@ export function onWaveformZoomWheel(
 		syncLockedZoom(ctx, seekWrap);
 		ctx.updateMainControls();
 	}
+}
+
+const KEYBOARD_ZOOM_STEP = 1.25;
+
+export function zoomFocusedView(
+	ctx: TrackSwitchControllerImpl,
+	direction: 1 | -1,
+): boolean {
+	const hovered = ctx.hoveredZoomWrap;
+	const wrapper = hovered ?? ctx.selectedZoomWrap;
+	if (!wrapper || !ctx.root.contains(wrapper)) {
+		return false;
+	}
+
+	const anchorPageX = hovered ? ctx.zoomPointerPageX : undefined;
+	const factor = direction > 0 ? KEYBOARD_ZOOM_STEP : 1 / KEYBOARD_ZOOM_STEP;
+	const isWaveform = wrapper.classList.contains("waveform-wrap");
+	const seekWrap = wrapper.querySelector(
+		isWaveform
+			? '.seekwrap[data-seek-surface="waveform"]'
+			: '.seekwrap[data-seek-surface="piano-roll"]',
+	);
+	if (!(seekWrap instanceof HTMLElement)) {
+		return false;
+	}
+
+	const zoomDuration = ctx.getSeekTimelineContext(seekWrap).duration;
+	const enabled = isWaveform
+		? ctx.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration)
+		: ctx.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration);
+	if (!enabled) {
+		return false;
+	}
+
+	const currentZoom = isWaveform
+		? ctx.renderer.getWaveformZoom(seekWrap)
+		: ctx.renderer.getPianoRollZoom(seekWrap);
+	if (currentZoom === null) {
+		return false;
+	}
+
+	const nextZoom = currentZoom * factor;
+	const changed = isWaveform
+		? ctx.renderer.setWaveformZoom(
+				seekWrap,
+				nextZoom,
+				zoomDuration,
+				anchorPageX,
+			)
+		: ctx.renderer.setPianoRollZoom(
+				seekWrap,
+				nextZoom,
+				zoomDuration,
+				anchorPageX,
+			);
+	if (changed) {
+		if (isWaveform) {
+			ctx.requestWaveformRender();
+		}
+		syncLockedZoom(ctx, seekWrap);
+		ctx.updateMainControls();
+	}
+	return true;
 }
 
 export function onPianoRollZoomWheel(
@@ -1440,6 +1495,7 @@ function updateTimelineMinimapDrag(
 	} else {
 		ctx.renderer.setWaveformMinimapViewportStart(seekWrap, startRatio);
 	}
+	syncLockedViewport(ctx, seekWrap);
 	return true;
 }
 
@@ -1483,127 +1539,11 @@ export function isPianoRollSeekSurface(seekWrap: HTMLElement | null): boolean {
 	);
 }
 
-/**
- * A keyboard-enabled piano roll's note grid pans instead of jumping: the sheet
- * tracks the pointer directly, panning playback position along with it. Its
- * own gesture, not the generic click-to-seek below, so it starts a distinct
- * drag state rather than an interactive seek.
- */
-function tryStartPianoRollPanDrag(
-	ctx: TrackSwitchControllerImpl,
-	event: ControllerPointerEvent,
-	seekWrap: HTMLElement,
-): boolean {
-	if (!ctx.isPianoRollSeekSurface(seekWrap)) {
-		return false;
-	}
-
-	const surface = ctx.renderer.findPianoRollSurface(seekWrap);
-	if (surface?.playbackFollowMode !== "pinnedLeft") {
-		return false;
-	}
-
-	const pageX = getPointerPageX(event);
-	if (pageX === null) {
-		return false;
-	}
-
-	ctx.pianoRollPanDragState = { seekWrap, lastPageX: pageX };
-	ctx.pendingWaveformTouchSeek = null;
-	ctx.seekingElement = null;
-	ctx.rightClickDragging = false;
-	ctx.loopDragStart = null;
-	ctx.draggingMarker = null;
-	if (ctx.state.currentlySeeking) {
-		ctx.dispatch({ type: "set-seeking", seeking: false });
-	}
-	ctx.disableLoopWhenSeekOutsideRegion();
-
-	return true;
-}
-
-/**
- * Applies one step of an in-progress piano-roll pan drag: moves playback
- * position by the pointer's pixel delta (inverted, since dragging right
- * reveals earlier content, as if pulling the sheet of paper towards you) and
- * writes `scrollLeft` directly so the pinned-left playhead visibly tracks the
- * gesture instead of waiting for the next follow-scroll tick, which is
- * suppressed for this surface while the drag is in progress — see
- * `shouldSuppressPianoRollPlaybackFollow`.
- */
-function updatePianoRollPanDrag(
-	ctx: TrackSwitchControllerImpl,
-	event: ControllerPointerEvent,
-): boolean {
-	const dragState = ctx.pianoRollPanDragState;
-	if (!dragState) {
-		return false;
-	}
-
-	event.preventDefault();
-
-	const pageX = getPointerPageX(event);
-	if (pageX === null) {
-		return true;
-	}
-
-	const deltaX = pageX - dragState.lastPageX;
-	dragState.lastPageX = pageX;
-	if (deltaX === 0) {
-		return true;
-	}
-
-	const surface = ctx.renderer.findPianoRollSurface(dragState.seekWrap);
-	if (!surface) {
-		return true;
-	}
-
-	const seekTimelineContext = ctx.getSeekTimelineContext(dragState.seekWrap);
-	const duration = seekTimelineContext.duration;
-	const timeWidth = getTimelineTimeWidth(surface);
-	if (!(duration > 0) || !(timeWidth > 0)) {
-		return true;
-	}
-
-	const currentLocalTime = seekTimelineContext.fromReferenceTime(
-		ctx.state.position,
-	);
-	const nextLocalTime = clamp(
-		currentLocalTime - (deltaX / timeWidth) * duration,
-		0,
-		duration,
-	);
-	const newPosition = seekTimelineContext.toReferenceTime(nextLocalTime);
-	const anchor = seekTimelineContext.toAnchor?.(nextLocalTime) ?? null;
-
-	ctx.dispatch({ type: "set-position", position: newPosition, anchor });
-	if (ctx.state.playing) {
-		ctx.stopAudio();
-		ctx.startAudio(newPosition, 0.03);
-	}
-
-	const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
-		surface,
-		nextLocalTime / duration,
-	);
-	if (scrollLeft !== null) {
-		surface.lastFollowScrollLeft = scrollLeft;
-		surface.scrollContainer.scrollLeft = scrollLeft;
-	}
-
-	ctx.updateMainControls();
-	return true;
-}
-
 export function startInteractiveSeek(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 	seekWrap: HTMLElement,
 ): void {
-	if (tryStartPianoRollPanDrag(ctx, event, seekWrap)) {
-		return;
-	}
-
 	ctx.seekingElement = seekWrap;
 	// The initial click/tap of a seek gesture is a discrete jump, worth
 	// animating; a drag's own per-pixel `onSeekMove` calls track the pointer
@@ -2084,6 +2024,13 @@ export function getPianoRollTimelineContext(
 		return null;
 	}
 
+	// An individual axis is the file's own; a shared one is the longest track's,
+	// the axis a waveform beside the roll runs on.
+	const axisDuration =
+		pianoRollSurface.timeAxis === "individual"
+			? pianoRollDuration
+			: getSharedAxisDuration(ctx);
+
 	const alignmentColumn =
 		typeof pianoRollSurface.alignmentColumn === "string"
 			? pianoRollSurface.alignmentColumn.trim()
@@ -2092,22 +2039,35 @@ export function getPianoRollTimelineContext(
 		? timelineId(alignmentColumn)
 		: null;
 	return (
-		buildProjectedTimelineContext(
-			ctx,
-			pianoRollTimeline,
-			pianoRollDuration,
-		) ?? {
+		buildProjectedTimelineContext(ctx, pianoRollTimeline, axisDuration) ?? {
 			// No timeline declared for ctx MIDI: it shares the reference
 			// timeline, so local and reference coordinates coincide.
-			duration: pianoRollDuration,
+			duration: axisDuration,
 			formatValue: (value: number): string =>
 				ctx.renderer.formatLocalTimelineValue(null, value),
 			toReferenceTime: (pianoRollTime: number): number =>
 				clamp(pianoRollTime, 0, ctx.longestDuration),
 			fromReferenceTime: (referenceTime: number): number =>
-				clamp(referenceTime, 0, pianoRollDuration),
+				clamp(referenceTime, 0, axisDuration),
 		}
 	);
+}
+
+/**
+ * The length of the axis waveforms and piano rolls share: the longest track's
+ * own duration, or the player's where no track reports one.
+ */
+export function getSharedAxisDuration(ctx: TrackSwitchControllerImpl): number {
+	let longest = 0;
+	ctx.runtimes.forEach((runtime: TrackRuntime) => {
+		const duration = (
+			ctx.constructor as typeof TrackSwitchControllerImpl
+		).getRuntimeDuration(runtime);
+		if (Number.isFinite(duration) && duration > longest) {
+			longest = duration;
+		}
+	});
+	return longest > 0 ? longest : ctx.longestDuration;
 }
 
 export function getImageTimelineContext(
@@ -2321,7 +2281,6 @@ function shouldSuppressPianoRollPlaybackFollow(
 	return (
 		!!controller.waveformMinimapDragState ||
 		!!controller.pinchZoomState ||
-		!!controller.pianoRollPanDragState ||
 		(controller.state.currentlySeeking &&
 			controller.isPianoRollSeekSurface(controller.seekingElement))
 	);

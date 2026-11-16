@@ -129,6 +129,19 @@
 	margin: 0;
 }
 
+/* A taller control in the first row (the sync button, the preset selector)
+   makes the row taller than the icon's own, so the icon is centered on that
+   row's height instead of sitting at its top. */
+.trackswitch
+	.main-control
+	ul.control:has(.sync-global, .preset-selector)
+	> li.fullscreen-toggle.button {
+	height: max(
+		var(--ts-main-control-row-height),
+		var(--ts-preset-selector-height)
+	);
+}
+
 .trackswitch .main-control .sync-global {
 	width: auto;
 	min-width: 38px;

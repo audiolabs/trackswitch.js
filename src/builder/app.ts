@@ -176,7 +176,6 @@ function defaultView(
 			return {
 				type,
 				mediaID: firstMediaId(project, "midi"),
-				pianoKeyboard: true,
 			};
 		case "sheetMusic":
 			return { type, mediaID: firstMediaId(project, "musicxml") };
