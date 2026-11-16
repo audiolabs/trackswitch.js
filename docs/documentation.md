@@ -971,6 +971,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `tracks?` | `"audible" \| string[]` | `"audible"` | Selects the audio tracks for the waveform. |
+| `switchTracksOnSeek?` | `boolean` | `true` | Seeking in this view makes exactly the tracks it shows the audible ones, un-soloing all others. Has no effect with `tracks: "audible"`. |
 | `height?` | `number` | `150` | Specifies the waveform height in pixels. |
 | `stereo?` | `boolean` | `false` | Shows the left and right channels in two lanes instead of one lane of their average. Requires two-channel audio. |
 | `maxZoom?` | `number` | `0` | Specifies the smallest visible interval. A smaller value permits more zoom, and `0` lets the view zoom in until individual samples show. |
@@ -1037,6 +1038,7 @@ Labels on the left edge of each lane show the frequency axis, in Hz and kHz or a
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `tracks?` | `"audible" \| string[]` | `"audible"` | Selects the audio tracks for the spectrogram. |
+| `switchTracksOnSeek?` | `boolean` | `true` | Seeking in this view makes exactly the tracks it shows the audible ones, un-soloing all others. Has no effect with `tracks: "audible"`. |
 | `height?` | `number` | `200` | Specifies the spectrogram height in pixels. |
 | `stereo?` | `boolean` | `false` | Shows the left and right channels in two lanes instead of one lane of their average. Requires two-channel audio. |
 | `frequencyScale?` | `"linear" \| "log" \| "mel" \| "bark"` | `"linear"` | Spaces frequencies linearly, logarithmically, or on the mel or Bark scale. |
@@ -1093,12 +1095,13 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 | `height?` | `number` | `180` | Specifies the piano-roll height in pixels. |
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval, where `0` lifts the zoom limit. |
 | `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`) | Specifies the visible interval the view opens on. Unset shows the whole file. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the piano roll moves with playback. Ignored while `pianoKeyboard` is on — see there. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinned"` | `"center"` | Controls how the piano roll moves with playback. `"pinned"` holds the playhead against the left edge (the near edge of the keys with `pianoKeyboard`) and scrolls the notes under it. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the piano roll. |
-| `pianoKeyboard?` | `boolean` | `false` | Draws a piano keyboard beside the pitch axis and pins the playhead to its edge. Forces a pinned-left follow that overrides `playbackFollowMode`, and changes the note grid's drag gesture to pan the sheet under the pointer instead of jumping to the click. |
+| `switchTracksOnSeek?` | `boolean` | `true` | Seeking in this view makes exactly the tracks named in `channelToTrackIDMap` the audible ones, un-soloing all others. Has no effect without that map. |
+| `pianoKeyboard?` | `boolean` | `true` | Draws a piano keyboard beside the pitch axis. Combine with `playbackFollowMode: "pinned"` to pin the playhead to its edge. |
 | `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |
-| `grid?` | `"none" \| "time" \| "pitch" \| "both"` | `"none"` | Draws reference lines behind the notes: a time grid, a pitch grid, or both. |
-| `noteTooltip?` | `boolean` | `false` | Shows the pitch, channel, start, end, duration and velocity of the note event under the cursor. |
+| `grid?` | `"none" \| "time" \| "pitch" \| "both"` | `"pitch"` | Draws reference lines behind the notes: a time grid, a pitch grid, or both. |
+| `noteTooltip?` | `boolean` | `true` | Shows the pitch, instrument, start, end, duration, velocity and channel of the note event under the cursor. |
 | `velocityBars?` | `boolean` | `false` | Draws a bar inside each note event showing its velocity. |
 | `velocityOpacity?` | `boolean` | `false` | Fades note events by their velocity instead of drawing them solid. |
 | `channelToTrackIDMap?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
@@ -1117,7 +1120,7 @@ A time grid draws its lines on round values of the unit the medium declares in `
 
 A pitch grid bands the rows of the black keys, which is the same reading the `pianoKeyboard` column gives — dark rows for the black keys against light ones for the white keys, in every palette. It needs a few pixels per semitone, so a short roll spanning a wide `noteRange` draws no pitch grid.
 
-`noteTooltip` reads out the note event under the cursor — its pitch, channel, start, end, duration and velocity — with the times in the same unit as the view's `timer` and the velocity as the 0–127 value the file was written with.
+`noteTooltip` reads out the note event under the cursor — its pitch, instrument (the General MIDI patch from the track's first program change, in the channel's colour at the top right), start, end, duration, velocity and channel — with the times in the same unit as the view's `timer` and the velocity as the 0–127 value the file was written with.
 
 #### Channels
 
@@ -1199,14 +1202,14 @@ With `noteRange` at its default of `"automatic"`, the pitch axis spans every not
 
 #### Piano keyboard
 
-`pianoKeyboard` draws a keyboard column beside the pitch axis and turns the roll into a falling-notes display. Its far edge is a real keyboard — seven white keys per octave, with the black keys stopping short of it — while its near edge carries one row per semitone, the grid the roll itself draws on, so a note bar meets its own key. Every C carries a gray label.
+`pianoKeyboard` draws a keyboard column beside the pitch axis and turns the roll into a falling-notes display. It is drawn like a piano with its front toward the notes: seven white keys per octave reach the near edge, where the notes arrive, while the black keys sit at the back, on the far edge, and stop short of it. Every C carries a gray label.
 
 A sounding note lights its key in the colour of its channel. Two channels holding one pitch split that key along its length, one box each.
 
-The keyboard changes how the roll follows playback and how its note grid drags, on top of a `defaultZoom` default that can be set on its own:
+The keyboard leaves playback follow to `playbackFollowMode`, and adds a `defaultZoom` default that can be set on its own:
 
-- Playback follow switches to holding the playhead against the left edge of the surface — the near edge of the keys — rather than whatever `playbackFollowMode` says; that option is ignored while the keyboard is on. The surface carries one viewport of empty space past the end of the medium, so the playhead stays pinned through the final note. This pinned-left follow is not itself configurable — it is exclusive to a keyboard-enabled piano roll and switches on automatically with it.
-- Dragging the note grid pans the sheet directly under the pointer instead of jumping to the click, as if pulling the paper: the notes track the drag, and playback position pans along with them.
+- With `playbackFollowMode: "pinned"`, the playhead is held against the left edge of the surface — the near edge of the keys — and the notes scroll into it. The surface carries one viewport of empty space past the end of the medium, so the playhead stays pinned through the final note. Any other follow mode (default `"center"`) works as it does without a keyboard.
+- With `"pinned"`, dragging the note grid pans the sheet directly under the pointer instead of jumping to the click, as if pulling the paper: the notes track the drag, and playback position pans along with them.
 - `defaultZoom` becomes 10 seconds, so the view opens on a phrase rather than on the whole file.
 
 #### Velocity
@@ -1431,7 +1434,7 @@ A `navigationBar` view shows playback and navigation controls for the player.
     "timer",
     "seekBar"
   ],
-  "repeatEnabled": false,
+  "repeatEnabled": true,
   "globalPanControl": "balance"
 }
 ```
@@ -1443,7 +1446,7 @@ If at least two presets exist, it shows `presets`.
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `controls` | `TrackSwitchNavigationBarControl[]` | - | Specifies the required control list in order. See the supported values after this table. |
-| `repeatEnabled?` | `boolean` | `false` | Enables repeat at player startup. |
+| `repeatEnabled?` | `boolean` | `true` | Enables repeat at player startup. |
 | `globalPanControl?` | `"balance" \| "pan"` | `"balance"` | Selects the pan algorithm for the global pan control shown by `"globalPan"`. See [`trackPanControls`](#tracklist) for the algorithm behaviors. |
 
 `controls` supports `"playback"`, `"globalVolume"`, `"globalPan"`, `"markerNavigation"`, `"markerEditing"`, `"looping"`, `"sync"`, `"presets"`, `"timer"`, and `"seekBar"`.
@@ -1465,7 +1468,7 @@ An omitted feature uses the default value in the table.
     "keyboard": true,
     "normalizeLoudness": false,
     "autoload": false,
-    "lockZoom": false
+    "lockZoom": true
   }
 }
 ```
@@ -1478,7 +1481,7 @@ An omitted feature uses the default value in the table.
 | `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
 | `normalizeLoudness?` | `boolean` | `false` | Normalizes each track to -14 LUFS integrated loudness at load time, clamped so it never clips. |
 | `autoload?` | `boolean` | `false` | Decodes the audio and renders the waveforms as soon as the player is created, instead of waiting for the first click or keypress. This doesn't start playback — browsers only gate producing sound behind a user gesture, not decoding — so it needs no interaction, but it does spend bandwidth and CPU on every visitor whether or not they press play. |
-| `lockZoom?` | `boolean` | `false` | Locks the zoom and scroll position of all `waveform`, `spectrogram`, and `pianoRoll` views together. Zooming, scrolling, or dragging the zoom overview of one view shows the same passage in all of them. In an aligned player the passage is matched through the reference timeline, so views of performances at different tempos stay on the same music. A view that cannot zoom as far as another, because of its `maxZoom`, shows as close a stretch as it can. On load, every view takes the zoom of the first one on the page. |
+| `lockZoom?` | `boolean` | `true` | Locks the zoom level of all `waveform`, `spectrogram`, and `pianoRoll` views together. Zooming one view, or dragging its zoom overview, gives the others the same amount of music in view; where each one looks is its own, so each keeps following its playhead. In an aligned player the amount is matched through the reference timeline, so views of performances at different tempos show the same stretch of music. A view that cannot zoom as far as another, because of its `maxZoom`, shows as close a stretch as it can. On load, every view takes the zoom of the first one on the page. |
 
 The player rejects unknown feature keys.
 

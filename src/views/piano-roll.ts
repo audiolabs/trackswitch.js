@@ -102,6 +102,8 @@ interface MidiNoteEvent {
 	name: string;
 	velocity: number;
 	channel: number;
+	/** General MIDI instrument of the note's track, from its program change; absent for an unknown patch. */
+	instrument: string | undefined;
 }
 
 interface PianoRollNoteColors {
@@ -134,9 +136,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	/** The media entry this roll draws, which is also its timeline id. */
 	mediaId: string;
 	/**
-	 * `pinnedLeft` whenever `pianoKeyboard` is on — forced, not the configured
-	 * `playbackFollowMode`, which a keyboard column overrides entirely; see
-	 * `TimelineFollowMode`.
+	 * The configured `playbackFollowMode`, with `"pinned"` stored as `pinnedLeft`;
+	 * see `TimelineFollowMode`.
 	 */
 	playbackFollowMode: TimelineFollowMode;
 	trailingPadPx: number;
@@ -161,6 +162,10 @@ export interface PianoRollSeekSurfaceMetadata {
 	zoomViewportNode: HTMLElement;
 	/** The keyboard column, drawn beside the roll when `pianoKeyboard` is on. */
 	keyboardCanvas: HTMLCanvasElement | null;
+	/** The keyboard column again, as the geometry sees it; see `TimelineSurfaceGeometry`. */
+	leadingColumn: HTMLElement | null;
+	/** Cached width the keyboard takes from the view; written by `refreshTimelineViewportWidth`. */
+	cachedLeadingColumnPx?: number;
 	/** The keyboard's configured width, at `configuredHeight` — a fullscreen grow scales from this. */
 	baseKeyboardWidth: number;
 	/** Serialized sounding pitches, so the keyboard only redraws when they change. */
@@ -196,6 +201,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	maxNoteDuration: number;
 	/** The audio tracks each paired channel follows, from the view config. */
 	channelTrackIds: Map<number, string[]>;
+	/** Whether seeking here makes the tracks of `channelTrackIds` the audible ones. */
+	switchTracksOnSeek: boolean;
 	/** Whether every channel in the file takes its own palette colour. */
 	colorPerChannel: boolean;
 	/** Palette slot of a coloured channel, by ascending channel number. */
@@ -296,6 +303,7 @@ export function setPianoRollSurfaceHeight(
 				`${scaledWidth}px`,
 			);
 		}
+		refreshTimelineViewportWidth(surface);
 		surface.lastKeyboardKey = null;
 	}
 	surface.lastRenderKey = null;
@@ -544,15 +552,17 @@ function buildPianoRollTooltipContent(
 	const pitch = document.createElement("span");
 	pitch.className = "piano-roll-note-tooltip-pitch";
 	pitch.textContent = formatMidiNoteName(note.midi);
-	const channel = document.createElement("span");
-	channel.className = "piano-roll-note-tooltip-channel";
-	channel.textContent =
-		surface.channelToLabelMap.get(note.channel) ?? `ch ${note.channel}`;
-	channel.style.color = resolvePianoRollChannelColors(
-		surface,
-		note.channel,
-	).velocity;
-	heading.append(pitch, channel);
+	heading.append(pitch);
+	if (note.instrument) {
+		const instrument = document.createElement("span");
+		instrument.className = "piano-roll-note-tooltip-instrument";
+		instrument.textContent = capitalize(note.instrument);
+		instrument.style.color = resolvePianoRollChannelColors(
+			surface,
+			note.channel,
+		).velocity;
+		heading.append(instrument);
+	}
 
 	return [
 		heading,
@@ -566,6 +576,10 @@ function buildPianoRollTooltipContent(
 		buildPianoRollTooltipRow(
 			"velocity",
 			String(Math.round(clamp(note.velocity, 0, 1) * 127)),
+		),
+		buildPianoRollTooltipRow(
+			"channel",
+			surface.channelToLabelMap.get(note.channel) ?? String(note.channel),
 		),
 	];
 }
@@ -611,6 +625,10 @@ function positionPianoRollTooltip(
 	tooltip.style.top = `${Math.round(clamp(top, 0, Math.max(0, boxHeight - height)))}px`;
 }
 
+function capitalize(text: string): string {
+	return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
 	const notes: MidiNoteEvent[] = [];
 	for (const track of midi.tracks) {
@@ -623,6 +641,7 @@ function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
 				velocity: note.velocity,
 				// A note carries no channel of its own; it belongs to its track.
 				channel: track.channel,
+				instrument: track.instrument.name,
 			});
 		}
 	}
@@ -1604,6 +1623,10 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			keyboardCanvas.className = "piano-roll-keyboard";
 		}
 
+		if (config.playbackFollowMode === "pinned") {
+			wrapper.classList.add("piano-roll-pinned");
+		}
+
 		parent.insertBefore(wrapper, canvasElement);
 		if (keyboardCanvas) {
 			wrapper.appendChild(keyboardCanvas);
@@ -1672,9 +1695,10 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			source,
 			alignmentColumn: definition.alignmentTimeline?.trim() || null,
 			mediaId: config.mediaID,
-			playbackFollowMode: pianoKeyboard
-				? "pinnedLeft"
-				: (config.playbackFollowMode ?? "center"),
+			playbackFollowMode:
+				config.playbackFollowMode === "pinned"
+					? "pinnedLeft"
+					: (config.playbackFollowMode ?? "center"),
 			trailingPadPx: 0,
 			originalHeight,
 			configuredHeight: originalHeight,
@@ -1695,6 +1719,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			zoomCanvas,
 			zoomViewportNode,
 			keyboardCanvas,
+			leadingColumn: keyboardCanvas,
 			baseKeyboardWidth,
 			lastKeyboardKey: null,
 			lastKeyboardPosition: 0,
@@ -1704,7 +1729,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			noteRange: resolveConfiguredNoteRange(config.noteRange),
 			velocityBars: config.velocityBars === true,
 			velocityOpacity: config.velocityOpacity === true,
-			grid: config.grid ?? "none",
+			grid: config.grid ?? "pitch",
 			tooltipNode:
 				config.noteTooltip === true
 					? createPianoRollTooltipNode(overlay)
@@ -1720,6 +1745,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			pianoRollDurationSeconds: 0,
 			maxNoteDuration: 0,
 			channelTrackIds,
+			switchTracksOnSeek: config.switchTracksOnSeek === true,
 			colorPerChannel: config.colorPerChannel ?? true,
 			channelPaletteIndex: new Map<number, number>(),
 			hiddenChannels: new Set<number>(),
@@ -1747,7 +1773,6 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				// so whatever the readout points at has moved on.
 				hidePianoRollTooltip(metadata);
 				ctx.schedulePianoRollNoteRefresh();
-				ctx.onTimelineViewportScroll(metadata.seekWrap);
 			},
 			{ passive: true },
 		);
@@ -2025,11 +2050,7 @@ export function updatePianoRollPlaybackState(
 			);
 		}
 
-		if (
-			!suppressPlaybackFollow &&
-			safeDuration > 0 &&
-			!ctx.isLockedPlaybackFollower(surface.seekWrap)
-		) {
+		if (!suppressPlaybackFollow && safeDuration > 0) {
 			const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
 				surface,
 				position / safeDuration,
@@ -2270,15 +2291,14 @@ export function destroyPianoRollDisplays(ctx: ViewRenderer): void {
 }
 
 /**
- * The keyboard column beside a piano roll. Its near edge — the one the notes
- * fly into — carries one row per semitone, exactly the grid the roll draws on,
- * so a note bar meets its key. Its far edge carries seven equal white keys per
- * octave, with the black keys stopping short of it, which is what makes the
- * column read as a keyboard rather than as a strip of twelve equal slots.
+ * The keyboard column beside a piano roll, drawn like a piano seen with its
+ * front toward the notes: seven white keys per octave reach the near edge — the
+ * one the notes fly into — while the black keys sit at the back, the far edge,
+ * and stop short of it.
  */
 
-/** Share of the column the black keys reach, measured from the note edge. */
-const BLACK_KEY_LENGTH_RATIO = 0.7;
+/** Share of the column the black keys reach, measured from the far edge. */
+const BLACK_KEY_LENGTH_RATIO = 0.6;
 /** A label needs at least this much white key to sit in. */
 const LABEL_MIN_KEY_HEIGHT = 9;
 const LABEL_FONT_SIZE = 9;
@@ -2373,43 +2393,6 @@ function collectWhiteKeys(minMidi: number, maxMidi: number): number[] {
 	return whiteKeys;
 }
 
-/** The two horizontal boundaries a key spans: on the far edge, and on the note edge. */
-interface KeyBands {
-	farTop: number;
-	farBottom: number;
-	nearTop: number;
-	nearBottom: number;
-}
-
-/**
- * The far band (7 keys/octave) and the near row (12 keys/octave) rarely line
- * up, so every white key is a step rather than a rectangle: a tall slab out to
- * `blackStart` at the far band's height, then a one-row tongue reaching the
- * near edge, flush with the black keys beside it. The two heights meet on a
- * vertical segment at `blackStart`, so the key is drawn from horizontals and
- * verticals only — no diagonal, which is what a real keyboard looks like.
- * How far the step juts either way differs per key, exactly as the notches
- * between the black keys of a piano do.
- */
-function traceWhiteKey(
-	context: CanvasRenderingContext2D,
-	bands: KeyBands,
-	blackStart: number,
-	width: number,
-): void {
-	const { farTop, farBottom, nearTop, nearBottom } = bands;
-	context.beginPath();
-	context.moveTo(0, farTop);
-	context.lineTo(blackStart, farTop);
-	context.lineTo(blackStart, nearTop);
-	context.lineTo(width, nearTop);
-	context.lineTo(width, nearBottom);
-	context.lineTo(blackStart, nearBottom);
-	context.lineTo(blackStart, farBottom);
-	context.lineTo(0, farBottom);
-	context.closePath();
-}
-
 /** Fills a box with the colours of everything sounding on it, side by side. */
 function fillActiveBoxes(
 	context: CanvasRenderingContext2D,
@@ -2440,13 +2423,14 @@ function drawPianoRollKeyboard(
 	const { minMidi, maxMidi, colors, active } = options;
 	const range = Math.max(1, maxMidi - minMidi + 1);
 	const rowHeight = height / range;
-	const blackStart = width * (1 - BLACK_KEY_LENGTH_RATIO);
+	// Black keys sit at the back of the keyboard, the far (left) edge, and stop
+	// short; the white keys' fronts face the notes arriving at the near edge.
+	const blackEnd = width * BLACK_KEY_LENGTH_RATIO;
 	const whiteKeys = collectWhiteKeys(minMidi, maxMidi);
 	// The pitch axis in canvas coordinates, in semitones rather than in rows, so
-	// the far-side bands — 12 rows to every 7 keys — can be placed on it.
+	// the white-key bands — 12 rows to every 7 keys — can be placed on it.
 	const semitoneY = (semitone: number): number =>
 		(maxMidi + 1 - semitone) * rowHeight;
-	const nearTop = (midi: number): number => semitoneY(midi + 1);
 
 	context.lineWidth = 1;
 	context.strokeStyle = colors.border;
@@ -2455,43 +2439,27 @@ function drawPianoRollKeyboard(
 
 	whiteKeys.forEach((midi) => {
 		const band = whiteKeyBand(midi);
-		const bands: KeyBands = {
-			farTop: semitoneY(band.top),
-			farBottom: semitoneY(band.bottom),
-			nearTop: nearTop(midi),
-			nearBottom: nearTop(midi) + rowHeight,
-		};
-		traceWhiteKey(context, bands, blackStart, width);
+		const top = semitoneY(band.top);
+		const keyHeight = semitoneY(band.bottom) - top;
 		context.fillStyle = colors.white;
-		context.fill();
+		context.fillRect(0, top, width, keyHeight);
 
 		const activeColors = active.get(midi);
 		if (activeColors && activeColors.length > 0) {
-			context.save();
-			context.clip();
-			fillActiveBoxes(
-				context,
-				activeColors,
-				0,
-				Math.min(bands.farTop, bands.nearTop),
-				width,
-				Math.max(bands.farBottom, bands.nearBottom) -
-					Math.min(bands.farTop, bands.nearTop),
-			);
-			context.restore();
+			fillActiveBoxes(context, activeColors, 0, top, width, keyHeight);
 		}
 
-		context.stroke();
+		context.strokeRect(0.5, top + 0.5, width - 1, keyHeight - 1);
 
 		if (
 			midi % SEMITONES_PER_OCTAVE === 0 &&
-			bands.farBottom - bands.farTop >= LABEL_MIN_KEY_HEIGHT
+			keyHeight >= LABEL_MIN_KEY_HEIGHT
 		) {
 			context.fillStyle = colors.label;
 			context.fillText(
 				formatMidiNoteName(midi),
-				3,
-				(bands.farTop + bands.farBottom) / 2,
+				blackEnd + 3,
+				top + keyHeight / 2,
 			);
 		}
 	});
@@ -2503,27 +2471,15 @@ function drawPianoRollKeyboard(
 			continue;
 		}
 
-		const top = nearTop(midi);
+		const top = semitoneY(midi + 1);
 		context.fillStyle = colors.black;
-		context.fillRect(blackStart, top, width - blackStart, rowHeight);
+		context.fillRect(0, top, blackEnd, rowHeight);
 
 		const activeColors = active.get(midi);
 		if (activeColors && activeColors.length > 0) {
-			fillActiveBoxes(
-				context,
-				activeColors,
-				blackStart,
-				top,
-				width - blackStart,
-				rowHeight,
-			);
+			fillActiveBoxes(context, activeColors, 0, top, blackEnd, rowHeight);
 		}
 
-		context.strokeRect(
-			blackStart,
-			top + 0.5,
-			width - blackStart,
-			rowHeight - 1,
-		);
+		context.strokeRect(0.5, top + 0.5, blackEnd - 1, rowHeight - 1);
 	}
 }

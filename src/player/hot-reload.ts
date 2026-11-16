@@ -161,6 +161,9 @@ function restoreZoomState(
 	zoomState.waveforms.forEach((state, index) => {
 		const surface = controller.renderer.waveformSeekSurfaces[index];
 		if (!surface) return;
+		// The rebuilt surface has not opened yet, and its first render would
+		// otherwise apply `defaultZoom` over the zoom restored here.
+		surface.defaultZoomApplied = true;
 		const duration = controller.getSeekTimelineContext(
 			surface.seekWrap,
 		).duration;
@@ -174,6 +177,7 @@ function restoreZoomState(
 	zoomState.pianoRoll.forEach((state, index) => {
 		const surface = controller.renderer.pianoRollSeekSurfaces[index];
 		if (!surface) return;
+		surface.defaultZoomApplied = true;
 		const duration = controller.getSeekTimelineContext(
 			surface.seekWrap,
 		).duration;

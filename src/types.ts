@@ -18,6 +18,12 @@ export type OutsideCoverageMode = "hold" | "extrapolate" | "error";
 export type DuplicateAnchorPolicy = "first" | "average" | "error";
 /** How a zoomable surface moves with playback. */
 export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
+/**
+ * How a piano roll moves with playback: the waveform modes, plus `"pinned"`,
+ * which holds the playhead against the left edge of the roll (the near edge of
+ * the keys, with a keyboard) and scrolls the notes underneath it.
+ */
+export type PianoRollPlaybackFollowMode = WaveformPlaybackFollowMode | "pinned";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
 type MarkerLineStyle = "solid" | "dashed";
 
@@ -207,6 +213,11 @@ export interface TrackSwitchPerTrackImageViewConfig {
 export interface TrackSwitchWaveformViewConfig {
 	type: "waveform";
 	tracks?: TrackId[] | "audible";
+	/**
+	 * Seeking in this view makes exactly the tracks it shows the audible ones.
+	 * Defaults to `true`. A view with `tracks: "audible"` has nothing to select.
+	 */
+	switchTracksOnSeek?: boolean;
 	height?: number;
 	/**
 	 * Shows the left and the right channel of the mix in two lanes, after
@@ -256,6 +267,11 @@ export type SpectrogramFrequencyRef = number | string;
 export interface TrackSwitchSpectrogramViewConfig {
 	type: "spectrogram";
 	tracks?: TrackId[] | "audible";
+	/**
+	 * Seeking in this view makes exactly the tracks it shows the audible ones.
+	 * Defaults to `true`. A view with `tracks: "audible"` has nothing to select.
+	 */
+	switchTracksOnSeek?: boolean;
 	height?: number;
 	/**
 	 * Shows the left and the right channel of the mix in two lanes, after
@@ -322,22 +338,25 @@ export type PianoRollLegendPosition = "none" | "top-right";
 export interface TrackSwitchPianoRollViewConfig {
 	type: "pianoRoll";
 	mediaID: MediaId;
+	/**
+	 * Seeking in this view makes exactly the tracks `channelToTrackIDMap` names
+	 * the audible ones. Defaults to `true`; with no map there is nothing to select.
+	 */
+	switchTracksOnSeek?: boolean;
 	height?: number;
 	maxZoom?: number;
 	defaultZoom?: number;
-	/** Ignored while `pianoKeyboard` is on — see there for what takes over. */
-	playbackFollowMode?: WaveformPlaybackFollowMode;
+	/** Defaults to `"center"`. `"pinned"` holds the playhead against the left edge. */
+	playbackFollowMode?: PianoRollPlaybackFollowMode;
 	timer?: boolean;
 	/**
-	 * Draws a piano keyboard beside the pitch axis and pins the playhead to its
-	 * edge, so the notes fly into the keys and the key of every sounding note
-	 * lights up in the colour of its channel. Defaults to `false`.
+	 * Draws a piano keyboard beside the pitch axis and, with `"pinned"` follow, pins the playhead to its
+	 * edge, and the key of every sounding note lights up in the colour of its
+	 * channel. Defaults to `true`.
 	 *
-	 * Also switches the roll to a pinned-left follow mode that holds the
-	 * playhead against the keys and scrolls the notes underneath it instead of
-	 * whatever `playbackFollowMode` says, and changes the note grid's drag
-	 * gesture: dragging pans the sheet directly under the pointer, panning
-	 * playback position along with it, rather than jumping to the clicked spot.
+	 * Follow behaviour stays up to `playbackFollowMode`; with `"pinned"` the
+	 * playhead sits against the keys so the notes fly into them, and dragging
+	 * the note grid pans the sheet under the pointer instead of jumping.
 	 */
 	pianoKeyboard?: boolean;
 	/**
@@ -349,13 +368,14 @@ export interface TrackSwitchPianoRollViewConfig {
 	 * Draws reference lines behind the note events. `"time"` draws vertical lines
 	 * at a round interval of the unit this view's medium declares its timeline in;
 	 * `"pitch"` bands the rows of the black keys; `"both"` draws both. Defaults to
-	 * `"none"`. A pitch grid needs a few pixels per semitone to read, and is left
+	 * `"pitch"`. A pitch grid needs a few pixels per semitone to read, and is left
 	 * out on a roll too short for its note range.
 	 */
 	grid?: "none" | "time" | "pitch" | "both";
 	/**
-	 * Shows a readout of the note event under the cursor: its pitch, channel,
-	 * start, end, duration and velocity. Defaults to `false`. When
+	 * Shows a readout of the note event under the cursor: its pitch, instrument
+	 * (top right, in the channel's colour), start, end, duration, velocity and
+	 * channel. Defaults to `true`. When
 	 * `channelToLabelMap` names the hovered note's channel, its label is shown
 	 * in place of the plain channel number.
 	 */
@@ -483,6 +503,7 @@ export type TrackSwitchNavigationBarControl =
 export interface TrackSwitchNavigationBarViewConfig {
 	type: "navigationBar";
 	controls: TrackSwitchNavigationBarControl[];
+	/** Starts with repeat on. Defaults to `true`. */
 	repeatEnabled?: boolean;
 	/** Pan algorithm for the global pan control shown when `controls` includes `"globalPan"`. */
 	globalPanControl?: TrackPanAlgorithm;
@@ -516,9 +537,9 @@ export interface TrackSwitchFeatures {
 	 */
 	autoload: boolean;
 	/**
-	 * Locks the zoom and the scroll position of every zoomable view —
-	 * `waveform`, `spectrogram`, and `pianoRoll` — together: zooming or
-	 * scrolling one shows the same passage in all of them.
+	 * Locks the zoom level of every zoomable view — `waveform`,
+	 * `spectrogram`, and `pianoRoll` — together: zooming one gives all of them
+	 * the same amount of music in view. Scroll positions stay independent.
 	 */
 	lockZoom: boolean;
 }

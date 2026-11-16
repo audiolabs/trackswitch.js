@@ -7,6 +7,7 @@ import type {
 	MarkerLayerConfig,
 	MediaConfig,
 	MidiNoteRange,
+	PianoRollPlaybackFollowMode,
 	SpectrogramFrequencyRef,
 	SpectrogramWindow,
 	TrackId,
@@ -66,6 +67,7 @@ const uiPerTrackImageAllowedKeys = keysOf<TrackSwitchPerTrackImageViewConfig>()(
 const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 	"type",
 	"tracks",
+	"switchTracksOnSeek",
 	"height",
 	"stereo",
 	"maxZoom",
@@ -80,6 +82,7 @@ const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 const uiSpectrogramAllowedKeys = keysOf<TrackSwitchSpectrogramViewConfig>()([
 	"type",
 	"tracks",
+	"switchTracksOnSeek",
 	"height",
 	"stereo",
 	"frequencyScale",
@@ -103,6 +106,7 @@ const uiSpectrogramAllowedKeys = keysOf<TrackSwitchSpectrogramViewConfig>()([
 const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"type",
 	"mediaID",
+	"switchTracksOnSeek",
 	"height",
 	"maxZoom",
 	"defaultZoom",
@@ -264,6 +268,17 @@ function normalizePlaybackFollowMode(
 		["off", "center", "jump"] as const,
 		`${label}.playbackFollowMode`,
 		fallback,
+	);
+}
+
+function normalizePianoRollFollowMode(
+	value: unknown,
+): PianoRollPlaybackFollowMode {
+	return normalizeEnum(
+		value,
+		["off", "center", "jump", "pinned"] as const,
+		"pianoRoll.playbackFollowMode",
+		"center",
 	);
 }
 
@@ -530,6 +545,11 @@ function normalizeAudioTimelineConfig<
 	const normalized: TView = {
 		...view,
 		height: toCanvasSize(view.height, defaultHeight, `${label}.height`),
+		switchTracksOnSeek:
+			normalizeOptionalBoolean(
+				view.switchTracksOnSeek,
+				`${label}.switchTracksOnSeek`,
+			) ?? true,
 		stereo: normalizeOptionalBoolean(view.stereo, `${label}.stereo`),
 		// A waveform zooms down to its samples unless told otherwise.
 		maxZoom: normalizeWaveformMaxZoom(view.maxZoom, label, 0),
@@ -951,33 +971,35 @@ function normalizePianoRollConfig(
 		normalizeOptionalBoolean(
 			pianoRoll.pianoKeyboard,
 			"pianoRoll.pianoKeyboard",
-		) ?? false;
+		) ?? true;
 
 	return {
 		...pianoRoll,
 		height: toCanvasSize(pianoRoll.height, 180, "pianoRoll.height"),
 		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll", 5),
 		defaultZoom: normalizeDefaultZoom(pianoRoll.defaultZoom, "pianoRoll"),
-		// A keyboard forces its own pinned-left follow instead — see
-		// PianoRollSeekSurfaceMetadata.playbackFollowMode.
-		playbackFollowMode: normalizePlaybackFollowMode(
+		playbackFollowMode: normalizePianoRollFollowMode(
 			pianoRoll.playbackFollowMode,
-			"pianoRoll",
 		),
 		timer: normalizeOptionalBoolean(pianoRoll.timer, "pianoRoll.timer"),
+		switchTracksOnSeek:
+			normalizeOptionalBoolean(
+				pianoRoll.switchTracksOnSeek,
+				"pianoRoll.switchTracksOnSeek",
+			) ?? true,
 		pianoKeyboard,
 		noteRange: normalizeNoteRange(pianoRoll.noteRange),
 		grid: normalizeEnum(
 			pianoRoll.grid,
 			["none", "time", "pitch", "both"] as const,
 			"pianoRoll.grid",
-			"none",
+			"pitch",
 		),
 		noteTooltip:
 			normalizeOptionalBoolean(
 				pianoRoll.noteTooltip,
 				"pianoRoll.noteTooltip",
-			) ?? false,
+			) ?? true,
 		channelToLabelMap: normalizeChannelToLabelMap(pianoRoll.channelToLabelMap),
 		legend: normalizeEnum(
 			pianoRoll.legend,
@@ -1284,7 +1306,7 @@ function normalizeNavigationBarConfig(
 			normalizeOptionalBoolean(
 				navigationBar.repeatEnabled,
 				"navigationBar.repeatEnabled",
-			) ?? false,
+			) ?? true,
 		globalPanControl: normalizeGlobalPanControl(navigationBar.globalPanControl),
 	};
 }

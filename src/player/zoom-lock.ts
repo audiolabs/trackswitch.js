@@ -1,11 +1,5 @@
+import { MIN_TIMELINE_ZOOM } from "../views/surface";
 import type { TrackSwitchControllerImpl } from "./player";
-
-/**
- * Scroll positions the lock has just written, by scroll container. A scroll
- * event reports them a moment later, and is then the lock's own echo rather
- * than a scroll to carry on — carrying it would bounce rounding back and forth.
- */
-const pendingScrolls = new WeakMap<HTMLElement, number>();
 
 /** A zoomable surface, as the lock reads and moves it. */
 interface LockedSurface {
@@ -47,20 +41,59 @@ export function alignLockedZoom(ctx: TrackSwitchControllerImpl): void {
 	}
 }
 
+/**
+ * The share of a surface's whole view that a column beside its scroller takes,
+ * such as a piano keyboard. The lock compares whole views, column included —
+ * that is where a centered playhead sits — so a roll with a keyboard reads as
+ * wider than its scroller, extending under the column.
+ */
+function getLeadingShare(
+	ctx: TrackSwitchControllerImpl,
+	surface: LockedSurface,
+): number {
+	if (!surface.isPianoRoll) {
+		return 0;
+	}
+	const roll = ctx.renderer.findPianoRollSurface(surface.seekWrap);
+	const columnPx = roll?.cachedLeadingColumnPx ?? 0;
+	const viewPx = surface.scrollContainer.clientWidth + columnPx;
+	return viewPx > 0 ? columnPx / viewPx : 0;
+}
+
+function getZoom(
+	ctx: TrackSwitchControllerImpl,
+	surface: LockedSurface,
+): number | null {
+	return surface.isPianoRoll
+		? ctx.renderer.getPianoRollZoom(surface.seekWrap)
+		: ctx.renderer.getWaveformZoom(surface.seekWrap);
+}
+
+/** The visible stretch of the whole view, as ratios of the surface's timeline. */
 function getViewport(
 	ctx: TrackSwitchControllerImpl,
 	surface: LockedSurface,
 ): { startRatio: number; widthRatio: number } | null {
-	return surface.isPianoRoll
+	const viewport = surface.isPianoRoll
 		? ctx.renderer.getPianoRollMinimapViewport(surface.seekWrap)
 		: ctx.renderer.getWaveformMinimapViewport(surface.seekWrap);
+	if (!viewport) {
+		return null;
+	}
+	const share = getLeadingShare(ctx, surface);
+	const widthRatio = viewport.widthRatio / (1 - share);
+	return {
+		startRatio: viewport.startRatio - widthRatio * share,
+		widthRatio,
+	};
 }
 
 /**
- * Carries the visible stretch of the surface behind `source` to every other
- * zoomable surface while `features.lockZoom` is on. The stretch travels
- * through the reference timeline, so surfaces on aligned timelines show the
- * same passage even where their recordings run at different tempos. A surface
+ * Carries the zoom level of the surface behind `source` to every other
+ * zoomable surface while `features.lockZoom` is on. Only the level travels —
+ * how much music fits the view, measured through the reference timeline so
+ * aligned surfaces agree even where their recordings run at different tempos.
+ * Where each surface looks stays its own, following its playhead. A surface
  * that cannot zoom that far shows as close a stretch as it can.
  */
 export function syncLockedZoom(
@@ -77,13 +110,12 @@ export function syncLockedZoom(
 		return;
 	}
 
-	const pending = pendingScrolls.get(sourceSurface.scrollContainer);
-	if (pending !== undefined) {
-		pendingScrolls.delete(sourceSurface.scrollContainer);
-		if (Math.abs(sourceSurface.scrollContainer.scrollLeft - pending) <= 1) {
-			return;
-		}
-	}
+	const sourceZoom = getZoom(ctx, sourceSurface);
+	// Zoomed out all the way shows the whole medium, whatever its length: the
+	// others follow to their own whole, rather than to the same stretch of music,
+	// which a shorter or longer recording would not fill exactly.
+	const sourceFullyZoomedOut =
+		sourceZoom !== null && sourceZoom <= MIN_TIMELINE_ZOOM;
 
 	const sourceTimeline = ctx.getSeekTimelineContext(source);
 	const sourceViewport = getViewport(ctx, sourceSurface);
@@ -106,9 +138,7 @@ export function syncLockedZoom(
 
 		const timeline = ctx.getSeekTimelineContext(surface.seekWrap);
 		const viewport = getViewport(ctx, surface);
-		const zoom = surface.isPianoRoll
-			? ctx.renderer.getPianoRollZoom(surface.seekWrap)
-			: ctx.renderer.getWaveformZoom(surface.seekWrap);
+		const zoom = getZoom(ctx, surface);
 		if (!viewport || zoom === null || timeline.duration <= 0) {
 			return;
 		}
@@ -119,17 +149,15 @@ export function syncLockedZoom(
 		}
 
 		// The visible share of a surface is inversely proportional to its zoom.
-		const nextZoom = (zoom * viewport.widthRatio * timeline.duration) / span;
+		const nextZoom = sourceFullyZoomedOut
+			? MIN_TIMELINE_ZOOM
+			: (zoom * viewport.widthRatio * timeline.duration) / span;
 		if (surface.isPianoRoll) {
 			ctx.renderer.setPianoRollZoom(
 				surface.seekWrap,
 				nextZoom,
 				timeline.duration,
 				undefined,
-			);
-			ctx.renderer.setPianoRollMinimapViewportStart(
-				surface.seekWrap,
-				start / timeline.duration,
 			);
 		} else {
 			ctx.renderer.setWaveformZoom(
@@ -138,16 +166,8 @@ export function syncLockedZoom(
 				timeline.duration,
 				undefined,
 			);
-			ctx.renderer.setWaveformMinimapViewportStart(
-				surface.seekWrap,
-				start / timeline.duration,
-			);
 			movedWaveform = true;
 		}
-		pendingScrolls.set(
-			surface.scrollContainer,
-			surface.scrollContainer.scrollLeft,
-		);
 	});
 
 	if (movedWaveform) {

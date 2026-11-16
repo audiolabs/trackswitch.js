@@ -8,8 +8,7 @@ export const MIN_TIMELINE_ZOOM = 1;
  * `WaveformPlaybackFollowMode` plus `pinnedLeft`, which holds the playhead
  * against the left edge of the viewport and scrolls the surface underneath it
  * instead — what a piano roll with a keyboard column needs, so the notes fly
- * into the keys. Not a publicly configurable value: the piano roll forces it
- * on internally whenever `pianoKeyboard` is on, and no other view uses it.
+ * into the keys. Only the piano roll uses it, configured as `"pinned"`.
  */
 export type TimelineFollowMode = WaveformPlaybackFollowMode | "pinnedLeft";
 
@@ -26,6 +25,14 @@ export interface TimelineSurfaceGeometry {
 	 * cache instead. Refreshed whenever the surface is reflowed or resized.
 	 */
 	cachedViewportWidth?: number;
+	/**
+	 * A column drawn beside the scroller, such as a piano keyboard. Centered
+	 * follow centers the playhead on the whole view, column included, not on
+	 * the scroller alone.
+	 */
+	leadingColumn?: HTMLElement | null;
+	/** Last known width the `leadingColumn` takes from the view; see `cachedViewportWidth`. */
+	cachedLeadingColumnPx?: number;
 	playbackFollowMode?: TimelineFollowMode;
 	/**
 	 * Empty surface past the end of the medium. A `pinnedLeft` surface needs one
@@ -122,6 +129,11 @@ export function refreshTimelineViewportWidth(
 ): number {
 	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
 	surface.cachedViewportWidth = viewportWidth;
+	const column = surface.leadingColumn;
+	surface.cachedLeadingColumnPx = column
+		? column.offsetWidth +
+			(Number.parseFloat(getComputedStyle(column).marginRight) || 0)
+		: 0;
 	// The pad is exactly one viewport, so the last scroll position puts the end
 	// of the medium under a left-pinned playhead.
 	surface.trailingPadPx =
@@ -334,7 +346,8 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	const visibleEnd = currentScrollLeft + viewportWidth;
 
 	if (surface.playbackFollowMode === "center") {
-		return clamp(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
+		const columnPx = surface.cachedLeadingColumnPx ?? 0;
+		return clamp(playheadPx - (viewportWidth - columnPx) / 2, 0, maxScrollLeft);
 	}
 
 	if (playheadPx < visibleStart || playheadPx > visibleEnd) {

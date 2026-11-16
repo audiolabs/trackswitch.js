@@ -49,7 +49,7 @@
 				},
 				"lockZoom": {
 					"type": "boolean",
-					"description": "Locks the zoom and the scroll position of every zoomable view — `waveform`, `spectrogram`, and `pianoRoll` — together: zooming or scrolling one shows the same passage in all of them."
+					"description": "Locks the zoom level of every zoomable view — `waveform`, `spectrogram`, and `pianoRoll` — together: zooming one gives all of them the same amount of music in view. Scroll positions stay independent."
 				}
 			},
 			"additionalProperties": false
@@ -1776,6 +1776,10 @@
 						}
 					]
 				},
+				"switchTracksOnSeek": {
+					"type": "boolean",
+					"description": "Seeking in this view makes exactly the tracks it shows the audible ones. Defaults to `true`. A view with `tracks: \"audible\"` has nothing to select."
+				},
 				"height": {
 					"type": "number"
 				},
@@ -1853,6 +1857,10 @@
 							"const": "audible"
 						}
 					]
+				},
+				"switchTracksOnSeek": {
+					"type": "boolean",
+					"description": "Seeking in this view makes exactly the tracks it shows the audible ones. Defaults to `true`. A view with `tracks: \"audible\"` has nothing to select."
 				},
 				"height": {
 					"type": "number"
@@ -1989,6 +1997,10 @@
 				"mediaID": {
 					"$ref": "#/definitions/MediaId"
 				},
+				"switchTracksOnSeek": {
+					"type": "boolean",
+					"description": "Seeking in this view makes exactly the tracks `channelToTrackIDMap` names the audible ones. Defaults to `true`; with no map there is nothing to select."
+				},
 				"height": {
 					"type": "number"
 				},
@@ -1999,15 +2011,15 @@
 					"type": "number"
 				},
 				"playbackFollowMode": {
-					"$ref": "#/definitions/WaveformPlaybackFollowMode",
-					"description": "Ignored while `pianoKeyboard` is on — see there for what takes over."
+					"$ref": "#/definitions/PianoRollPlaybackFollowMode",
+					"description": "Defaults to `\"center\"`. `\"pinned\"` holds the playhead against the left edge."
 				},
 				"timer": {
 					"type": "boolean"
 				},
 				"pianoKeyboard": {
 					"type": "boolean",
-					"description": "Draws a piano keyboard beside the pitch axis and pins the playhead to its edge, so the notes fly into the keys and the key of every sounding note lights up in the colour of its channel. Defaults to `false`.\n\nAlso switches the roll to a pinned-left follow mode that holds the playhead against the keys and scrolls the notes underneath it instead of whatever `playbackFollowMode` says, and changes the note grid's drag gesture: dragging pans the sheet directly under the pointer, panning playback position along with it, rather than jumping to the clicked spot."
+					"description": "Draws a piano keyboard beside the pitch axis and, with `\"pinned\"` follow, pins the playhead to its edge, and the key of every sounding note lights up in the colour of its channel. Defaults to `true`.\n\nFollow behaviour stays up to `playbackFollowMode`; with `\"pinned\"` the playhead sits against the keys so the notes fly into them, and dragging the note grid pans the sheet under the pointer instead of jumping."
 				},
 				"noteRange": {
 					"$ref": "#/definitions/MidiNoteRange",
@@ -2021,11 +2033,11 @@
 						"pitch",
 						"both"
 					],
-					"description": "Draws reference lines behind the note events. `\"time\"` draws vertical lines at a round interval of the unit this view's medium declares its timeline in; `\"pitch\"` bands the rows of the black keys; `\"both\"` draws both. Defaults to `\"none\"`. A pitch grid needs a few pixels per semitone to read, and is left out on a roll too short for its note range."
+					"description": "Draws reference lines behind the note events. `\"time\"` draws vertical lines at a round interval of the unit this view's medium declares its timeline in; `\"pitch\"` bands the rows of the black keys; `\"both\"` draws both. Defaults to `\"pitch\"`. A pitch grid needs a few pixels per semitone to read, and is left out on a roll too short for its note range."
 				},
 				"noteTooltip": {
 					"type": "boolean",
-					"description": "Shows a readout of the note event under the cursor: its pitch, channel, start, end, duration and velocity. Defaults to `false`. When `channelToLabelMap` names the hovered note's channel, its label is shown in place of the plain channel number."
+					"description": "Shows a readout of the note event under the cursor: its pitch, instrument (top right, in the channel's colour), start, end, duration, velocity and channel. Defaults to `true`. When `channelToLabelMap` names the hovered note's channel, its label is shown in place of the plain channel number."
 				},
 				"channelToLabelMap": {
 					"type": "object",
@@ -2092,6 +2104,18 @@
 				"mediaID"
 			],
 			"additionalProperties": false
+		},
+		"PianoRollPlaybackFollowMode": {
+			"anyOf": [
+				{
+					"$ref": "#/definitions/WaveformPlaybackFollowMode"
+				},
+				{
+					"type": "string",
+					"const": "pinned"
+				}
+			],
+			"description": "How a piano roll moves with playback: the waveform modes, plus `\"pinned\"`, which holds the playhead against the left edge of the roll (the near edge of the keys, with a keyboard) and scrolls the notes underneath it."
 		},
 		"MidiNoteRange": {
 			"anyOf": [
@@ -2298,7 +2322,8 @@
 					}
 				},
 				"repeatEnabled": {
-					"type": "boolean"
+					"type": "boolean",
+					"description": "Starts with repeat on. Defaults to `true`."
 				},
 				"globalPanControl": {
 					"$ref": "#/definitions/TrackPanAlgorithm",

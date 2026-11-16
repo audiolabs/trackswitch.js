@@ -450,12 +450,12 @@
 	--seekhead-color: var(--ts-color-surface-panel-dark);
 }
 
-/* With a keyboard, dragging pans the sheet instead of jumping to the click. */
-.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .seekwrap {
+/* With pinned follow, dragging pans the sheet instead of jumping to the click. */
+.trackswitch .piano-roll-wrap.piano-roll-pinned .seekwrap {
 	cursor: grab;
 }
 
-.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .seekwrap:active {
+.trackswitch .piano-roll-wrap.piano-roll-pinned .seekwrap:active {
 	cursor: grabbing;
 }
 

@@ -27,11 +27,7 @@ import type {
 	TrackSwitchWarpingMatrixViewConfig,
 	TrackSwitchWaveformViewConfig,
 } from "../types";
-import {
-	getHostIconSlot,
-	renderIconSlotHtml,
-	setHostIcon,
-} from "./icons";
+import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
 import type {
 	PerTrackImageSource,
 	ViewRenderer,

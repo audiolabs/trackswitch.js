@@ -116,7 +116,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </label>
         <label class="ts-control-row">
           <span>Repeat Enabled</span>
-          <input type="checkbox" name="repeatEnabled" />
+          <input type="checkbox" name="repeatEnabled" checked />
         </label>
         <label class="ts-control-row">
           <span>Solo Mode</span>
@@ -211,7 +211,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </label>
         <label class="ts-control-row">
           <span>Lock Zoom of All Views</span>
-          <input type="checkbox" name="lockZoom" />
+          <input type="checkbox" name="lockZoom" checked />
         </label>
       </div>
 

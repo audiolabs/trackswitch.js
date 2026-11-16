@@ -312,11 +312,6 @@ export class ViewRenderer {
 	public isTrackAudible: (trackIndex: number) => boolean = () => true;
 	/** Whether a `trackList` is the selected timeline of an aligned player. */
 	public isTrackListUnitActive: (groupIndex: number) => boolean = () => false;
-	/**
-	 * Told whenever a zoomable surface scrolls, by the listener or by the
-	 * player, so the controller can carry the viewport to locked surfaces.
-	 */
-	public onTimelineViewportScroll: (seekWrap: HTMLElement) => void = () => {};
 	public hasAlignment = false;
 	public referenceTimelineUnit: TimelineUnit = "seconds";
 	public referenceTimelineId: string | null = null;
@@ -1188,31 +1183,6 @@ export class ViewRenderer {
 
 	public refreshVisibleWaveformTilesFromLatestInput(): void {
 		viewRendererWaveform.refreshVisibleWaveformTilesFromLatestInput(this);
-	}
-
-	/**
-	 * Whether `seekWrap` leaves following playback to the locked zoom. While
-	 * `features.lockZoom` is on, only the first following surface on the page
-	 * scrolls with the playhead; the others are carried along by it. Each
-	 * following on its own would fight the lock over where the stretch sits.
-	 */
-	public isLockedPlaybackFollower(seekWrap: HTMLElement): boolean {
-		if (!this.features.lockZoom) {
-			return false;
-		}
-
-		const leader = Array.from(
-			this.root.querySelectorAll<HTMLElement>(
-				'.seekwrap[data-seek-surface="waveform"], .seekwrap[data-seek-surface="piano-roll"]',
-			),
-		).find((candidate) => {
-			const mode = (
-				this.findWaveformSurface(candidate) ??
-				this.findPianoRollSurface(candidate)
-			)?.playbackFollowMode;
-			return mode !== undefined && mode !== "off";
-		});
-		return leader !== seekWrap;
 	}
 
 	public findWaveformSurface(

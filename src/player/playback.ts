@@ -1,5 +1,8 @@
 import type { TrackTimelineProjector } from "../media/waveform-engine";
-import { resolveAudibleWaveformTrackIndex } from "../media/waveform-engine";
+import {
+	resolveAudibleWaveformTrackIndex,
+	resolveWaveformTrackIndices,
+} from "../media/waveform-engine";
 import type { Alignment } from "../model/alignment";
 import { loadMarkerSequences, moveRuntimeMarker } from "../model/marker";
 import {
@@ -360,7 +363,8 @@ export function seekTo(ctx: TrackSwitchControllerImpl, seconds: number): void {
 		ctx.dispatch({ type: "set-position", position: nextPosition });
 	}
 
-	ctx.updateMainControls();
+	// A jump to a place, unlike playback ticking along, eases the views there.
+	ctx.updateMainControls(true);
 }
 
 export function seekRelative(
@@ -644,6 +648,73 @@ export function toggleSolo(
 
 	ctx.applyTrackProperties();
 	ctx.finishSoloUnitSwitch(previousUnitIndex);
+}
+
+/** Makes exactly the tracks at `selected` the soloed ones. */
+function soloOnlyTracks(
+	ctx: TrackSwitchControllerImpl,
+	selected: ReadonlySet<number>,
+): void {
+	if (
+		selected.size === 0 ||
+		ctx.runtimes.every(
+			(runtime, index) => runtime.state.solo === selected.has(index),
+		)
+	) {
+		return;
+	}
+
+	const previousUnitIndex = ctx.activeSoloUnitIndex();
+	ctx.runtimes.forEach((runtime, index) => {
+		runtime.state.solo = selected.has(index);
+	});
+	ctx.applyTrackProperties();
+	ctx.finishSoloUnitSwitch(previousUnitIndex);
+}
+
+/**
+ * A waveform bound to fixed tracks, or a piano roll pairing channels with
+ * tracks, once seeked in makes exactly those tracks the audible ones. A waveform
+ * following "audible" has nothing to select.
+ */
+export function soloSeekSurfaceTracks(
+	ctx: TrackSwitchControllerImpl,
+	seekWrap: HTMLElement,
+): void {
+	const waveform = ctx.renderer.findWaveformSurface(seekWrap);
+	if (waveform) {
+		if (!waveform.switchTracksOnSeek || waveform.waveformSource === "audible") {
+			return;
+		}
+		soloOnlyTracks(
+			ctx,
+			new Set(
+				resolveWaveformTrackIndices(
+					ctx.runtimes.length,
+					waveform.waveformSource,
+				),
+			),
+		);
+		return;
+	}
+
+	const pianoRoll = ctx.renderer.findPianoRollSurface(seekWrap);
+	if (!pianoRoll?.switchTracksOnSeek) {
+		return;
+	}
+	const trackIds = new Set<string>();
+	pianoRoll.channelTrackIds.forEach((ids) => {
+		ids.forEach((id) => {
+			trackIds.add(id);
+		});
+	});
+	const selected = new Set<number>();
+	ctx.runtimes.forEach((runtime, index) => {
+		if (trackIds.has(runtime.definition.id)) {
+			selected.add(index);
+		}
+	});
+	soloOnlyTracks(ctx, selected);
 }
 
 export function applyPreset(

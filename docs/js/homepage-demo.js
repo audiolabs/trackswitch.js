@@ -103,7 +103,7 @@
 			trackVolumeControls: controls.trackVolumeControls,
 			trackPanControls: controls.trackPanControls,
 		});
-		views.unshift(buildNavigationBar(controls, true));
+		views.unshift(buildNavigationBar(controls, true, true));
 
 		var config = {
 			media: media,
@@ -178,6 +178,18 @@
 					},
 				},
 		});
+		// The two performances sit on their own alignment timelines, so only one
+		// of them can sound at a time — hence one shared `comparisonGroup`. Each has its
+		// own list, which sits below its waveform to show which belongs to which.
+		function performanceTrackList(track) {
+			return {
+				type: "trackList",
+				tracks: [track],
+				comparisonGroup: 0,
+				trackVolumeControls: controls.trackVolumeControls,
+				trackPanControls: controls.trackPanControls,
+			};
+		}
 		var views = [];
 		var markerLayersA = controls.markers ? [markerLayer("hu33Measures")] : [];
 		var markerLayersB = controls.markers ? [markerLayer("sc06Structure")] : [];
@@ -240,6 +252,7 @@
 							: performance.layers,
 					),
 				);
+				views.push(performanceTrackList(performance.track));
 			});
 		}
 		if (controls.spectrogram) {
@@ -266,16 +279,11 @@
 		if (controls.warpingMatrix) {
 			views.push({ type: "warpingMatrix", x: "hu33", y: "sc06", height: 200 });
 		}
-		views.push({
-			// The two performances sit on their own alignment timelines, so only one
-			// of them can sound at a time.
-			type: "trackList",
-			tracks: ["hu33", "sc06"],
-			comparisonGroup: 0,
-			trackVolumeControls: controls.trackVolumeControls,
-			trackPanControls: controls.trackPanControls,
-		});
-		views.unshift(buildNavigationBar(controls, false));
+		// Without waveforms there is nothing to sit below, so the lists close the player.
+		if (!controls.waveform) {
+			views.push(performanceTrackList("hu33"), performanceTrackList("sc06"));
+		}
+		views.unshift(buildNavigationBar(controls, false, false));
 
 		// A timeline is only worth declaring for a medium the config still carries.
 		var timelines = {};
@@ -333,7 +341,7 @@
 		};
 	}
 
-	function buildNavigationBar(controls, includePresets) {
+	function buildNavigationBar(controls, includePresets, includeSeekBar) {
 		return {
 			type: "navigationBar",
 			controls: [
@@ -345,7 +353,7 @@
 				"sync",
 				includePresets && controls.presets && "presets",
 				controls.timer && "timer",
-				controls.seekBar && "seekBar",
+				includeSeekBar && controls.seekBar && "seekBar",
 			].filter(Boolean),
 			repeatEnabled: controls.repeatEnabled,
 			globalPanControl: controls.globalPanControl,
@@ -507,7 +515,7 @@
 				controller = null;
 			}
 			if (controller) {
-				controller.setRepeat(readControl(controlsRoot, "repeatEnabled", false));
+				controller.setRepeat(readControl(controlsRoot, "repeatEnabled", true));
 				controller.updateConfig(config);
 			} else {
 				controller = window.TrackSwitch.createTrackSwitch(playerRoot, config);

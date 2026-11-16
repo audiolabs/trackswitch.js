@@ -64,6 +64,8 @@ export interface WaveformSeekSurfaceMetadata {
 	endedRegion: HTMLElement;
 	seekWrap: HTMLElement;
 	waveformSource: WaveformSourceIndex;
+	/** Whether seeking here makes the tracks of `waveformSource` the audible ones. */
+	switchTracksOnSeek: boolean;
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
 	trailingPadPx?: number;
@@ -895,6 +897,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 				endedRegion: endedRegion,
 				seekWrap: seekWrap,
 				waveformSource: waveformSource,
+				switchTracksOnSeek: config.switchTracksOnSeek === true,
 				playbackFollowMode: playbackFollowMode,
 				drawRange: null,
 				timeAxis: timeAxis,
@@ -945,7 +948,6 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 						updateTimelineMinimapViewport(currentSurface);
 					}
 					ctx.scheduleVisibleWaveformTileRefresh();
-					ctx.onTimelineViewportScroll(seekWrap);
 				},
 				{ passive: true },
 			);
@@ -2223,10 +2225,7 @@ export function updateWaveformPlaybackFollow(
 	}
 
 	ctx.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
-		if (
-			surface.playbackFollowMode === "off" ||
-			ctx.isLockedPlaybackFollower(surface.seekWrap)
-		) {
+		if (surface.playbackFollowMode === "off") {
 			return;
 		}
 

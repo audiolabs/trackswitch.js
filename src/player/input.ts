@@ -29,7 +29,7 @@ import {
 	snapLoopStartToMarker,
 	submitMarkerNavigationDialog,
 } from "./markers";
-import { activateLoopRange } from "./playback";
+import { activateLoopRange, soloSeekSurfaceTracks } from "./playback";
 import {
 	isKeyboardControllerActive,
 	setActiveKeyboardController,
@@ -254,6 +254,7 @@ export function onSeekStart(
 		return;
 	}
 
+	soloSeekSurfaceTracks(ctx, targetSeekWrap);
 	ctx.startInteractiveSeek(event, targetSeekWrap);
 
 	event.stopPropagation();
@@ -606,6 +607,10 @@ export function onSeekEnd(
 	}
 
 	ctx.dispatch({ type: "set-seeking", seeking: false });
+	// Following was held back while the playhead was dragged; once it is let
+	// go, the views ease back around it — also while paused, when no playback
+	// tick would do it.
+	ctx.updateMainControls(true);
 	event.stopPropagation();
 }
 
