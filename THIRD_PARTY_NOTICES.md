@@ -26,6 +26,12 @@ the applicable license notices.
 | d3 | 7.9.0 | ISC |
 | opensheetmusicdisplay | 2.1.2 | BSD-3-Clause |
 | papaparse | 5.5.4 | MIT |
+| spessasynth_core | 4.4.10 | Apache-2.0 |
+| stb-vorbis (via spessasynth_core) | 0.0.7 | Apache-2.0 |
+
+No SoundFont is distributed with the package. A player that synthesizes MIDI
+loads the `soundFont` file its configuration names, and that file carries its
+own license.
 
 ### Embedded third-party artwork in distributed JavaScript
 

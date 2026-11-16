@@ -680,6 +680,18 @@ export class AudioEngine {
 				continue;
 			}
 
+			if (source.soundFont) {
+				try {
+					return await this.renderMidiSource(
+						source,
+						source.soundFont,
+						sourceIndex,
+					);
+				} catch (_error) {
+					continue;
+				}
+			}
+
 			if (!isPlayableSource(source, audioElement)) {
 				continue;
 			}
@@ -780,6 +792,43 @@ export class AudioEngine {
 				resolve({ bytes: null });
 			}
 		});
+	}
+
+	/** A MIDI file played through a sound font, standing in for a decoded recording. */
+	private async renderMidiSource(
+		source: TrackSourceDefinition,
+		soundFont: string,
+		sourceIndex: number,
+	): Promise<LoadSourceSelectionResult> {
+		const context = this.context;
+		if (!context) {
+			throw new Error("AudioContext unavailable");
+		}
+
+		const midiBytes = await this.requestArrayBuffer(source.src);
+		// Synthesis is only needed once a player has a MIDI track, and brings a
+		// sizeable engine with it.
+		const { renderMidiToBuffer } = await import("./midi-synth");
+		const buffer = await renderMidiToBuffer(
+			context,
+			midiBytes,
+			soundFont,
+			(url) => this.requestArrayBuffer(url),
+		);
+
+		return {
+			success: true,
+			selection: {
+				buffer,
+				timing: calculateTrackTiming(source, buffer.duration),
+				sourceIndex,
+				sourceSampleRate: context.sampleRate,
+				loudnessGain: this.normalizeLoudnessEnabled
+					? computeLoudnessNormalizationGain(buffer)
+					: 1,
+			},
+			error: null,
+		};
 	}
 
 	private requestArrayBuffer(url: string): Promise<ArrayBuffer> {

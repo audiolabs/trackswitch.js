@@ -77,11 +77,25 @@ export interface TimelineReadout {
 	fromReadout(readoutValue: number): number;
 }
 
+/** A MIDI file an "audible" piano roll can swap in, paired with the track it notates. */
+export interface PianoRollCandidate {
+	mediaId: string;
+	trackId: string;
+	source: string;
+	alignmentTimeline: string;
+	startOffsetMs?: number;
+	endOffsetMs?: number;
+}
+
 export interface ConfiguredViewHost {
 	view: TrackSwitchViewConfig;
 	waveformSource?: WaveformSourceIndex;
 	alignmentTimeline?: string;
 	source?: string;
+	/** Set for a piano roll with `mediaID: "audible"`. */
+	pianoRollCandidates?: PianoRollCandidate[];
+	/** The offsets of the MIDI medium of a piano roll with one fixed file. */
+	midiOffsets?: { startOffsetMs?: number; endOffsetMs?: number };
 }
 
 export interface SheetMusicHostConfig {

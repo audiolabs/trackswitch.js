@@ -273,3 +273,9 @@
 	height: 1px;
 	background: var(--ts-color-text-secondary);
 }
+
+/* No audible source: nothing is drawn, so the playhead and the zoom readout go too. */
+.trackswitch .waveform-wrap.waveform-silent .seekwrap .seekhead,
+.trackswitch .waveform-wrap.waveform-silent .waveform-zoom {
+	display: none;
+}

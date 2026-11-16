@@ -1,5 +1,6 @@
 import { Midi } from "@tonejs/midi";
 import { formatTimelineValue, type TimelineUnit } from "../model/timeline";
+import { calculateTrackTiming } from "../shared/audio";
 import { applyCssOverrides } from "../shared/dom";
 import { clamp, sanitizeDuration } from "../shared/math";
 import {
@@ -16,6 +17,7 @@ import type {
 } from "../types";
 import type {
 	ConfiguredViewHost,
+	PianoRollCandidate,
 	TimelineReadout,
 	ViewRenderer,
 } from "./renderer";
@@ -201,6 +203,21 @@ export interface PianoRollSeekSurfaceMetadata {
 	maxNoteDuration: number;
 	/** The audio tracks each paired channel follows, from the view config. */
 	channelTrackIds: Map<number, string[]>;
+	/** The MIDI files an `"audible"` roll swaps between, or null for a roll with one fixed file. */
+	candidates: PianoRollCandidate[] | null;
+	/** The offsets of a roll with one fixed file. */
+	midiOffsets: MidiOffsets;
+	/** What each candidate parsed to, once loaded. */
+	candidateData: Map<
+		string,
+		{ midi: Midi; notes: MidiNoteEvent[]; durationSeconds: number }
+	>;
+	/** Every candidate's notes together, so the pitch axis holds still across a swap. */
+	candidateRangeNotes: MidiNoteEvent[];
+	/** The candidate the audible track calls for; null when nothing should show. */
+	desiredMediaId: string | null;
+	/** The candidate currently drawn, null while the roll is left empty. */
+	shownMediaId: string | null;
 	/** Whether seeking here makes the tracks of `channelTrackIds` the audible ones. */
 	switchTracksOnSeek: boolean;
 	/** Whether every channel in the file takes its own palette colour. */
@@ -629,14 +646,39 @@ function capitalize(text: string): string {
 	return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
+/** The start and end offsets of a MIDI medium, which move it against the timeline. */
+export interface MidiOffsets {
+	startOffsetMs?: number;
+	endOffsetMs?: number;
+}
+
+/**
+ * The notes of a file on the timeline, after its offsets: cut off at the front
+ * and the back, or shifted later by padding. A note straddling a cut is
+ * shortened to it.
+ */
+function flattenMidiNotes(
+	midi: Midi,
+	source: string,
+	offsets: MidiOffsets,
+): MidiNoteEvent[] {
+	const timing = calculateTrackTiming(offsets, midi.duration);
+	const shift = timing.padStart - timing.trimStart;
 	const notes: MidiNoteEvent[] = [];
 	for (const track of midi.tracks) {
 		for (const note of track.notes) {
+			const start = Math.max(0, note.time + shift);
+			const end = Math.min(
+				timing.effectiveDuration,
+				note.time + shift + note.duration,
+			);
+			if (end <= start) {
+				continue;
+			}
 			notes.push({
 				midi: note.midi,
-				time: note.time,
-				duration: note.duration,
+				time: start,
+				duration: end - start,
 				name: note.name,
 				velocity: note.velocity,
 				// A note carries no channel of its own; it belongs to its track.
@@ -677,14 +719,18 @@ function applyRetriggers(notes: MidiNoteEvent[]): void {
 function applyMidiNotes(
 	surface: PianoRollSeekSurfaceMetadata,
 	notes: MidiNoteEvent[],
+	rangeNotes: MidiNoteEvent[] = notes,
+	fileDurationSeconds = 0,
 ): void {
 	let minMidi = Number.POSITIVE_INFINITY;
 	let maxMidi = Number.NEGATIVE_INFINITY;
 	let durationSeconds = 0;
 	let maxNoteDuration = 0;
-	for (const note of notes) {
+	for (const note of rangeNotes) {
 		minMidi = Math.min(minMidi, note.midi);
 		maxMidi = Math.max(maxMidi, note.midi);
+	}
+	for (const note of notes) {
 		durationSeconds = Math.max(durationSeconds, note.time + note.duration);
 		maxNoteDuration = Math.max(maxNoteDuration, note.duration);
 	}
@@ -699,9 +745,13 @@ function applyMidiNotes(
 	} else {
 		[surface.minMidi, surface.maxMidi] = surface.noteRange;
 	}
-	surface.pianoRollDurationSeconds = durationSeconds;
+	// The file runs to its end, which can lie past its last note.
+	surface.pianoRollDurationSeconds = Math.max(
+		fileDurationSeconds,
+		durationSeconds,
+	);
 	surface.maxNoteDuration = maxNoteDuration;
-	assignChannelPalette(surface, notes);
+	assignChannelPalette(surface, rangeNotes);
 	updatePianoRollLegend(surface);
 	surface.lastRenderKey = null;
 	surface.lastMinimapKey = null;
@@ -1588,6 +1638,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 		const config = definition.view as TrackSwitchPianoRollViewConfig;
 		const source = definition.source;
 		if (!source) return;
+		const candidates = definition.pianoRollCandidates ?? null;
 
 		const wrapper = document.createElement("div");
 		wrapper.className = "piano-roll-wrap ts-stack-section";
@@ -1694,7 +1745,13 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			seekWrap,
 			source,
 			alignmentColumn: definition.alignmentTimeline?.trim() || null,
-			mediaId: config.mediaID,
+			mediaId: candidates ? candidates[0].mediaId : config.mediaID,
+			candidates,
+			midiOffsets: definition.midiOffsets ?? {},
+			candidateData: new Map(),
+			candidateRangeNotes: [],
+			desiredMediaId: null,
+			shownMediaId: null,
 			playbackFollowMode:
 				config.playbackFollowMode === "pinned"
 					? "pinnedLeft"
@@ -1813,16 +1870,117 @@ export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
 
 	await Promise.all(
 		surfaces.map(async (surface) => {
+			if (surface.candidates) {
+				await loadCandidateMidis(ctx, surface, surface.candidates);
+				return;
+			}
 			if (surface.midi) {
 				return;
 			}
 			surface.wrapper.classList.add("piano-roll-loading");
 			const midi = await Midi.fromUrl(surface.source);
 			surface.midi = midi;
-			applyMidiNotes(surface, flattenMidiNotes(midi, surface.source));
+			applyMidiNotes(
+				surface,
+				flattenMidiNotes(midi, surface.source, surface.midiOffsets),
+				undefined,
+				calculateTrackTiming(surface.midiOffsets, midi.duration)
+					.effectiveDuration,
+			);
 			surface.wrapper.classList.remove("piano-roll-loading");
 		}),
 	);
+}
+
+async function loadCandidateMidis(
+	ctx: ViewRenderer,
+	surface: PianoRollSeekSurfaceMetadata,
+	candidates: PianoRollCandidate[],
+): Promise<void> {
+	if (surface.candidateData.size === 0) {
+		surface.wrapper.classList.add("piano-roll-loading");
+		await Promise.all(
+			candidates.map(async (candidate) => {
+				const midi = await Midi.fromUrl(candidate.source);
+				surface.candidateData.set(candidate.mediaId, {
+					midi,
+					notes: flattenMidiNotes(midi, candidate.source, candidate),
+					durationSeconds: calculateTrackTiming(candidate, midi.duration)
+						.effectiveDuration,
+				});
+			}),
+		);
+		surface.candidateRangeNotes = [];
+		candidates.forEach((candidate) => {
+			surface.candidateRangeNotes.push(
+				...(surface.candidateData.get(candidate.mediaId)?.notes ?? []),
+			);
+		});
+		surface.wrapper.classList.remove("piano-roll-loading");
+	}
+
+	// The first file gives the roll its extent and pitch axis; what is shown
+	// then follows the audible track.
+	showPianoRollMedia(
+		ctx,
+		surface,
+		surface.desiredMediaId ?? candidates[0].mediaId,
+	);
+	if (surface.desiredMediaId === null) {
+		showPianoRollMedia(ctx, surface, null);
+	}
+}
+
+/**
+ * Draws one of an `"audible"` roll's files, or none. A file brings its own
+ * extent and alignment column, so the surface moves onto that timeline: seeks
+ * and markers then follow the file shown.
+ */
+function showPianoRollMedia(
+	ctx: ViewRenderer,
+	surface: PianoRollSeekSurfaceMetadata,
+	mediaId: string | null,
+): void {
+	if (!surface.candidates || surface.shownMediaId === mediaId) {
+		return;
+	}
+
+	if (mediaId === null) {
+		surface.notes = [];
+		surface.maxNoteDuration = 0;
+	} else {
+		const candidate = surface.candidates.find(
+			(entry) => entry.mediaId === mediaId,
+		);
+		const data = surface.candidateData.get(mediaId);
+		if (!candidate || !data) {
+			return;
+		}
+		surface.midi = data.midi;
+		surface.source = candidate.source;
+		surface.mediaId = candidate.mediaId;
+		surface.alignmentColumn = candidate.alignmentTimeline.trim() || null;
+		ctx.registerSeekTimeline(surface.seekWrap, surface.alignmentColumn);
+		applyMidiNotes(
+			surface,
+			data.notes,
+			surface.candidateRangeNotes,
+			data.durationSeconds,
+		);
+	}
+	surface.shownMediaId = mediaId;
+	surface.lastRenderKey = null;
+	surface.lastMinimapKey = null;
+	surface.lastPlaybackKey = null;
+	surface.lastKeyboardKey = null;
+
+	const latest = ctx.latestPianoRollRenderInput;
+	if (latest) {
+		ctx.renderPianoRollDisplays(
+			latest.timelineDuration,
+			latest.usePianoRollLocalTimeline,
+		);
+	}
 }
 
 /** Parsed MIDI files keyed by source url, for reuse by the media profiler. */
@@ -1832,6 +1990,12 @@ export function getLoadedMidiBySource(ctx: ViewRenderer): Map<string, Midi> {
 		if (surface.midi) {
 			bySource.set(surface.source, surface.midi);
 		}
+		surface.candidates?.forEach((candidate) => {
+			const data = surface.candidateData.get(candidate.mediaId);
+			if (data) {
+				bySource.set(candidate.source, data.midi);
+			}
+		});
 	});
 	return bySource;
 }
@@ -1936,6 +2100,20 @@ export function updatePianoRollChannelVisibility(
 	});
 
 	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		if (surface.candidates) {
+			// One audible track calls for its own file; several sounding at once
+			// (sync mode) would overlap, so the roll is left empty.
+			const audible = runtimes.filter((_runtime, index) =>
+				ctx.isTrackAudible(index),
+			);
+			surface.desiredMediaId =
+				audible.length === 1
+					? (surface.candidates.find(
+							(candidate) => candidate.trackId === audible[0].definition.id,
+						)?.mediaId ?? null)
+					: null;
+			showPianoRollMedia(ctx, surface, surface.desiredMediaId);
+		}
 		surface.hiddenChannels.clear();
 		surface.channelTrackIds.forEach((trackIds, channel) => {
 			const audible = trackIds.some((trackId) => {

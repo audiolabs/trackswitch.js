@@ -59,6 +59,8 @@ export type WaveformTimeAxis = "shared" | "individual";
 
 export interface TrackSourceDefinition {
 	src: string;
+	/** Renders the MIDI file at `src` through this sound font instead of decoding audio. */
+	soundFont?: string;
 	type?: string;
 	startOffsetMs?: number;
 	endOffsetMs?: number;
@@ -107,6 +109,33 @@ export interface AudioMediaEntryConfig {
 export interface MidiMediaEntryConfig {
 	type: "midi";
 	src: string;
+	/**
+	 * The track this MIDI file is the notation of, such as an expressive
+	 * transcription of one recording. A `pianoRoll` with `mediaID: "audible"`
+	 * shows the file of the track that is audible.
+	 */
+	trackID?: TrackId;
+	/**
+	 * Trims or pads the file's start and end like the audio entry's offsets: a
+	 * positive start offset cuts that much off the front, a negative one adds
+	 * silence before it; likewise at the end. Give a MIDI file the offsets of the
+	 * recording it notates, so that both sit on the same timeline.
+	 */
+	startOffsetMs?: number;
+	endOffsetMs?: number;
+	/**
+	 * URL of a SoundFont (`.sf2`, `.sf3`) to play this file through. With it the
+	 * medium is also a track, rendered to audio once at load time, and appears in
+	 * a `trackList` like any recording; without it the file only draws in a
+	 * piano roll. The track's fields below apply only then.
+	 */
+	soundFont?: string;
+	title?: string;
+	solo?: boolean;
+	volume?: number;
+	pan?: number;
+	volumeControl?: boolean;
+	panControl?: TrackPanControl;
 	/** See `AudioMediaEntryConfig.timelineUnit`. */
 	timelineUnit?: TimelineUnit;
 }
@@ -337,7 +366,12 @@ export type PianoRollLegendPosition = "none" | "top-right";
 
 export interface TrackSwitchPianoRollViewConfig {
 	type: "pianoRoll";
-	mediaID: MediaId;
+	/**
+	 * The MIDI medium to draw. `"audible"` draws the one whose `trackID` names the
+	 * audible track instead, swapping as the selection moves, and nothing while
+	 * several tracks sound at once or the audible track has no MIDI file.
+	 */
+	mediaID: MediaId | "audible";
 	/**
 	 * Seeking in this view makes exactly the tracks `channelToTrackIDMap` names
 	 * the audible ones. Defaults to `true`; with no map there is nothing to select.

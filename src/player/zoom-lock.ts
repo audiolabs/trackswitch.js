@@ -38,6 +38,15 @@ export function alignLockedZoom(ctx: TrackSwitchControllerImpl): void {
 	);
 	if (first instanceof HTMLElement) {
 		syncLockedZoom(ctx, first);
+		// Changing a zoom keeps the middle of what a view shows, which is not
+		// where its playhead is; bring every view back to its own follow position.
+		// A piano roll skips a refresh when nothing about playback changed, and
+		// the zoom is not part of what it compares.
+		ctx.renderer.pianoRollSeekSurfaces.forEach((surface) => {
+			surface.lastPlaybackKey = null;
+			surface.lastFollowScrollLeft = null;
+		});
+		ctx.updateMainControls();
 	}
 }
 

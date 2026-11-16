@@ -596,6 +596,20 @@ MIDI, MusicXML, and image entries accept `type`, `src`, and `timelineUnit`:
 }
 ```
 
+A MIDI entry takes `startOffsetMs` and `endOffsetMs` like an audio entry: a positive start offset cuts that much off the front of the file, a negative one adds silence before it, and the end offset does the same at the back. As with an audio entry, the alignment is assumed to have been computed on the original, un-offset file: its column holds times of the file as it is on disk, and the offsets are applied afterwards. Give a MIDI file the offsets of the recording it notates and both end up on the same timeline. Notes cut by an offset are removed or shortened.
+
+A MIDI entry can also play. Name a SoundFont (`.sf2` or `.sf3`) in `soundFont` and the medium becomes a track as well: the player renders the file through that font to audio once, at load time, and the track then solos, mutes, pans, seeks and aligns like any recording. List the entry's id in a `trackList` to show it there. Without `soundFont` the entry draws in a piano roll and makes no track. The SoundFont is not part of the player; host it yourself and point `soundFont` at it (for example a General MIDI font such as FluidR3_GM.sf2, under its own license).
+
+```json
+{
+  "media": {
+    "notes": { "type": "midi", "src": "notes.mid", "soundFont": "fonts/FluidR3_GM.sf2", "title": "Piano (synth)" }
+  }
+}
+```
+
+A synthesized MIDI entry also accepts the track fields `title`, `solo`, `volume`, `pan`, `volumeControl`, and `panControl`, as an `audio` entry does.
+
 An `image` media entry can use its own timeline. Add a column for the image to `alignment.timelines`.
 
 Then add an `image` view that uses the image `mediaID`. The player seeks through the alignment instead of a linear position.
@@ -1091,7 +1105,7 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `mediaID` | `string` | - | Identifies a `media` entry with `type: "midi"`. |
+| `mediaID` | `string \| "audible"` | - | Identifies a `media` entry with `type: "midi"`. `"audible"` draws the MIDI file whose `trackID` names the audible track instead; see [following the audible track](#following-the-audible-track). |
 | `height?` | `number` | `180` | Specifies the piano-roll height in pixels. |
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval, where `0` lifts the zoom limit. |
 | `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`) | Specifies the visible interval the view opens on. Unset shows the whole file. |
@@ -1199,6 +1213,24 @@ With `noteRange` at its default of `"automatic"`, the pitch axis spans every not
 { "type": "pianoRoll", "mediaID": "notes", "noteRange": ["C1", "C4"] }
 { "type": "pianoRoll", "mediaID": "notes", "noteRange": [24, 60] }
 ```
+
+#### Following the audible track
+
+With `"mediaID": "audible"` a piano roll draws whichever MIDI file belongs to the track that is audible, and swaps as the selection moves. Pair each MIDI file with its track through `trackID`, for example an expressive transcription of each recording:
+
+```json
+{
+  "media": {
+    "takeA": { "type": "audio", "src": "take-a.wav" },
+    "takeB": { "type": "audio", "src": "take-b.wav" },
+    "notesA": { "type": "midi", "src": "take-a.mid", "trackID": "takeA" },
+    "notesB": { "type": "midi", "src": "take-b.mid", "trackID": "takeB" }
+  },
+  "views": [{ "type": "pianoRoll", "mediaID": "audible" }]
+}
+```
+
+Each file brings its own timeline, so seeks and markers on the roll follow the file shown. Files never overlap: while several tracks sound at once, as in sync mode, or while the audible track has no MIDI file, the roll draws nothing. The pitch axis spans every paired file, so it holds still when the roll swaps.
 
 #### Piano keyboard
 

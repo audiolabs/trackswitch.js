@@ -39,7 +39,7 @@ export function inferSourceMimeType(
 }
 
 export function calculateTrackTiming(
-	source: TrackSourceDefinition,
+	source: Pick<TrackSourceDefinition, "startOffsetMs" | "endOffsetMs">,
 	bufferDuration: number,
 ): TrackTiming {
 	const startOffsetMs = Number(source.startOffsetMs ?? 0);

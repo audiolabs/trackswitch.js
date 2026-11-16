@@ -243,6 +243,16 @@ const audioMediaAllowedKeys = keysOf<AudioMediaEntryConfig>()([
 const midiMediaAllowedKeys = keysOf<MidiMediaEntryConfig>()([
 	"type",
 	"src",
+	"trackID",
+	"startOffsetMs",
+	"endOffsetMs",
+	"soundFont",
+	"title",
+	"solo",
+	"volume",
+	"pan",
+	"volumeControl",
+	"panControl",
 	"timelineUnit",
 ] as const);
 const musicxmlMediaAllowedKeys = keysOf<MusicXmlMediaEntryConfig>()([
@@ -763,6 +773,37 @@ function normalizeMediaConfig(media: MediaConfig | undefined): {
 				);
 			}
 			normalizedMedia[mediaId] = { ...entry };
+			if (entry.soundFont === undefined) {
+				return;
+			}
+			if (
+				typeof entry.soundFont !== "string" ||
+				entry.soundFont.trim().length === 0
+			) {
+				throw new Error(
+					`Invalid media.${mediaId} configuration: soundFont must be a non-empty string.`,
+				);
+			}
+			tracks.push({
+				id: mediaId,
+				title: entry.title,
+				solo: entry.solo,
+				volume: entry.volume,
+				pan: entry.pan,
+				volumeControl: normalizeOptionalBoolean(
+					entry.volumeControl,
+					`media.${mediaId}.volumeControl`,
+				),
+				panControl: normalizeTrackPanControl(mediaId, entry.panControl),
+				sources: [
+					{
+						src: entry.src,
+						soundFont: entry.soundFont,
+						startOffsetMs: entry.startOffsetMs,
+						endOffsetMs: entry.endOffsetMs,
+					},
+				],
+			});
 			return;
 		}
 

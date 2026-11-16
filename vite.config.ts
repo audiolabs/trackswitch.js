@@ -12,7 +12,7 @@ const banner = [
 
 const commonBuild = {
 	emptyOutDir: false,
-	target: "es2017",
+	target: "es2020",
 	sourcemap: false,
 } as const;
 

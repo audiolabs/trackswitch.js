@@ -114,7 +114,8 @@
 		"d3": "^7.9.2",
 		"fflate": "0.8.3",
 		"opensheetmusicdisplay": "^2.3.0",
-		"papaparse": "^5.7.1"
+		"papaparse": "^5.7.1",
+		"spessasynth_core": "^4.4.10"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.6.7",

@@ -1,12 +1,12 @@
 /* Shared timeline geometry for main seekbar, waveform/piano-roll overlays, and seekable images. */
 
 .trackswitch
-:is(
-	.main-control .seekbar,
-	.waveform-wrap .seekwrap,
-	.piano-roll-wrap .seekwrap,
-	.seekable-img-wrap .seekwrap
-) {
+	:is(
+		.main-control .seekbar,
+		.waveform-wrap .seekwrap,
+		.piano-roll-wrap .seekwrap,
+		.seekable-img-wrap .seekwrap
+	) {
 	--ts-playhead-position: 0%;
 	--ts-loop-marker-a: 0%;
 	--ts-loop-marker-b: 0%;

@@ -1,4 +1,5 @@
 import { Midi } from "@tonejs/midi";
+import { calculateTrackTiming } from "../shared/audio";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
 import type {
 	MediaConfig,
@@ -288,14 +289,22 @@ function createMidiProfile(
 		ticksToSeconds(ticks: number): number;
 		secondsToTicks(seconds: number): number;
 	} | null,
+	timing: TrackTiming,
 ): MediaProfile {
+	// Offsets move the file against the timeline like an audio entry's do.
+	const playbackOffset = timing.padStart - timing.trimStart;
 	return {
 		nativeUnit: "seconds",
 		extent: { start: 0, end: durationSeconds },
 		toNative: (value, declared) =>
-			declared === "ticks" && header ? header.ticksToSeconds(value) : value,
-		fromNative: (value, declared) =>
-			declared === "ticks" && header ? header.secondsToTicks(value) : value,
+			(declared === "ticks" && header ? header.ticksToSeconds(value) : value) +
+			playbackOffset,
+		fromNative: (value, declared) => {
+			const seconds = value - playbackOffset;
+			return declared === "ticks" && header
+				? header.secondsToTicks(seconds)
+				: seconds;
+		},
 	};
 }
 
@@ -415,9 +424,10 @@ export async function probeMediaProfiles(
 			if (!midi) {
 				return;
 			}
+			const timing = calculateTrackTiming(entry, midi.duration);
 			profiles.set(
 				timelineId(mediaId),
-				createMidiProfile(midi.duration, midi.header),
+				createMidiProfile(timing.effectiveDuration, midi.header, timing),
 			);
 		}),
 	);

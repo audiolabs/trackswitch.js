@@ -1681,6 +1681,12 @@ export function renderWaveformsInternal(
 			runtimes,
 			waveformSource,
 		);
+		// With nothing audible there is nothing drawn, so no playhead or zoom
+		// readout either.
+		surfaceMetadata.wrapper.classList.toggle(
+			"waveform-silent",
+			sourceRuntimes.length === 0,
+		);
 		// A fixed source resolves to its own track index outright. A dynamic
 		// "audible" source resolves to the first audible track and renders its
 		// own unwarped waveform exactly like a fixed source would — everything

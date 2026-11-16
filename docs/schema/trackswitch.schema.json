@@ -1438,6 +1438,32 @@
 				"src": {
 					"type": "string"
 				},
+				"trackID": {
+					"$ref": "#/definitions/TrackId",
+					"description": "The track this MIDI file is the notation of, such as an expressive transcription of one recording. A `pianoRoll` with `mediaID: \"audible\"` shows the file of the track that is audible."
+				},
+				"soundFont": {
+					"type": "string",
+					"description": "URL of a SoundFont (`.sf2`, `.sf3`) to play this file through. With it the medium is also a track, rendered to audio once at load time, and appears in a `trackList` like any recording; without it the file only draws in a piano roll. The track's fields below apply only then."
+				},
+				"title": {
+					"type": "string"
+				},
+				"solo": {
+					"type": "boolean"
+				},
+				"volume": {
+					"type": "number"
+				},
+				"pan": {
+					"type": "number"
+				},
+				"volumeControl": {
+					"type": "boolean"
+				},
+				"panControl": {
+					"$ref": "#/definitions/TrackPanControl"
+				},
 				"timelineUnit": {
 					"$ref": "#/definitions/TimelineUnit",
 					"description": "See `AudioMediaEntryConfig.timelineUnit`."
@@ -1448,6 +1474,9 @@
 				"src"
 			],
 			"additionalProperties": false
+		},
+		"TrackId": {
+			"$ref": "#/definitions/MediaId"
 		},
 		"MusicXmlMediaEntryConfig": {
 			"type": "object",
@@ -1612,9 +1641,6 @@
 				"tracks"
 			],
 			"additionalProperties": false
-		},
-		"TrackId": {
-			"$ref": "#/definitions/MediaId"
 		},
 		"TrackSwitchViewConfig": {
 			"oneOf": [
@@ -1995,7 +2021,16 @@
 					"const": "pianoRoll"
 				},
 				"mediaID": {
-					"$ref": "#/definitions/MediaId"
+					"anyOf": [
+						{
+							"$ref": "#/definitions/MediaId"
+						},
+						{
+							"type": "string",
+							"const": "audible"
+						}
+					],
+					"description": "The MIDI medium to draw. `\"audible\"` draws the one whose `trackID` names the audible track instead, swapping as the selection moves, and nothing while several tracks sound at once or the audible track has no MIDI file."
 				},
 				"switchTracksOnSeek": {
 					"type": "boolean",

@@ -956,8 +956,26 @@ function normalizePianoRollConfig(
 			"Invalid pianoRoll configuration: mediaID must be a non-empty string.",
 		);
 	}
-	const entry = ctx.media[pianoRoll.mediaID];
-	if (entry?.type !== "midi") {
+	if (pianoRoll.mediaID === "audible") {
+		const paired = Object.entries(ctx.media).filter(
+			([, entry]) => entry.type === "midi" && entry.trackID !== undefined,
+		);
+		if (paired.length === 0) {
+			throw new Error(
+				'Invalid pianoRoll configuration: mediaID "audible" needs at least one midi media entry with a trackID.',
+			);
+		}
+		paired.forEach(([mediaId, entry]) => {
+			if (
+				entry.type === "midi" &&
+				!ctx.trackIds.includes(entry.trackID ?? "")
+			) {
+				throw new Error(
+					`Invalid media.${mediaId} configuration: trackID "${entry.trackID}" is not a track.`,
+				);
+			}
+		});
+	} else if (ctx.media[pianoRoll.mediaID]?.type !== "midi") {
 		throw new Error(
 			`Invalid pianoRoll configuration: mediaID "${pianoRoll.mediaID}" is not declared as type "midi" in media.`,
 		);

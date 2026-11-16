@@ -9,6 +9,7 @@ import { formatBytesToHumanReadable } from "../shared/format";
 import { clamp, clampPercent } from "../shared/math";
 import type {
 	AudioDownloadSizeInfo,
+	MediaEntryConfig,
 	MediaId,
 	TrackId,
 	TrackListGroup,
@@ -30,6 +31,7 @@ import type {
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
 import type {
 	PerTrackImageSource,
+	PianoRollCandidate,
 	ViewRenderer,
 	WarpingMatrixRenderContext,
 	WaveformTimelineContext,
@@ -1963,6 +1965,8 @@ interface ConfiguredViewRenderer {
 			waveformSource?: "audible" | number | number[];
 			alignmentTimeline?: string;
 			source?: string;
+			pianoRollCandidates?: PianoRollCandidate[];
+			midiOffsets?: { startOffsetMs?: number; endOffsetMs?: number };
 		},
 	): void;
 	setPerTrackImageSources(sources: Map<TrackId, PerTrackImageSource>): void;
@@ -2149,6 +2153,15 @@ function resolveAlignmentTimelineAttribute(
 	return ctx.hasAlignment && ctx.alignmentTimelines.has(mediaID) ? mediaID : "";
 }
 
+function midiOffsetsOf(entry: MediaEntryConfig | undefined): {
+	startOffsetMs?: number;
+	endOffsetMs?: number;
+} {
+	return entry?.type === "midi"
+		? { startOffsetMs: entry.startOffsetMs, endOffsetMs: entry.endOffsetMs }
+		: {};
+}
+
 function renderPianoRoll(
 	renderer: ConfiguredViewRenderer,
 	pianoRoll: TrackSwitchPianoRollViewConfig,
@@ -2158,6 +2171,29 @@ function renderPianoRoll(
 	canvas.className = "piano-roll";
 	canvas.width = 1200;
 	canvas.height = resolvedSize(pianoRoll.height, "pianoRoll.height");
+	if (pianoRoll.mediaID === "audible") {
+		const candidates: PianoRollCandidate[] = [];
+		Object.entries(ctx.media).forEach(([mediaId, entry]) => {
+			if (entry.type === "midi" && entry.trackID !== undefined) {
+				candidates.push({
+					mediaId,
+					trackId: entry.trackID,
+					source: entry.src,
+					alignmentTimeline: resolveAlignmentTimelineAttribute(mediaId, ctx),
+					startOffsetMs: entry.startOffsetMs,
+					endOffsetMs: entry.endOffsetMs,
+				});
+			}
+		});
+		renderer.registerConfiguredViewHost(canvas, {
+			view: pianoRoll,
+			alignmentTimeline: candidates[0].alignmentTimeline,
+			source: candidates[0].source,
+			pianoRollCandidates: candidates,
+		});
+		renderer.root.appendChild(canvas);
+		return;
+	}
 	renderer.registerConfiguredViewHost(canvas, {
 		view: pianoRoll,
 		alignmentTimeline: resolveAlignmentTimelineAttribute(
@@ -2165,6 +2201,7 @@ function renderPianoRoll(
 			ctx,
 		),
 		source: ctx.media[pianoRoll.mediaID]?.src,
+		midiOffsets: midiOffsetsOf(ctx.media[pianoRoll.mediaID]),
 	});
 	renderer.root.appendChild(canvas);
 }

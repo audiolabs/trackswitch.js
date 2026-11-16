@@ -150,7 +150,22 @@
 			};
 		}
 		if (controls.pianoRoll) {
-			media.midi = { type: "midi", src: basePath + "/Schubert_D911-03.mid" };
+			// Each performance's expressive transcription, on that performance's own
+			// timeline. The piano roll shows the one of whichever performance is
+			// audible.
+			media.midiHU33 = {
+				type: "midi",
+				src: basePath + "/Schubert_D911-03_HU33.mid",
+				trackID: "hu33",
+				// The recording's own trim, so the notes sit where its audio does.
+				startOffsetMs: 200,
+			};
+			media.midiSC06 = {
+				type: "midi",
+				src: basePath + "/Schubert_D911-03_SC06.mid",
+				trackID: "sc06",
+				startOffsetMs: 600,
+			};
 		}
 		Object.assign(media, {
 			hu33: {
@@ -210,7 +225,7 @@
 				withMarkerLayers(
 					{
 						type: "pianoRoll",
-						mediaID: "midi",
+						mediaID: "audible",
 						height: 180,
 						maxZoom: 5,
 						pianoKeyboard: true,
@@ -288,7 +303,10 @@
 		// A timeline is only worth declaring for a medium the config still carries.
 		var timelines = {};
 		if (media.score) timelines.score = "measure_Schubert_D911-03_2";
-		if (media.midi) timelines.midi = "time_Schubert_D911-03";
+		if (media.midiHU33) {
+			timelines.midiHU33 = "time_Schubert_D911-03_HU33";
+			timelines.midiSC06 = "time_Schubert_D911-03_SC06";
+		}
 		timelines.hu33 = "time_Schubert_D911-03_HU33";
 		timelines.sc06 = "time_Schubert_D911-03_SC06";
 
