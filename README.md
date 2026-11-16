@@ -4,6 +4,7 @@ trackswitch
 [![npm version](https://img.shields.io/npm/v/trackswitch)](https://www.npmjs.com/package/trackswitch)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/demo-live-black)](https://audiolabs.github.io/trackswitch.js/)
+[![Player Builder](https://img.shields.io/badge/builder-try%20it-blue)](https://audiolabs.github.io/trackswitch.js/builder.html)
 
 **trackswitch** is a web-based player for exploring related music representations — audio recordings, MIDI, sheet music and analysis results — in one interface.
 
@@ -11,10 +12,16 @@ It is built on three concepts. **Timelines** are the coordinate systems of indiv
 
 Audio can be heard in two ways: *comparative listening*, where one track sounds at a time and listeners switch between alternatives without interrupting playback, and *simultaneous listening*, where tracks sharing a timeline mix together. Performances on distinct timelines are compared rather than mixed, unless time-scale-modified renditions are supplied, which the Sync control then plays together.
 
-Live Demo
+Quick Start
 -------------
 
 - See what **trackswitch** can do on our demo website: https://audiolabs.github.io/trackswitch.js/
+
+Take a look at the [Tutorials & Use Cases](https://audiolabs.github.io/trackswitch.js/use-cases/) for complete, working configuration examples.
+
+- Use our [Player Builder](https://audiolabs.github.io/trackswitch.js/builder.html) to assemble, preview and export a player with your own, local media
+
+For further information on integrating the player into an ESM / React project, see [Documentation](https://audiolabs.github.io/trackswitch.js/documentation.html)
 
 Installation
 ------------
@@ -44,12 +51,6 @@ Or build locally:
 1. Clone Repo
 2. `npm install`
 3. `npm run build`
-
-Quick Setup
------------
-Take a look at the [Tutorials & Use Cases](https://audiolabs.github.io/trackswitch.js/use-cases/) for complete, working configuration examples.
-
-For further information on integrating the player into an ESM / React project, see [Documentation](https://audiolabs.github.io/trackswitch.js/documentation.html)
 
 Features
 -----------------
@@ -89,14 +90,8 @@ Features
 
 ### Additional Features
 
-- [Player Builder](https://audiolabs.github.io/trackswitch.js/builder.html): assemble and export a player from local media
 - Interactive alignment: run DTW in the browser on your own recordings and get a configured player and alignment CSV back
 - Published JSON Schema for completion and validation in your editor
-
-Programmatic API
-----------------
-
-`TrackSwitch.createDefaultTrackSwitch(rootElement, init)` and `TrackSwitch.createTrackSwitchSyncPlayer(rootElement, init)` return controllers for playback, seeking, looping, presets, and track state. This means that the player can be controlled by your application, independently from the end user.
 
 Citation
 --------

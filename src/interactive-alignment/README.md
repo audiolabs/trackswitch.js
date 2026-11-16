@@ -5,22 +5,11 @@ optionally a score) into the page, run a DTW variant in the browser, and get bac
 a trackswitch player configured with the resulting anchors — plus the alignment
 CSV to keep.
 
-It is an **extension built on top of the player**, not part of it. Nothing in
-`src/` imports from this folder, and the only things it takes from `src/` are
+It is built on top of the player as a separate bundle. Only the builder imports
+from this folder, and the only things it takes from the rest of `src/` are
 type declarations ([core-adapter.ts](core-adapter.ts)): at runtime it reaches the
 core through `window.TrackSwitch.interactiveExtensionApi`, so the two bundles
 stay independent.
-
-## Layout
-
-| | |
-|---|---|
-| `browser.ts` | IIFE entry — defines the `<trackswitch-sync-interactive>` element |
-| `interactive-controller.ts` | the tool's state machine: files in, config out |
-| `core-adapter.ts` | the narrow surface the tool uses from the player core |
-| `methods/` | the offered alignment methods and their Python implementations |
-| `worker/` | Pyodide module worker running the alignment pipeline off-thread |
-| `ui/` | dropzone, settings panel, help text |
 
 ## Build
 

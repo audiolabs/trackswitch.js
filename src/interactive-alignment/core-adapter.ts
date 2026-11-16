@@ -1,14 +1,14 @@
 import type {
 	ElementConfigError,
 	ElementConfigParser,
-} from "../../src/config/config";
+} from "../config/config";
 import type {
 	MediaConfig,
 	TrackSwitchController,
 	TrackSwitchViewConfig,
 	WaveformPlaybackFollowMode,
-} from "../../src/types";
-import type { TrackSwitchIconName } from "../../src/views/icons";
+} from "../types";
+import type { TrackSwitchIconName } from "../views/icons";
 
 export type {
 	MediaConfig,
@@ -22,7 +22,7 @@ type InteractiveCoreApi = {
 	createTrackSwitch: (
 		rootElement: HTMLElement,
 		init: Parameters<
-			typeof import("../../src/player/player").createTrackSwitch
+			typeof import("../player/player").createTrackSwitch
 		>[1],
 	) => TrackSwitchController;
 	describeError: (error: unknown, fallbackMessage: string) => string;
@@ -32,13 +32,13 @@ type InteractiveCoreApi = {
 		element: HTMLElement,
 		parseConfig: ElementConfigParser<TConfig>,
 	) => Promise<TConfig | undefined>;
-	parseNumericCsv: typeof import("../../src/model/alignment").parseNumericCsv;
+	parseNumericCsv: typeof import("../model/alignment").parseNumericCsv;
 	renderIconSlotHtml: (
 		iconName: TrackSwitchIconName,
 		extraClassName?: string,
 	) => string;
-	renderTrackSwitchErrorPanel: typeof import("../../src/views/layout").renderTrackSwitchErrorPanel;
-	renderTrackSwitchLoadingPanel: typeof import("../../src/views/layout").renderTrackSwitchLoadingPanel;
+	renderTrackSwitchErrorPanel: typeof import("../views/layout").renderTrackSwitchErrorPanel;
+	renderTrackSwitchLoadingPanel: typeof import("../views/layout").renderTrackSwitchLoadingPanel;
 };
 
 function coreApi(): InteractiveCoreApi {

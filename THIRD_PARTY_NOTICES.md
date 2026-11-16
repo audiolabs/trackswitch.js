@@ -23,9 +23,9 @@ the applicable license notices.
 | Package | Version | License |
 | --- | --- | --- |
 | @tonejs/midi | 2.0.28 | MIT |
-| d3 | 7.9.0 | ISC |
-| opensheetmusicdisplay | 2.1.2 | BSD-3-Clause |
-| papaparse | 5.5.4 | MIT |
+| d3 | 7.9.2 | ISC |
+| opensheetmusicdisplay | 2.3.1 | BSD-3-Clause |
+| papaparse | 5.7.1 | MIT |
 | spessasynth_core | 4.4.10 | Apache-2.0 |
 | stb-vorbis (via spessasynth_core) | 0.0.7 | Apache-2.0 |
 
@@ -44,18 +44,18 @@ No Font Awesome runtime/package code is bundled in the published artifacts.
 
 ### Additional packages bundled via `d3` in `dist/js/*`
 
-- ISC: `d3-array` 3.2.4, `d3-axis` 3.0.0, `d3-brush` 3.0.0, `d3-chord` 3.0.1,
-  `d3-color` 3.1.0, `d3-contour` 4.0.2, `d3-delaunay` 6.0.4,
-  `d3-dispatch` 3.0.1, `d3-drag` 3.0.0, `d3-dsv` 3.0.1, `d3-fetch` 3.0.1,
-  `d3-force` 3.0.0, `d3-format` 3.1.2, `d3-geo` 3.1.1,
-  `d3-hierarchy` 3.1.2, `d3-interpolate` 3.0.1, `d3-path` 3.1.0,
-  `d3-polygon` 3.0.1, `d3-quadtree` 3.0.1, `d3-random` 3.0.1,
-  `d3-scale` 4.0.2, `d3-scale-chromatic` 3.1.0, `d3-selection` 3.0.0,
-  `d3-shape` 3.2.0, `d3-time` 3.1.0, `d3-time-format` 4.1.0,
-  `d3-timer` 3.0.1, `d3-transition` 3.0.1, `d3-zoom` 3.0.0,
-  `internmap` 2.0.3, and `delaunator` 5.0.1.
-- BSD-3-Clause: `d3-ease` 3.0.1.
-- Unlicense: `robust-predicates` 3.0.2.
+- ISC: `d3-array` 3.2.5, `d3-axis` 3.0.1, `d3-brush` 3.0.1, `d3-chord` 3.0.2,
+  `d3-color` 3.1.1, `d3-contour` 4.0.3, `d3-delaunay` 6.0.6,
+  `d3-dispatch` 3.0.2, `d3-drag` 3.0.1, `d3-dsv` 3.0.2, `d3-fetch` 3.0.2,
+  `d3-force` 3.0.1, `d3-format` 3.1.3, `d3-geo` 3.1.2,
+  `d3-hierarchy` 3.1.3, `d3-interpolate` 3.0.2, `d3-path` 3.1.1,
+  `d3-polygon` 3.0.2, `d3-quadtree` 3.0.2, `d3-random` 3.0.2,
+  `d3-scale` 4.0.3, `d3-scale-chromatic` 3.1.1, `d3-selection` 3.0.1,
+  `d3-shape` 3.2.1, `d3-time` 3.1.1, `d3-time-format` 4.1.1,
+  `d3-timer` 3.0.2, `d3-transition` 3.0.2, `d3-zoom` 3.0.1,
+  `internmap` 2.0.3, and `delaunator` 5.1.0.
+- BSD-3-Clause: `d3-ease` 3.0.2.
+- Unlicense: `robust-predicates` 3.0.3.
 
 ### Additional packages bundled via `@tonejs/midi` in published JavaScript
 
@@ -65,7 +65,7 @@ No Font Awesome runtime/package code is bundled in the published artifacts.
 
 - MIT: `vexflow` 1.2.93, `loglevel` 1.9.2, `typescript-collections` 1.3.3,
   `lie` 3.3.0, `setimmediate` 1.0.5, and `immediate` 3.0.6.
-- MIT OR GPL-3.0-or-later: `jszip` 3.10.1. The MIT option is used for this
+- MIT OR GPL-3.0-or-later: `jszip` 3.10.2. The MIT option is used for this
   distribution.
 - MIT AND Zlib: `pako` 1.0.11.
 

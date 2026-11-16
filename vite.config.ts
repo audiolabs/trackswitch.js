@@ -44,7 +44,7 @@ const buildTargets = {
 			outDir: "dist/interactive",
 			assetsInlineLimit: Number.MAX_SAFE_INTEGER,
 			lib: {
-				entry: resolve(rootDir, "extensions/interactive-alignment/browser.ts"),
+				entry: resolve(rootDir, "src/interactive-alignment/browser.ts"),
 				name: "TrackSwitchInteractive",
 				formats: ["iife"],
 				fileName: () => "trackswitch-interactive.js",
@@ -64,7 +64,7 @@ const buildTargets = {
 			lib: {
 				entry: resolve(
 					rootDir,
-					"extensions/interactive-alignment/worker/alignment-worker.ts",
+					"src/interactive-alignment/worker/alignment-worker.ts",
 				),
 				formats: ["es"],
 				fileName: () => "trackswitch-interactive-worker.js",

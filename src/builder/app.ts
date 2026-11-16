@@ -1,16 +1,16 @@
-import { processFile } from "../../extensions/interactive-alignment/file-handler";
+import { processFile } from "../interactive-alignment/file-handler";
 import type {
 	AlignmentAlgorithmId,
 	AlignmentFeatureSetId,
 	InteractiveFile,
 	WorkerComputeResult,
-} from "../../extensions/interactive-alignment/types";
+} from "../interactive-alignment/types";
 import {
 	bindAlignmentHelpTooltips,
 	buildAlignmentHelpLabelHtml,
-} from "../../extensions/interactive-alignment/ui/alignment-help";
-import type { AlignmentHelpTooltipId } from "../../extensions/interactive-alignment/ui/alignment-help-types";
-import { AlignmentWorkerBridge } from "../../extensions/interactive-alignment/worker/alignment-worker-bridge";
+} from "../interactive-alignment/ui/alignment-help";
+import type { AlignmentHelpTooltipId } from "../interactive-alignment/ui/alignment-help-types";
+import { AlignmentWorkerBridge } from "../interactive-alignment/worker/alignment-worker-bridge";
 import { normalizeTrackSwitchConfig } from "../config/config";
 import { parseCsvRecords } from "../shared/csv";
 import type {
