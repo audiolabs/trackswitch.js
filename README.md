@@ -17,11 +17,11 @@ Quick Start
 
 - See what **trackswitch** can do on our demo website: https://audiolabs.github.io/trackswitch.js/
 
-Take a look at the [Tutorials & Use Cases](https://audiolabs.github.io/trackswitch.js/use-cases/) for complete, working configuration examples.
-
 - Use our [Player Builder](https://audiolabs.github.io/trackswitch.js/builder.html) to assemble, preview and export a player with your own, local media
 
-For further information on integrating the player into an ESM / React project, see [Documentation](https://audiolabs.github.io/trackswitch.js/documentation.html)
+- Take a look at the [Tutorials & Use Cases](https://audiolabs.github.io/trackswitch.js/use-cases/) for complete, working configuration examples.
+
+- For further information on integrating the player into an ESM / React project, see the [Documentation](https://audiolabs.github.io/trackswitch.js/documentation.html).
 
 Installation
 ------------
