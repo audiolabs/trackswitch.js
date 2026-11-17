@@ -1,4 +1,5 @@
 import { Midi } from "@tonejs/midi";
+import { parseMidi } from "midi-file";
 import { formatTimelineValue, type TimelineUnit } from "../model/timeline";
 import { calculateTrackTiming } from "../shared/audio";
 import { applyCssOverrides } from "../shared/dom";
@@ -55,6 +56,8 @@ const PIANO_ROLL_VELOCITY_BAR_MIN_HEIGHT = 8;
 const PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH = 6;
 /** Below this a checkerboard cell reads as noise rather than as a pattern. */
 const MIN_CHECKERBOARD_CELL = 6;
+/** The white laid over a sounding note to brighten it. */
+const PIANO_ROLL_ACTIVE_WASH = "rgba(255, 255, 255, 0.55)";
 /**
  * Rounds the corners of a note event just enough that two notes meeting on one
  * row — a repeated pitch, a legato pair — pinch apart visibly, including at row
@@ -176,6 +179,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	lastKeyboardKey: string | null;
 	/** The position the keys were last drawn for, so a reflow can repeat it. */
 	lastKeyboardPosition: number;
+	/** Whether the pointer is over the keyboard's column of the roll. */
+	pointerOverKeyboard: boolean;
 	keyboardColors: PianoRollKeyboardColors | null;
 	/** Parsed file, cached so the header is available for tick conversion. */
 	midi: Midi | null;
@@ -191,6 +196,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	tooltipNode: HTMLElement | null;
 	/** Channel number to label, from the view's `channelToLabelMap` config. */
 	channelToLabelMap: Map<number, string>;
+	/** Channels the shown file sets an instrument on with a program change event. */
+	programChannels: Set<number>;
 	/** The legend naming every labelled channel, when the view asks for one. */
 	legendNode: HTMLElement | null;
 	/**
@@ -222,7 +229,12 @@ export interface PianoRollSeekSurfaceMetadata {
 	/** What each candidate parsed to, once loaded. */
 	candidateData: Map<
 		string,
-		{ midi: Midi; notes: MidiNoteEvent[]; durationSeconds: number }
+		{
+			midi: Midi;
+			programChannels: Set<number>;
+			notes: MidiNoteEvent[];
+			durationSeconds: number;
+		}
 	>;
 	/** Every candidate's notes together, so the pitch axis holds still across a swap. */
 	candidateRangeNotes: MidiNoteEvent[];
@@ -407,7 +419,7 @@ function updatePianoRollLegend(surface: PianoRollSeekSurfaceMetadata): void {
 		return;
 	}
 
-	const rows = [...surface.channelToLabelMap.entries()]
+	const rows = [...resolvePianoRollLegendLabels(surface).entries()]
 		.filter(([channel]) => !surface.hiddenChannels.has(channel))
 		.sort((a, b) => a[0] - b[0])
 		.map(([channel, label]) =>
@@ -415,6 +427,30 @@ function updatePianoRollLegend(surface: PianoRollSeekSurfaceMetadata): void {
 		);
 	legend.replaceChildren(...rows);
 	legend.style.display = rows.length > 0 ? "flex" : "none";
+}
+
+/**
+ * The names the legend can give: the configured label of a channel, or else
+ * the instrument its file's program change event selects. A channel the file
+ * never sets an instrument on has no name to show.
+ */
+function resolvePianoRollLegendLabels(
+	surface: PianoRollSeekSurfaceMetadata,
+): Map<number, string> {
+	const labels = new Map<number, string>();
+	for (const note of surface.notes) {
+		if (
+			note.instrument &&
+			surface.programChannels.has(note.channel) &&
+			!labels.has(note.channel)
+		) {
+			labels.set(note.channel, capitalize(note.instrument));
+		}
+	}
+	surface.channelToLabelMap.forEach((label, channel) => {
+		labels.set(channel, label);
+	});
+	return labels;
 }
 
 function buildPianoRollLegendRow(
@@ -575,10 +611,13 @@ function buildPianoRollTooltipContent(
 	pitch.className = "piano-roll-note-tooltip-pitch";
 	pitch.textContent = formatMidiNoteName(note.midi);
 	heading.append(pitch);
-	if (note.instrument) {
+	const name =
+		surface.channelToLabelMap.get(note.channel) ??
+		(note.instrument ? capitalize(note.instrument) : undefined);
+	if (name) {
 		const instrument = document.createElement("span");
 		instrument.className = "piano-roll-note-tooltip-instrument";
-		instrument.textContent = capitalize(note.instrument);
+		instrument.textContent = name;
 		instrument.style.color = resolvePianoRollChannelColors(
 			surface,
 			note.channel,
@@ -599,10 +638,7 @@ function buildPianoRollTooltipContent(
 			"velocity",
 			String(Math.round(clamp(note.velocity, 0, 1) * 127)),
 		),
-		buildPianoRollTooltipRow(
-			"channel",
-			surface.channelToLabelMap.get(note.channel) ?? String(note.channel),
-		),
+		buildPianoRollTooltipRow("channel", String(note.channel)),
 	];
 }
 
@@ -1401,12 +1437,17 @@ function collectVisibleNotes(
  * the stretch as a checkerboard: one row per channel, square-ish cells, and the
  * colours rotating by one row from column to column. Solid notes would otherwise
  * simply cover one another.
+ *
+ * With `sounding` given, the stretches are first cleared, and a cell is
+ * brightened only if its own note is among them: a note still to come keeps its
+ * plain colour in the pattern, and the glow of two sounding ones interleaves.
  */
 function drawOverlapCheckerboards(
 	context: CanvasRenderingContext2D,
 	surface: PianoRollSeekSurfaceMetadata,
 	visible: MidiNoteEvent[],
 	geometry: NoteGeometry,
+	sounding?: ReadonlySet<MidiNoteEvent>,
 ): void {
 	const byPitch = new Map<number, MidiNoteEvent[]>();
 	for (const note of visible) {
@@ -1433,6 +1474,13 @@ function drawOverlapCheckerboards(
 				MIN_PIANO_ROLL_NOTE_WIDTH,
 				(segment.end - segment.start) * pixelsPerSecond,
 			);
+			if (sounding) {
+				context.save();
+				context.globalCompositeOperation = "destination-out";
+				context.fillStyle = "#000";
+				context.fillRect(left, top, width, noteHeight);
+				context.restore();
+			}
 			const rowPixels = noteHeight / rows;
 			const cellWidth = Math.max(MIN_CHECKERBOARD_CELL, rowPixels * 2);
 			const columns = Math.max(1, Math.ceil(width / cellWidth));
@@ -1449,6 +1497,16 @@ function drawOverlapCheckerboards(
 						cellRight - cellLeft,
 						rowPixels,
 					);
+					if (sounding?.has(note)) {
+						context.globalAlpha = 1;
+						context.fillStyle = PIANO_ROLL_ACTIVE_WASH;
+						context.fillRect(
+							cellLeft,
+							top + row * rowPixels,
+							cellRight - cellLeft,
+							rowPixels,
+						);
+					}
 				}
 			}
 		}
@@ -1902,6 +1960,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			baseKeyboardWidth,
 			lastKeyboardKey: null,
 			lastKeyboardPosition: 0,
+			pointerOverKeyboard: false,
 			keyboardColors: null,
 			midi: null,
 			notes: [],
@@ -1914,6 +1973,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 					? createPianoRollTooltipNode(overlay)
 					: null,
 			channelToLabelMap: resolveChannelToLabelMap(config.channelToLabelMap),
+			programChannels: new Set(),
 			legendNode:
 				config.legend && config.legend !== "none"
 					? createPianoRollLegendNode(overlay, timingNode, config.legend)
@@ -1951,6 +2011,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				// The roll travels under a stationary cursor while playback follows,
 				// so whatever the readout points at has moved on.
 				hidePianoRollTooltip(metadata);
+				updatePianoRollKeyboardFade(metadata);
 				ctx.schedulePianoRollNoteRefresh();
 			},
 			{ passive: true },
@@ -2001,8 +2062,9 @@ export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
 				return;
 			}
 			surface.wrapper.classList.add("piano-roll-loading");
-			const midi = await Midi.fromUrl(surface.source);
+			const { midi, programChannels } = await loadMidiFile(surface.source);
 			surface.midi = midi;
+			surface.programChannels = programChannels;
 			applyMidiNotes(
 				surface,
 				flattenMidiNotes(midi, surface.source, surface.midiOffsets),
@@ -2015,6 +2077,30 @@ export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
 	);
 }
 
+/**
+ * Fetches and parses a MIDI file, and notes which channels it sets an instrument
+ * on: the parsed tracks cannot tell a program change event from the default
+ * piano they fall back to.
+ */
+async function loadMidiFile(
+	source: string,
+): Promise<{ midi: Midi; programChannels: Set<number> }> {
+	const response = await fetch(source);
+	if (!response.ok) {
+		throw new Error(`Could not load '${source}'`);
+	}
+	const buffer = await response.arrayBuffer();
+	const programChannels = new Set<number>();
+	for (const track of parseMidi(new Uint8Array(buffer)).tracks) {
+		for (const event of track) {
+			if (event.type === "programChange") {
+				programChannels.add(event.channel);
+			}
+		}
+	}
+	return { midi: new Midi(buffer), programChannels };
+}
+
 async function loadCandidateMidis(
 	ctx: ViewRenderer,
 	surface: PianoRollSeekSurfaceMetadata,
@@ -2024,9 +2110,10 @@ async function loadCandidateMidis(
 		surface.wrapper.classList.add("piano-roll-loading");
 		await Promise.all(
 			candidates.map(async (candidate) => {
-				const midi = await Midi.fromUrl(candidate.source);
+				const { midi, programChannels } = await loadMidiFile(candidate.source);
 				surface.candidateData.set(candidate.mediaId, {
 					midi,
+					programChannels,
 					notes: flattenMidiNotes(midi, candidate.source, candidate),
 					durationSeconds: calculateTrackTiming(candidate, midi.duration)
 						.effectiveDuration,
@@ -2080,6 +2167,7 @@ function showPianoRollMedia(
 			return;
 		}
 		surface.midi = data.midi;
+		surface.programChannels = data.programChannels;
 		surface.source = candidate.source;
 		surface.mediaId = candidate.mediaId;
 		surface.alignmentColumn = candidate.alignmentTimeline.trim() || null;
@@ -2338,6 +2426,7 @@ export function updatePianoRollPlaybackState(
 			: null;
 		surface.seekWrap.classList.toggle("aligned-playhead", hooked);
 		drawPianoRollAlignmentOverlay(surface);
+		updatePianoRollKeyboardFade(surface);
 		// This runs on every 16 ms playback tick, so bail out early when nothing
 		// observable changed since the previous one.
 		const playbackKey = [
@@ -2588,12 +2677,29 @@ function refreshPianoRollActiveNotes(
 		context.fill();
 	}
 	context.globalAlpha = 1;
-	context.fillStyle = "rgba(255, 255, 255, 0.55)";
+	context.fillStyle = PIANO_ROLL_ACTIVE_WASH;
 	for (const rect of rects) {
 		trace(rect, 0, PIANO_ROLL_NOTE_CORNER_RADIUS);
 		context.fill();
 	}
-	drawOverlapCheckerboards(context, surface, activeNotes, geometry);
+	// Every note of those pitches takes part, not just the sounding ones: a note
+	// that is still to come would otherwise lie under this layer's solid body,
+	// wiping out the checkerboard the layer below shows for the stretch ahead.
+	// Only the cells of sounding notes are brightened, so the glow belongs to
+	// them alone.
+	const activePitches = new Set(activeNotes.map((note) => note.midi));
+	drawOverlapCheckerboards(
+		context,
+		surface,
+		collectVisibleNotes(
+			surface,
+			tileWindow.tileStartPx / geometry.pixelsPerSecond,
+			(tileWindow.tileStartPx + tileWindow.tileCssWidth) /
+				geometry.pixelsPerSecond,
+		).filter((note) => activePitches.has(note.midi)),
+		geometry,
+		new Set(activeNotes),
+	);
 	context.lineWidth = 1;
 	for (const rect of rects) {
 		const colors = resolvePianoRollChannelColors(surface, rect.note.channel);
@@ -2667,37 +2773,47 @@ function collectSoundingPitches(
 function bindPianoRollKeyboardFade(
 	surface: PianoRollSeekSurfaceMetadata,
 ): void {
+	const keyboard = surface.keyboardCanvas;
+	if (!keyboard) {
+		return;
+	}
+
 	surface.scrollContainer.addEventListener("pointermove", (event) => {
-		updatePianoRollKeyboardFade(
-			surface,
-			event.pointerType === "mouse" ? event.clientX : null,
-		);
+		surface.pointerOverKeyboard =
+			event.pointerType === "mouse" &&
+			event.clientX >= surface.scrollContainer.getBoundingClientRect().left &&
+			event.clientX < keyboard.getBoundingClientRect().right;
+		updatePianoRollKeyboardFade(surface);
 	});
 	surface.scrollContainer.addEventListener("pointerleave", () => {
-		updatePianoRollKeyboardFade(surface, null);
+		surface.pointerOverKeyboard = false;
+		updatePianoRollKeyboardFade(surface);
 	});
 }
 
 /**
- * Turns the keyboard mostly transparent while the pointer is over it. The
- * keyboard itself ignores the pointer, so that the roll underneath can still be
- * clicked there — to seek to the very start, say — and this is told from where
- * the pointer is over the roll.
+ * Turns the keyboard mostly transparent while the pointer is over it, or while
+ * the playhead is, so that the notes under it stay readable. The keyboard itself
+ * ignores the pointer, so that the roll underneath can still be clicked there —
+ * to seek to the very start, say — and the pointer is told from where it is over
+ * the roll.
  */
 function updatePianoRollKeyboardFade(
 	surface: PianoRollSeekSurfaceMetadata,
-	clientX: number | null,
 ): void {
 	const keyboard = surface.keyboardCanvas;
 	if (!keyboard) {
 		return;
 	}
 
+	const playheadX =
+		surface.lastPlayheadRatio * getTimelineTimeWidth(surface) -
+		surface.scrollContainer.scrollLeft;
+	const playheadOverKeyboard =
+		playheadX >= 0 && playheadX <= keyboard.clientWidth;
 	keyboard.classList.toggle(
 		"piano-roll-keyboard-faded",
-		clientX !== null &&
-			clientX >= surface.scrollContainer.getBoundingClientRect().left &&
-			clientX < keyboard.getBoundingClientRect().right,
+		surface.pointerOverKeyboard || playheadOverKeyboard,
 	);
 }
 

@@ -1113,7 +1113,7 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 | `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`, the default) | Specifies the visible interval the view opens on. Unset shows the whole file. |
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the piano roll moves with playback. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the piano roll. |
-| `switchTracksOnSeek?` | `boolean` | `true` | Seeking in this view makes exactly the tracks named in `channelToTrackIDMap` the audible ones, un-soloing all others. Has no effect without that map. |
+| `switchTracksOnSeek?` | `boolean` | `false` | Seeking in this view makes exactly the tracks named in `channelToTrackIDMap` the audible ones, un-soloing all others. Has no effect without that map. |
 | `pianoKeyboard?` | `boolean` | `true` | Draws a piano keyboard over the left edge of the roll. See [Piano keyboard](#piano-keyboard). |
 | `pitchLabels?` | `boolean` | `true` | Labels the pitch rows with note names, in gray, at the left edge of the roll. The labels lie on top of the notes, and, while the view is zoomed in, leave the top left corner to the zoom readout. Not drawn with `pianoKeyboard`, which names the pitches itself. |
 | `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |

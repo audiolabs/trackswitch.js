@@ -699,11 +699,23 @@ export function soloSeekSurfaceTracks(
 		return;
 	}
 	const trackIds = new Set<string>();
-	pianoRoll.channelTrackIds.forEach((ids) => {
-		ids.forEach((id) => {
-			trackIds.add(id);
+	if (pianoRoll.candidates) {
+		// The roll shows one file at a time, so only that file's track is made
+		// audible; with none shown, the audible tracks are left as they are.
+		const shown = pianoRoll.candidates.find(
+			(candidate) => candidate.mediaId === pianoRoll.shownMediaId,
+		);
+		if (!shown) {
+			return;
+		}
+		trackIds.add(shown.trackId);
+	} else {
+		pianoRoll.channelTrackIds.forEach((ids) => {
+			ids.forEach((id) => {
+				trackIds.add(id);
+			});
 		});
-	});
+	}
 	const selected = new Set<number>();
 	ctx.runtimes.forEach((runtime, index) => {
 		if (trackIds.has(runtime.definition.id)) {

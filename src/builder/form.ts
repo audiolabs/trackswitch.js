@@ -90,7 +90,7 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	height: 150,
 	italic: false,
 	keyboard: true,
-	legend: "none",
+	legend: "top-right",
 	line: "dashed",
 	lockZoom: true,
 	resizablePanels: true,

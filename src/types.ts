@@ -392,7 +392,8 @@ export interface TrackSwitchPianoRollViewConfig {
 	alignedPlayhead?: boolean;
 	/**
 	 * Seeking in this view makes exactly the tracks `channelToTrackIDMap` names
-	 * the audible ones. Defaults to `true`; with no map there is nothing to select.
+	 * the audible ones, un-soloing all others. Defaults to `false`: a click then
+	 * only seeks. With no map there is nothing to select.
 	 */
 	switchTracksOnSeek?: boolean;
 	height?: number;
@@ -431,22 +432,23 @@ export interface TrackSwitchPianoRollViewConfig {
 	/**
 	 * Shows a readout of the note event under the cursor: its pitch, instrument
 	 * (top right, in the channel's colour), start, end, duration, velocity and
-	 * channel. Defaults to `true`. When
-	 * `channelToLabelMap` names the hovered note's channel, its label is shown
-	 * in place of the plain channel number.
+	 * channel number. Defaults to `true`. When `channelToLabelMap` names the
+	 * hovered note's channel, its label is shown in place of the instrument.
 	 */
 	noteTooltip?: boolean;
 	/**
 	 * Labels MIDI channels, keyed by channel number (e.g. `{ "1": "Piano" }`).
 	 * Shown on note hover when `noteTooltip` is on, and in the legend when
 	 * `legend` is not `"none"`. A channel with no entry falls back to its plain
-	 * number.
+	 * number — in the legend, to the instrument a program change event of the
+	 * file selects, if there is one.
 	 */
 	channelToLabelMap?: Record<string, string>;
 	/**
-	 * Draws a legend naming every channel `channelToLabelMap` labels, each entry
-	 * paired with the channel's colour, at the given position. Defaults to
-	 * `"none"`.
+	 * Draws a legend naming every channel that has a name, each entry paired with
+	 * the channel's colour, at the given position. A name is a label from
+	 * `channelToLabelMap` or the instrument a program change event of the file
+	 * selects; with neither, no legend shows. Defaults to `"top-right"`.
 	 */
 	legend?: PianoRollLegendPosition;
 	/** Draws a bar inside each note event showing its velocity. Defaults to `false`. */

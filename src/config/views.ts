@@ -1029,7 +1029,7 @@ function normalizePianoRollConfig(
 			normalizeOptionalBoolean(
 				pianoRoll.switchTracksOnSeek,
 				"pianoRoll.switchTracksOnSeek",
-			) ?? true,
+			) ?? false,
 		timeAxis,
 		alignedPlayhead,
 		pianoKeyboard,
@@ -1055,7 +1055,7 @@ function normalizePianoRollConfig(
 			pianoRoll.legend,
 			["none", "top-right"] as const,
 			"pianoRoll.legend",
-			"none",
+			"top-right",
 		),
 		velocityBars:
 			normalizeOptionalBoolean(
