@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig, type UserConfig } from "vite";
 
 const rootDir = import.meta.dirname;
+const { version } = JSON.parse(
+	readFileSync(resolve(rootDir, "package.json"), "utf8"),
+) as { version: string };
 const banner = [
 	"/*!",
 	" * trackswitch (https://github.com/audiolabs/trackswitch.js)",
@@ -122,7 +126,10 @@ const buildTargets = {
 
 export default defineConfig(({ mode }) => {
 	const buildTarget = Object.hasOwn(buildTargets, mode) ? mode : "browser";
-	const config = buildTargets[buildTarget as keyof typeof buildTargets];
+	const config = {
+		...buildTargets[buildTarget as keyof typeof buildTargets],
+		define: { __TRACKSWITCH_VERSION__: JSON.stringify(version) },
+	};
 
 	// `npm run docs:watch` writes the bundles straight into the Jekyll site;
 	// their file names already match the ones docs:assets copies them to.

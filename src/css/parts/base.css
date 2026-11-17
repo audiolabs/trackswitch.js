@@ -28,6 +28,12 @@
 	/* Reset line-height to stop it inheriting from page */
 }
 
+/* Let the activation info box extend beyond small players while hovered. */
+.trackswitch.trackswitch:has(.overlay-activation #overlayinfo:hover) {
+	overflow: visible;
+	z-index: 30;
+}
+
 .trackswitch.trackswitch > .ts-stack-section:not(.main-control) {
 	border-left: 1px solid var(--ts-color-border-mid);
 	border-right: 1px solid var(--ts-color-border-mid);

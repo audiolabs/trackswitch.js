@@ -490,7 +490,9 @@ export function buildPlayerOverlayHtml(
 		renderIconSlotHtml("circle-info") +
 		"</span>" +
 		'<span class="text">' +
-		"<strong>trackswitch</strong> - Open Source Multitrack Audio Player<br />" +
+		"<strong>trackswitch</strong> v" +
+		__TRACKSWITCH_VERSION__ +
+		" - Open Source Multitrack Audio Player<br />" +
 		'<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>' +
 		'<br /><br /><span class="overlay-download-info">Expected download size for ctx player: calculating...</span>' +
 		"</span>" +
