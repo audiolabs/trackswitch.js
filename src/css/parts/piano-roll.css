@@ -596,7 +596,7 @@
 	height: 18px;
 	overflow: hidden;
 	border-radius: 5px;
-	background: var(--piano-roll-surface-background);
+	background: var(--ts-color-surface-base);
 	pointer-events: auto;
 	cursor: grab;
 }

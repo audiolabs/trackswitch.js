@@ -281,6 +281,17 @@ export function reflowTimelineSurface<T extends TimelineSurfaceGeometry>(
 	updateTimelineMinimapViewport(surface);
 }
 
+/**
+ * Rounds a timeline offset to a whole CSS pixel. Browsers quantize
+ * `scrollLeft` (Chromium to whole CSS pixels, even on high-density screens)
+ * while a percentage-positioned playhead stays fractional, so a centered
+ * playhead would otherwise wobble by up to a pixel against the viewport.
+ * Snapping both onto the same grid keeps it still.
+ */
+export function snapTimelinePx(px: number): number {
+	return Math.round(px);
+}
+
 export function resolveTimelinePlaybackFollowScrollLeft(
 	surface: TimelineSurfaceGeometry & {
 		playbackFollowMode: TimelineFollowMode;
@@ -298,7 +309,9 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 		return null;
 	}
 
-	const playheadPx = clamp(playheadRatio, 0, 1) * getTimelineTimeWidth(surface);
+	const playheadPx = snapTimelinePx(
+		clamp(playheadRatio, 0, 1) * getTimelineTimeWidth(surface),
+	);
 	const currentScrollLeft = clamp(
 		surface.scrollContainer.scrollLeft,
 		0,
@@ -308,7 +321,11 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	const visibleEnd = currentScrollLeft + viewportWidth;
 
 	if (surface.playbackFollowMode === "center") {
-		return clamp(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
+		return clamp(
+			snapTimelinePx(playheadPx - viewportWidth / 2),
+			0,
+			maxScrollLeft,
+		);
 	}
 
 	if (playheadPx < visibleStart || playheadPx > visibleEnd) {
@@ -568,10 +585,15 @@ export function updateSeekWrapVisuals(
 		if (geometryRoot.classList.contains("seekbar")) {
 			setMainSeekbarPlayheadPosition(geometryRoot, seekhead, seekRatio);
 		} else {
+			const timeWidth = geometryRoot.clientWidth;
+			const snappedRatio =
+				timeWidth > 0
+					? snapTimelinePx(seekRatio * timeWidth) / timeWidth
+					: seekRatio;
 			setPercentProperty(
 				geometryRoot,
 				"--ts-playhead-position",
-				clampPercent(seekRatio * 100),
+				clampPercent(snappedRatio * 100),
 			);
 		}
 		const formattedPosition = formatValue(safePosition);
